@@ -59,8 +59,7 @@ const config: Config = {
           editUrl: "https://github.com/dhia-rek/boussole/tree/main/docs-site/",
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
-          // Versioning disabled — single living doc
-          disableVersioning: true,
+          // Single living doc, no versioned snapshots committed.
           includeCurrentVersion: true,
         },
         blog: false,
