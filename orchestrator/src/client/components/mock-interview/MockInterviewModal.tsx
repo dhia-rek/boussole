@@ -149,6 +149,15 @@ function MockInterviewRoom({
     return () => stopMedia();
   }, [stopMedia]);
 
+  // Attach the webcam stream once the <video> element is actually rendered
+  // (phase "live"). Doing this in startInterview races React's commit and can
+  // leave the camera invisible.
+  useEffect(() => {
+    if (phase === "live" && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [phase]);
+
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
@@ -218,12 +227,6 @@ function MockInterviewRoom({
       });
       streamRef.current = stream;
       setPhase("live");
-      // Defer until the video element is mounted.
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      });
       await nextTurn([]);
     } catch {
       setError(
