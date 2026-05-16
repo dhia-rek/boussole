@@ -1,0 +1,137 @@
+import type { Config } from "tailwindcss";
+
+export default {
+  darkMode: "class",
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Apple-inspired palette
+        primary: {
+          50: "var(--color-primary-50)",
+          100: "var(--color-primary-100)",
+          200: "var(--color-primary-200)",
+          300: "var(--color-primary-300)",
+          400: "var(--color-primary-400)",
+          500: "var(--color-primary-500)",
+          600: "var(--color-primary-600)",
+          700: "var(--color-primary-700)",
+          900: "var(--color-primary-900)",
+        },
+        gray: {
+          50: "var(--color-gray-50)",
+          100: "var(--color-gray-100)",
+          150: "var(--color-gray-150)",
+          200: "var(--color-gray-200)",
+          300: "var(--color-gray-300)",
+          400: "var(--color-gray-400)",
+          500: "var(--color-gray-500)",
+          600: "var(--color-gray-600)",
+          700: "var(--color-gray-700)",
+          800: "var(--color-gray-800)",
+          900: "var(--color-gray-900)",
+        },
+      },
+      fontFamily: {
+        sans: "var(--font-sans)",
+        mono: "var(--font-mono)",
+      },
+      fontSize: {
+        xs: ["12px", { lineHeight: "16px", letterSpacing: "0em" }],
+        sm: ["13px", { lineHeight: "19px", letterSpacing: "0em" }],
+        base: ["16px", { lineHeight: "24px", letterSpacing: "-0.2px" }],
+        lg: ["18px", { lineHeight: "28px", letterSpacing: "-0.2px" }],
+        xl: ["20px", { lineHeight: "30px", letterSpacing: "-0.3px" }],
+        "2xl": ["24px", { lineHeight: "32px", letterSpacing: "-0.3px" }],
+        "3xl": ["28px", { lineHeight: "36px", letterSpacing: "-0.4px" }],
+        "4xl": ["32px", { lineHeight: "40px", letterSpacing: "-0.4px" }],
+        "5xl": ["40px", { lineHeight: "48px", letterSpacing: "-0.5px" }],
+        "6xl": ["48px", { lineHeight: "56px", letterSpacing: "-0.6px" }],
+      },
+      spacing: {
+        0: "0",
+        1: "4px",
+        2: "8px",
+        3: "12px",
+        4: "16px",
+        5: "20px",
+        6: "24px",
+        8: "32px",
+        10: "40px",
+        12: "48px",
+        16: "64px",
+        20: "80px",
+        24: "96px",
+      },
+      borderRadius: {
+        none: "0",
+        xs: "4px",
+        sm: "6px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        "2xl": "20px",
+        full: "9999px",
+      },
+      boxShadow: {
+        none: "none",
+        sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        base: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+      },
+      transitionProperty: {
+        DEFAULT:
+          "color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform",
+      },
+      transitionDuration: {
+        DEFAULT: "200ms",
+        75: "75ms",
+        100: "100ms",
+        150: "150ms",
+        200: "200ms",
+        300: "300ms",
+        500: "500ms",
+      },
+      transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.4, 0, 0.2, 1)",
+        smooth: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        ease: "ease",
+        "in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "out-cubic": "cubic-bezier(0.33, 1, 0.68, 1)",
+      },
+      animation: {
+        fade: "fadeIn 400ms ease-out forwards",
+        "slide-up": "slideUp 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "slide-down": "slideDown 400ms ease-out forwards",
+        pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        shimmer: "shimmer 2s infinite",
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideDown: {
+          "0%": { opacity: "0", transform: "translateY(-20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        pulse: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-1000px 0" },
+          "100%": { backgroundPosition: "1000px 0" },
+        },
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
