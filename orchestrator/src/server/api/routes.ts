@@ -12,6 +12,7 @@ import { extractorHealthRouter } from "./routes/extractor-health";
 import { ghostwriterRouter } from "./routes/ghostwriter";
 import { jobsRouter } from "./routes/jobs";
 import { manualJobsRouter } from "./routes/manual-jobs";
+import { mockInterviewRouter } from "./routes/mock-interview";
 import { onboardingRouter } from "./routes/onboarding";
 import { pipelineRouter } from "./routes/pipeline";
 import { postApplicationProvidersRouter } from "./routes/post-application-providers";
@@ -28,6 +29,7 @@ export const apiRouter = Router();
 
 apiRouter.use("/jobs", jobsRouter);
 apiRouter.use("/jobs/:id/chat", ghostwriterRouter);
+apiRouter.use("/jobs/:id/mock-interview", mockInterviewRouter);
 apiRouter.use("/demo", demoRouter);
 apiRouter.use("/settings", settingsRouter);
 apiRouter.use("/pipeline", pipelineRouter);
