@@ -7,6 +7,7 @@ import {
 import { GhostwriterDrawer } from "@client/components/ghostwriter/GhostwriterDrawer";
 import { JobDetailsEditDrawer } from "@client/components/JobDetailsEditDrawer";
 import { KbdHint } from "@client/components/KbdHint";
+import { MockInterviewButton } from "@client/components/mock-interview/MockInterviewModal";
 import { OpenJobListingButton } from "@client/components/OpenJobListingButton";
 import { TooltipWhenDisabled } from "@client/components/TooltipWhenDisabled";
 import { TailoringWorkspace } from "@client/components/tailoring/TailoringWorkspace";
@@ -588,6 +589,11 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
             <GhostwriterDrawer
               job={selectedJob}
               triggerLabel="Ask Ghostwriter"
+              triggerVariant="ghost"
+            />
+            <MockInterviewButton
+              job={selectedJob}
+              triggerLabel="Mock interview"
               triggerVariant="ghost"
             />
             <Button
