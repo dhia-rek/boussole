@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./auth-session";
 export * from "./ghostwriter";
 export * from "./jobs";
+export * from "./mock-interview";
 export * from "./pipeline";
 export * from "./post-application";
 export * from "./settings-profile";
