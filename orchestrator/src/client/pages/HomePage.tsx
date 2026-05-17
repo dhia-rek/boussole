@@ -32,17 +32,14 @@ export const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Read initial duration from URL
-  const initialDuration: DurationValue = (() => {
+  const [duration, setDuration] = useState<DurationValue>(() => {
     const value = Number(searchParams.get("duration"));
     return (
       (DURATION_OPTIONS as readonly number[]).includes(value)
         ? value
         : DEFAULT_DURATION
     ) as DurationValue;
-  })();
-
-  const [duration, setDuration] = useState<DurationValue>(initialDuration);
+  });
 
   const overviewQuery = useQuery({
     queryKey: queryKeys.jobs.list({

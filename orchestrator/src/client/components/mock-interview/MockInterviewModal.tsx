@@ -125,11 +125,15 @@ function MockInterviewRoom({
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<MockInterviewReport | null>(null);
 
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const titleId = "mock-interview-title";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const transcriptRef = useRef<MockInterviewTurn[]>([]);
   const speechSupported = getSpeechRecognitionCtor() !== null;
+  const speechLang =
+    typeof navigator !== "undefined" ? navigator.language : "en-US";
 
   transcriptRef.current = transcript;
 
@@ -148,6 +152,18 @@ function MockInterviewRoom({
   useEffect(() => {
     return () => stopMedia();
   }, [stopMedia]);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        stopMedia();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [stopMedia, onClose]);
 
   // Attach the webcam stream once the <video> element is actually rendered
   // (phase "live"). Doing this in startInterview races React's commit and can
@@ -262,7 +278,7 @@ function MockInterviewRoom({
     }
 
     const recognition = new Ctor();
-    recognition.lang = "en-US";
+    recognition.lang = speechLang;
     recognition.continuous = true;
     recognition.interimResults = true;
     let finalText = "";
@@ -284,7 +300,7 @@ function MockInterviewRoom({
     recognitionRef.current = recognition;
     setListening(true);
     recognition.start();
-  }, [listening]);
+  }, [listening, speechLang]);
 
   const handleClose = () => {
     stopMedia();
@@ -302,12 +318,19 @@ function MockInterviewRoom({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur outline-none"
+    >
       <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <div>
-            <div className="text-sm font-semibold text-foreground">
+            <div id={titleId} className="text-sm font-semibold text-foreground">
               Mock interview
             </div>
             <div className="text-xs text-muted-foreground">
