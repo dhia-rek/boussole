@@ -12,19 +12,16 @@ export const OnboardingStepContent: React.FC<{
   basicAuthPassword: string;
   basicAuthUser: string;
   currentStep: StepId;
-  defaultModel: string | null | undefined;
-  effectiveModel: string | null | undefined;
   isBusy: boolean;
   isImportingResume: boolean;
   isGeneratingSearchTerms: boolean;
   hasSavedSearchTermsInSession: boolean;
-  model: string;
   llmValidation: ValidationState;
   searchTermDraft: string;
   searchTerms: string[];
   searchTermsSource: SearchTermsSuggestionResponse["source"] | null;
   searchTermsStale: boolean;
-  onLlmModelChange: (value: string) => void;
+  onAiAccountChange: () => void;
   onBasicAuthChoiceChange: (choice: BasicAuthChoice) => void;
   onBasicAuthPasswordChange: (value: string) => void;
   onBasicAuthUserChange: (value: string) => void;
@@ -36,12 +33,8 @@ export const OnboardingStepContent: React.FC<{
   if (props.currentStep === "llm") {
     return (
       <LlmConnectionStep
-        defaultModel={props.defaultModel}
-        effectiveModel={props.effectiveModel}
-        isBusy={props.isBusy}
-        model={props.model}
         validation={props.llmValidation}
-        onModelChange={props.onLlmModelChange}
+        onAccountChange={props.onAiAccountChange}
       />
     );
   }

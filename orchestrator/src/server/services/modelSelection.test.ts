@@ -23,13 +23,20 @@ vi.mock("./llm/service", () => ({
 }));
 
 import * as settingsRepo from "../repositories/settings";
-import { resolveLlmModel } from "./modelSelection";
+import { resolveActiveAiProvider, resolveLlmModel } from "./modelSelection";
 import { pickProjectIdsForJob } from "./projectSelection";
 import { scoreJobSuitability } from "./scorer";
 import { getEffectiveSettings } from "./settings";
 import { generateTailoring } from "./summary";
 
+function mockStoredSettings(values: Record<string, string | null>): void {
+  vi.mocked(settingsRepo.getSetting).mockImplementation(
+    async (key) => values[key] ?? null,
+  );
+}
+
 function mockEffectiveSettings(model: unknown): void {
+  mockStoredSettings({ model: typeof model === "string" ? model : null });
   vi.mocked(getEffectiveSettings).mockResolvedValue({
     model: { value: model, default: "opus:medium", override: null },
     scoringInstructions: { value: "", default: "", override: null },
@@ -59,6 +66,28 @@ describe("Model Selection Logic", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe("AI account choice", () => {
+    it("uses the ChatGPT model when the workspace picked ChatGPT", async () => {
+      mockStoredSettings({
+        aiProvider: "chatgpt",
+        chatgptModel: " gpt-6.1-sol:low ",
+      });
+      await expect(resolveActiveAiProvider()).resolves.toBe("chatgpt");
+      await expect(resolveLlmModel()).resolves.toBe("gpt-6.1-sol:low");
+    });
+
+    it("lets ChatGPT use its own default model when none is picked", async () => {
+      mockStoredSettings({ aiProvider: "chatgpt" });
+      await expect(resolveLlmModel()).resolves.toBe("");
+    });
+
+    it("falls back to Claude for an unknown provider value", async () => {
+      mockStoredSettings({ aiProvider: "gemini", model: "sonnet" });
+      await expect(resolveActiveAiProvider()).resolves.toBe("claude");
+      await expect(resolveLlmModel()).resolves.toBe("sonnet");
+    });
   });
 
   describe("resolveLlmModel", () => {

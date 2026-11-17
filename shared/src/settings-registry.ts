@@ -4,6 +4,7 @@ import {
   LOCATION_SEARCH_SCOPE_VALUES,
 } from "./location-preferences";
 import { getDefaultPromptTemplate } from "./prompt-template-definitions";
+import { AI_PROVIDERS, type AiProvider } from "./types/ai-account";
 import {
   CHAT_STYLE_LANGUAGE_MODE_VALUES,
   CHAT_STYLE_MANUAL_LANGUAGE_VALUES,
@@ -40,6 +41,13 @@ function parseBitBoolOrNull(raw: string | undefined): boolean | null {
 }
 
 export const DEFAULT_CLAUDE_CLI_MODEL = "opus:medium";
+
+function parseAiProviderOrNull(raw: string | undefined): AiProvider | null {
+  const value = raw?.trim().toLowerCase();
+  return (AI_PROVIDERS as readonly string[]).includes(value ?? "")
+    ? (value as AiProvider)
+    : null;
+}
 
 function serializeNullableNumber(
   value: number | null | undefined,
@@ -123,12 +131,31 @@ export const resumeProjectsSchema = z.object({
 
 export const settingsRegistry = {
   // --- Typed Settings ---
+  /** Which of the person's AI accounts runs scoring, tailoring and agents. */
+  aiProvider: {
+    kind: "typed" as const,
+    schema: z.enum(AI_PROVIDERS),
+    default: (): AiProvider => "claude",
+    parse: parseAiProviderOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  /** Claude model, "<alias or id>[:<effort>]". */
   model: {
     kind: "typed" as const,
     schema: z.string().trim().max(200),
     default: (): string =>
       (typeof process !== "undefined" && process.env.MODEL?.trim()) ||
       DEFAULT_CLAUDE_CLI_MODEL,
+    parse: parseNonEmptyStringOrNull,
+    serialize: (value: string | null | undefined): string | null =>
+      value ?? null,
+  },
+  /** ChatGPT model, "<slug>[:<effort>]"; empty means Codex's own default. */
+  chatgptModel: {
+    kind: "typed" as const,
+    schema: z.string().trim().max(200),
+    default: (): string => "",
     parse: parseNonEmptyStringOrNull,
     serialize: (value: string | null | undefined): string | null =>
       value ?? null,

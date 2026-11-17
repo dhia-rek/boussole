@@ -49,24 +49,6 @@ type UpsertPostApplicationMessageInput = {
   existingMessage?: PostApplicationMessage | null;
 };
 
-type UpdatePostApplicationMessageSuggestionInput = {
-  id: string;
-  matchedJobId: string | null;
-  matchConfidence?: number | null;
-  processingStatus: PostApplicationProcessingStatus;
-};
-
-type UpdatePostApplicationMessageDecisionInput = {
-  id: string;
-  processingStatus: Extract<
-    PostApplicationProcessingStatus,
-    "manual_linked" | "ignored"
-  >;
-  matchedJobId: string | null;
-  decidedAt?: number;
-  decidedBy?: string | null;
-};
-
 export type UpsertPostApplicationMessageResult = {
   message: PostApplicationMessage;
   wasCreated: boolean;
