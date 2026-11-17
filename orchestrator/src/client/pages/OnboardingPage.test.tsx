@@ -363,32 +363,6 @@ describe("OnboardingPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("defaults the authentication step to lock it down", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-
-    renderPage();
-
-    await waitForAiStep();
-
-    fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
-    });
-
-    expect(screen.getByLabelText(/lock it down/i)).toBeChecked();
-    expect(
-      screen.getByRole("button", { name: /enable authentication/i }),
-    ).toBeInTheDocument();
-  });
-
   it("renders the new search terms step in the onboarding rail", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
@@ -542,114 +516,6 @@ describe("OnboardingPage", () => {
     });
   });
 
-  it("lets the user skip basic auth and finish onboarding", async () => {
-    vi.mocked(useOnboardingRequirement).mockReturnValue({
-      checking: false,
-      complete: false,
-    });
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.updateSettings).mockImplementation(async () => {
-      currentSettings = {
-        ...currentSettings,
-        onboardingBasicAuthDecision: "skipped",
-      };
-      return {
-        ...currentSettings,
-        searchTerms: {
-          ...currentSettings.searchTerms,
-          override: null,
-        },
-      };
-    });
-
-    renderPage();
-
-    await waitForAiStep();
-
-    fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByLabelText(/skip for now/i));
-    fireEvent.click(screen.getByRole("button", { name: /finish onboarding/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("ready page")).toBeInTheDocument();
-    });
-    expect(api.updateSettings).toHaveBeenCalledWith({
-      onboardingBasicAuthDecision: "skipped",
-    });
-  });
-
-  it("lets the user enable basic auth and finish onboarding", async () => {
-    vi.mocked(useOnboardingRequirement).mockReturnValue({
-      checking: false,
-      complete: false,
-    });
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.updateSettings).mockImplementation(async (update) => {
-      currentSettings = {
-        ...currentSettings,
-        ...("enableBasicAuth" in update || "basicAuthUser" in update
-          ? {
-              basicAuthActive: true,
-              onboardingBasicAuthDecision: "enabled",
-              basicAuthUser:
-                update.basicAuthUser ?? currentSettings.basicAuthUser,
-            }
-          : {}),
-      };
-      return currentSettings;
-    });
-
-    renderPage();
-
-    await waitForAiStep();
-
-    fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByLabelText(/lock it down/i));
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: "boussole-admin" },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: "correct horse battery staple" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: /enable authentication/i }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("ready page")).toBeInTheDocument();
-    });
-    expect(api.updateSettings).toHaveBeenCalledWith({
-      enableBasicAuth: true,
-      basicAuthUser: "boussole-admin",
-      basicAuthPassword: "correct horse battery staple",
-      onboardingBasicAuthDecision: "enabled",
-    });
-  });
-
   it("redirects when search terms are the last missing step", async () => {
     vi.mocked(useOnboardingRequirement).mockReturnValue({
       checking: false,
@@ -706,43 +572,6 @@ describe("OnboardingPage", () => {
     expect(api.updateSettings).toHaveBeenCalledWith({
       searchTerms: ["Platform Engineer", "Backend Engineer"],
     });
-  });
-
-  it("does not leave onboarding early when basic auth is saved before the other steps are complete", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: false,
-      message: "Connection failed",
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.updateSettings).mockResolvedValue({
-      ...baseSettings,
-      onboardingBasicAuthDecision: "skipped",
-    } as any);
-
-    renderPage();
-
-    await waitForAiStep();
-
-    fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByLabelText(/skip for now/i));
-    fireEvent.click(screen.getByRole("button", { name: /finish onboarding/i }));
-
-    await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalledWith({
-        onboardingBasicAuthDecision: "skipped",
-      });
-    });
-
-    expect(screen.queryByText("ready page")).not.toBeInTheDocument();
-    expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
   });
 
   it("does not finish onboarding when only default search terms exist", async () => {
@@ -807,7 +636,7 @@ describe("OnboardingPage", () => {
     expect(screen.queryByText("ready page")).not.toBeInTheDocument();
   });
 
-  it("continues from the CV step when the CV is already loaded", async () => {
+  it("finishes onboarding from the CV step when nothing else is missing", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
@@ -831,9 +660,8 @@ describe("OnboardingPage", () => {
 
     fireEvent.click(continueButton);
 
-    expect(
-      await screen.findByText("Choose the job titles to search for."),
-    ).toBeInTheDocument();
+    // Search terms are already saved, so the CV was the last missing step.
+    expect(await screen.findByText("ready page")).toBeInTheDocument();
     expect(api.validateResumeConfig).toHaveBeenCalledTimes(1);
   });
 
@@ -990,38 +818,5 @@ describe("OnboardingPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/resume changed/i)).toBeInTheDocument();
     });
-  });
-
-  it("lets the full authentication option card change the selection", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Secure your workspace")).toBeInTheDocument();
-    });
-
-    const skipCard = screen
-      .getByText(/you can add authentication later from settings\./i)
-      .closest("label");
-
-    if (!skipCard) {
-      throw new Error("Expected the skip card to render as a label");
-    }
-
-    fireEvent.click(skipCard);
-
-    expect(
-      screen.getByRole("button", { name: /finish onboarding/i }),
-    ).toBeEnabled();
   });
 });
