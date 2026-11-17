@@ -1,6 +1,5 @@
 import type { ResumeProfile } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
-import { queryClient as appQueryClient } from "@/client/lib/queryClient";
 import { queryKeys } from "@/client/lib/queryKeys";
 import * as api from "../api";
 
@@ -33,9 +32,4 @@ export function useProfile() {
     personName: profile?.basics?.name || "Resume",
     refreshProfile,
   };
-}
-
-/** @internal For testing only */
-export function _resetProfileCache() {
-  appQueryClient.removeQueries({ queryKey: queryKeys.profile.all });
 }

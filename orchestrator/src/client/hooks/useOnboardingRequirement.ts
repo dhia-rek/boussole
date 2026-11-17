@@ -2,7 +2,6 @@ import * as api from "@client/api";
 import { useDemoInfo } from "@client/hooks/useDemoInfo";
 import { useSettings } from "@client/hooks/useSettings";
 import { isOnboardingComplete } from "@client/lib/onboarding";
-import { normalizeLlmProvider } from "@client/pages/settings/utils";
 import type { ValidationResult } from "@shared/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,25 +17,13 @@ export function useOnboardingRequirement() {
   const demoMode = demoInfo?.demoMode ?? false;
 
   const [llmValidation, setLlmValidation] = useState(EMPTY_VALIDATION_STATE);
-  const [rxresumeValidation, setRxresumeValidation] = useState(
-    EMPTY_VALIDATION_STATE,
-  );
   const [baseResumeValidation, setBaseResumeValidation] = useState(
     EMPTY_VALIDATION_STATE,
   );
   const validationInputsKeyRef = useRef<string | null>(null);
 
-  const selectedProvider = normalizeLlmProvider(settings?.llmProvider?.value);
-  const shouldValidateRxresume = Boolean(
-    settings?.pdfRenderer?.value === "rxresume" ||
-      settings?.rxresumeBaseResumeId,
-  );
   const validationInputsKey = JSON.stringify({
-    provider: selectedProvider,
-    llmBaseUrl: settings?.llmBaseUrl?.value || null,
-    pdfRenderer: settings?.pdfRenderer?.value || null,
-    rxresumeBaseResumeId: settings?.rxresumeBaseResumeId || null,
-    rxresumeUrl: settings?.rxresumeUrl || null,
+    model: settings?.model?.value || null,
   });
 
   useEffect(() => {
@@ -45,7 +32,6 @@ export function useOnboardingRequirement() {
     }
     validationInputsKeyRef.current = validationInputsKey;
     setLlmValidation(EMPTY_VALIDATION_STATE);
-    setRxresumeValidation(EMPTY_VALIDATION_STATE);
     setBaseResumeValidation(EMPTY_VALIDATION_STATE);
   }, [validationInputsKey]);
 
@@ -55,10 +41,7 @@ export function useOnboardingRequirement() {
     const validations: Promise<ValidationResult>[] = [];
     validations.push(
       api
-        .validateLlm({
-          provider: selectedProvider,
-          baseUrl: settings.llmBaseUrl?.value || undefined,
-        })
+        .validateLlm()
         .then((result) => {
           setLlmValidation({ ...result, checked: true });
           return result;
@@ -73,32 +56,6 @@ export function useOnboardingRequirement() {
           return result;
         }),
     );
-
-    if (shouldValidateRxresume) {
-      validations.push(
-        api
-          .validateRxresume({
-            baseUrl: settings.rxresumeUrl ?? undefined,
-          })
-          .then((result) => {
-            setRxresumeValidation({ ...result, checked: true });
-            return result;
-          })
-          .catch((error: unknown) => {
-            const result = {
-              valid: false,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "RxResume validation failed",
-            };
-            setRxresumeValidation({ ...result, checked: true });
-            return result;
-          }),
-      );
-    } else {
-      setRxresumeValidation(EMPTY_VALIDATION_STATE);
-    }
 
     validations.push(
       api
@@ -121,15 +78,13 @@ export function useOnboardingRequirement() {
     );
 
     await Promise.allSettled(validations);
-  }, [selectedProvider, settings, shouldValidateRxresume]);
+  }, [settings]);
 
   useEffect(() => {
     if (demoMode || !settings || settingsLoading) return;
 
     const needsValidation =
-      !llmValidation.checked ||
-      (shouldValidateRxresume && !rxresumeValidation.checked) ||
-      !baseResumeValidation.checked;
+      !llmValidation.checked || !baseResumeValidation.checked;
 
     if (!needsValidation) return;
     void runValidations();
@@ -138,10 +93,8 @@ export function useOnboardingRequirement() {
     demoMode,
     llmValidation.checked,
     runValidations,
-    rxresumeValidation.checked,
     settings,
     settingsLoading,
-    shouldValidateRxresume,
   ]);
 
   const complete = useMemo(() => {

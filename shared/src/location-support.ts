@@ -99,14 +99,6 @@ export const SUPPORTED_COUNTRY_INPUTS = [
   "worldwide",
 ] as const;
 
-const UK_ONLY_SOURCES = new Set<JobSource>(["gradcracker", "ukvisajobs"]);
-const SEEK_SUPPORTED_COUNTRIES = new Set(
-  ["australia", "new zealand"].map((c) => normalizeCountryKey(c)),
-);
-const NAUKRI_SUPPORTED_COUNTRIES = new Set(["india"].map(normalizeCountryKey));
-const JOBINDEX_SUPPORTED_COUNTRIES = new Set(
-  ["denmark"].map(normalizeCountryKey),
-);
 const GLASSDOOR_SUPPORTED_COUNTRIES = new Set(
   [
     "australia",
@@ -193,13 +185,6 @@ export function isSourceAllowedForCountry(
   source: JobSource,
   country: string | null | undefined,
 ): boolean {
-  if (UK_ONLY_SOURCES.has(source)) return isUkCountry(country);
-  if (source === "seek")
-    return SEEK_SUPPORTED_COUNTRIES.has(normalizeCountryKey(country));
-  if (source === "naukri")
-    return NAUKRI_SUPPORTED_COUNTRIES.has(normalizeCountryKey(country));
-  if (source === "jobindex")
-    return JOBINDEX_SUPPORTED_COUNTRIES.has(normalizeCountryKey(country));
   if (source === "glassdoor") return isGlassdoorCountry(country);
   if (source === "adzuna") return getAdzunaCountryCode(country) !== null;
   return true;

@@ -160,10 +160,10 @@ Open the **search links** row in the Ready summary to reveal the generated links
 
 PDF generation uses:
 
-- base resume selected from RxResume
+- your CV from the CV editor (in the job's language when you have one)
 - job description
 - tailored summary/headline/skills/projects
-- the configured PDF renderer (`rxresume` export or local LaTeX via `tectonic`)
+- the Boussole LaTeX layout, rendered locally with `tectonic`
 
 Common paths:
 
@@ -231,5 +231,5 @@ curl -X POST "http://localhost:3001/api/jobs/<jobId>/generate-pdf"
 - [Job Search Bar](/docs/features/job-search-bar)
 - [Pipeline Run](/docs/features/pipeline-run)
 - [Ghostwriter](/docs/features/ghostwriter)
-- [Reactive Resume](/docs/features/reactive-resume)
+- [CV Editor](/docs/features/design-resume)
 - [Post-Application Tracking](/docs/features/post-application-tracking)

@@ -5,12 +5,6 @@ import { DEMO_PROJECT_CATALOG } from "@server/config/demo-defaults";
 import { getDesignResumeStatus } from "@server/services/design-resume";
 import { clearProfileCache, getProfile } from "@server/services/profile";
 import { extractProjectsFromProfile } from "@server/services/resumeProjects";
-import {
-  clearRxResumeResumeCache,
-  getResume,
-  RxResumeAuthConfigError,
-} from "@server/services/rxresume";
-import { getConfiguredRxResumeBaseResumeId } from "@server/services/rxresume/baseResumeId";
 import { type Request, type Response, Router } from "express";
 
 export const profileRouter = Router();
@@ -45,47 +39,17 @@ profileRouter.get("/", async (_req: Request, res: Response) => {
 });
 
 /**
- * GET /api/profile/status - Check if base resume is configured and accessible
+ * GET /api/profile/status - Whether the CV editor holds a CV
  */
 profileRouter.get("/status", async (_req: Request, res: Response) => {
   try {
     const localStatus = await getDesignResumeStatus();
-    if (localStatus.exists) {
-      ok(res, { exists: true, error: null });
-      return;
-    }
-
-    const { resumeId: rxresumeBaseResumeId } =
-      await getConfiguredRxResumeBaseResumeId();
-
-    if (!rxresumeBaseResumeId) {
-      ok(res, {
-        exists: false,
-        error:
-          "No base resume selected. Please select a resume from your Reactive Resume account in Settings.",
-      });
-      return;
-    }
-
-    // Verify the resume is accessible
-    try {
-      const resume = await getResume(rxresumeBaseResumeId);
-      if (!resume.data || typeof resume.data !== "object") {
-        ok(res, {
-          exists: false,
-          error: "Selected resume is empty or invalid.",
-        });
-        return;
-      }
-
-      ok(res, { exists: true, error: null });
-    } catch (error) {
-      if (error instanceof RxResumeAuthConfigError) {
-        ok(res, { exists: false, error: error.message });
-        return;
-      }
-      throw error;
-    }
+    ok(res, {
+      exists: localStatus.exists,
+      error: localStatus.exists
+        ? null
+        : "No CV yet. Upload a PDF or DOCX CV, or create one in the CV editor.",
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     ok(res, { exists: false, error: message });
@@ -93,12 +57,11 @@ profileRouter.get("/status", async (_req: Request, res: Response) => {
 });
 
 /**
- * POST /api/profile/refresh - Clear profile cache and refetch from Reactive Resume
+ * POST /api/profile/refresh - Clear the profile cache and reload the CV
  */
 profileRouter.post("/refresh", async (_req: Request, res: Response) => {
   try {
     clearProfileCache();
-    clearRxResumeResumeCache();
     const profile = await getProfile(true);
     ok(res, profile);
   } catch (error) {

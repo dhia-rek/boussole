@@ -7,12 +7,8 @@ import {
   designResumeToProfile,
   isLegacyDesignResumeError,
 } from "./design-resume";
-import { getResume, RxResumeAuthConfigError } from "./rxresume";
-import { getConfiguredRxResumeBaseResumeId } from "./rxresume/baseResumeId";
 
 type TenantProfileCache = {
-  profile: ResumeProfile | null;
-  resumeId: string | null;
   localProfile: ResumeProfile | null;
   lastAccessedAt: number;
 };
@@ -49,8 +45,6 @@ function getTenantProfileCache(): TenantProfileCache {
   let cache = profileCacheByTenant.get(tenantId);
   if (!cache) {
     cache = {
-      profile: null,
-      resumeId: null,
       localProfile: null,
       lastAccessedAt: now,
     };
@@ -61,85 +55,34 @@ function getTenantProfileCache(): TenantProfileCache {
 }
 
 /**
- * Get the base resume profile from RxResume.
+ * Profile of the CV in the CV editor (Design Resume), cached per workspace
+ * until clearProfileCache() is called.
  *
- * Requires rxresumeBaseResumeId to be configured in settings.
- * Results are cached until clearProfileCache() is called.
- *
- * @param forceRefresh Force reload from API.
- * @throws Error if rxresumeBaseResumeId is not configured or API call fails.
+ * @throws Error when no CV has been created or imported yet.
  */
 export async function getProfile(forceRefresh = false): Promise<ResumeProfile> {
   const cache = getTenantProfileCache();
-
   if (cache.localProfile && !forceRefresh) {
     return cache.localProfile;
   }
 
+  let localProfile: ResumeProfile | null = null;
   try {
-    const localProfile = await designResumeToProfile();
-    if (localProfile) {
-      cache.localProfile = localProfile;
-      return localProfile;
-    }
+    localProfile = await designResumeToProfile();
   } catch (error) {
     if (!isLegacyDesignResumeError(error)) {
       throw error;
     }
-    logger.warn(
-      "Ignoring legacy local Design Resume while loading profile fallback",
-      {
-        error,
-      },
-    );
+    logger.warn("Ignoring a legacy CV that can no longer be read", { error });
   }
 
-  const { resumeId: rxresumeBaseResumeId } =
-    await getConfiguredRxResumeBaseResumeId();
-
-  if (!rxresumeBaseResumeId) {
+  if (!localProfile) {
     throw new Error(
-      "Base resume not configured. Please select a base resume from your RxResume account in Settings.",
+      "No CV yet. Create or import your CV in the CV editor first.",
     );
   }
-
-  // Return cached profile if valid
-  if (
-    cache.profile &&
-    cache.resumeId === rxresumeBaseResumeId &&
-    !forceRefresh
-  ) {
-    return cache.profile;
-  }
-
-  try {
-    logger.info("Fetching profile from Reactive Resume", {
-      resumeId: rxresumeBaseResumeId,
-    });
-    const resume = forceRefresh
-      ? await getResume(rxresumeBaseResumeId, { forceRefresh: true })
-      : await getResume(rxresumeBaseResumeId);
-
-    if (!resume.data || typeof resume.data !== "object") {
-      throw new Error("Resume data is empty or invalid");
-    }
-
-    cache.profile = resume.data as unknown as ResumeProfile;
-    cache.resumeId = rxresumeBaseResumeId;
-    logger.info("Profile loaded from Reactive Resume", {
-      resumeId: rxresumeBaseResumeId,
-    });
-    return cache.profile;
-  } catch (error) {
-    if (error instanceof RxResumeAuthConfigError) {
-      throw new Error(error.message);
-    }
-    logger.error("Failed to load profile from Reactive Resume", {
-      resumeId: rxresumeBaseResumeId,
-      error,
-    });
-    throw error;
-  }
+  cache.localProfile = localProfile;
+  return localProfile;
 }
 
 /**

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   buildJobChatPromptContext: vi.fn(),
-  resolveLlmRuntimeSettings: vi.fn(),
+  resolveLlmModel: vi.fn(),
   llmCallJson: vi.fn(),
 }));
 
@@ -15,7 +15,7 @@ vi.mock("./ghostwriter-context", () => ({
 }));
 
 vi.mock("./modelSelection", () => ({
-  resolveLlmRuntimeSettings: mocks.resolveLlmRuntimeSettings,
+  resolveLlmModel: mocks.resolveLlmModel,
 }));
 
 vi.mock("./llm/service", () => ({
@@ -32,12 +32,7 @@ beforeEach(() => {
     jobSnapshot: '{"job":"snapshot"}',
     profileSnapshot: "Candidate profile",
   });
-  mocks.resolveLlmRuntimeSettings.mockResolvedValue({
-    model: "test-model",
-    provider: "openai",
-    baseUrl: null,
-    apiKey: "k",
-  });
+  mocks.resolveLlmModel.mockResolvedValue("test-model");
 });
 
 describe("generateInterviewerTurn", () => {
@@ -58,6 +53,10 @@ describe("generateInterviewerTurn", () => {
       ended: false,
       questionNumber: 1,
     });
+    expect(mocks.resolveLlmModel).toHaveBeenCalled();
+    expect(mocks.llmCallJson).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "test-model", jobId: "job_1" }),
+    );
   });
 
   it("counts prior interviewer turns for questionNumber", async () => {

@@ -16,8 +16,6 @@ services:
     volumes:
       # Persist database and generated PDFs
       - ./data:/app/data
-      # Persist Codex login/session data for app-server provider
-      - codex-home:/app/codex-home
     environment:
       # Server config
       - NODE_ENV=production
@@ -25,8 +23,6 @@ services:
 
       # Python path (uses system python in container)
       - PYTHON_PATH=/usr/bin/python3
-      # Codex runtime home (stores auth and config)
-      - CODEX_HOME=/app/codex-home
 
     env_file:
       - path: ./.env
@@ -46,32 +42,11 @@ services:
           target: /app/visa-sponsor-providers
           action: sync+restart
         # Sync extractor changes
-        - path: ./extractors/gradcracker/src
-          target: /app/extractors/gradcracker/src
-          action: sync+restart
         - path: ./extractors/hiringcafe/src
           target: /app/extractors/hiringcafe/src
           action: sync+restart
-        - path: ./extractors/ukvisajobs/src
-          target: /app/extractors/ukvisajobs/src
-          action: sync+restart
-        - path: ./extractors/workingnomads/src
-          target: /app/extractors/workingnomads/src
-          action: sync+restart
-        - path: ./extractors/golangjobs/src
-          target: /app/extractors/golangjobs/src
-          action: sync+restart
-        - path: ./extractors/jobindex/src
-          target: /app/extractors/jobindex/src
-          action: sync+restart
-        - path: ./extractors/seek/src
-          target: /app/extractors/seek/src
-          action: sync+restart
         - path: ./extractors/jobspy
           target: /app/extractors/jobspy
-          action: sync+restart
-        - path: ./extractors/naukri
-          target: /app/extractors/naukri
           action: sync+restart
         - path: ./extractors/adzuna
           target: /app/extractors/adzuna
@@ -85,14 +60,8 @@ services:
         - path: ./extractors/companyats
           target: /app/extractors/companyats
           action: sync+restart
-        - path: ./extractors/remoteco
-          target: /app/extractors/remoteco
-          action: sync+restart
         - path: ./extractors/wellfound
           target: /app/extractors/wellfound
-          action: sync+restart
-        - path: ./extractors/weworkremotely
-          target: /app/extractors/weworkremotely
           action: sync+restart
         - path: ./extractors/wttj
           target: /app/extractors/wttj
@@ -112,4 +81,3 @@ secrets:
 # Volumes for data persistence
 volumes:
   data:
-  codex-home:

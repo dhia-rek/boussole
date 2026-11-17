@@ -4,12 +4,13 @@
 
 import { logger } from "@infra/logger";
 import { getOriginalEnvValue } from "@server/services/envSettings";
+import { LlmService } from "@server/services/llm/service";
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
 import type { Job, ResumeProfile } from "@shared/types";
 import { buildAiProfileView, formatCandidateNotes } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
 import { stripMarkdownCodeFences } from "./llm/utils/json";
-import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
+import { resolveLlmModel } from "./modelSelection";
 import { renderPromptTemplate } from "./prompt-templates";
 import {
   buildProfileKeywords,
@@ -101,7 +102,7 @@ export async function scoreJobSuitability(
   profile: Record<string, unknown>,
 ): Promise<SuitabilityResult> {
   const [model, settings] = await Promise.all([
-    resolveLlmModel("scoring"),
+    resolveLlmModel(),
     getEffectiveSettings(),
   ]);
 
@@ -140,7 +141,7 @@ export async function scoreJobSuitability(
       getDefaultPromptTemplate("scoringPromptTemplate"),
   });
 
-  const llm = await createConfiguredLlmService("scoring");
+  const llm = new LlmService();
   const result = await llm.callJson<{ score: number; reason: string }>({
     model,
     messages: [{ role: "user", content: prompt }],
@@ -150,9 +151,6 @@ export async function scoreJobSuitability(
   });
 
   if (!result.success) {
-    if (result.error.toLowerCase().includes("api key")) {
-      logger.warn("LLM API key not set, using mock scoring", { jobId: job.id });
-    }
     logger.error("Scoring failed, using mock scoring", {
       jobId: job.id,
       error: result.error,
@@ -534,7 +532,8 @@ async function mockScore(
 
   score = Math.min(100, Math.max(0, score));
 
-  const baseReason = "Scored using keyword matching (API key not configured)";
+  const baseReason =
+    "Scored by keyword matching because Claude was unavailable";
 
   // Apply salary penalty if enabled
   const penaltyResult = applySalaryPenalty(job, score, baseReason, settings);
@@ -543,27 +542,4 @@ async function mockScore(
     score: penaltyResult.score,
     reason: penaltyResult.reason,
   };
-}
-
-/**
- * Score multiple jobs and return sorted by score (descending).
- */
-export async function scoreAndRankJobs(
-  jobs: Job[],
-  profile: Record<string, unknown>,
-): Promise<
-  Array<Job & { suitabilityScore: number; suitabilityReason: string }>
-> {
-  const scoredJobs = await Promise.all(
-    jobs.map(async (job) => {
-      const { score, reason } = await scoreJobSuitability(job, profile);
-      return {
-        ...job,
-        suitabilityScore: score,
-        suitabilityReason: reason,
-      };
-    }),
-  );
-
-  return scoredJobs.sort((a, b) => b.suitabilityScore - a.suitabilityScore);
 }

@@ -66,27 +66,6 @@ export const queryKeys = {
     runInsights: (id: string) =>
       [...queryKeys.pipeline.all, "run-insights", id] as const,
   },
-  visaSponsors: {
-    all: ["visa-sponsors"] as const,
-    status: () => [...queryKeys.visaSponsors.all, "status"] as const,
-    search: (
-      query: string,
-      limit: number,
-      minScore: number,
-      country?: string,
-    ) =>
-      [
-        ...queryKeys.visaSponsors.all,
-        "search",
-        { query, limit, minScore, country: country ?? null },
-      ] as const,
-    organization: (name: string, providerId?: string) =>
-      [
-        ...queryKeys.visaSponsors.all,
-        "organization",
-        { name, providerId: providerId ?? null },
-      ] as const,
-  },
   postApplication: {
     all: ["post-application"] as const,
     providerStatus: (provider: PostApplicationProvider, accountKey: string) =>

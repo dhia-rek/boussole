@@ -72,11 +72,6 @@ export function createAuthGuard() {
     }
     if (
       normalizedMethod === "POST" &&
-      normalizedPath === "/api/visa-sponsors/search"
-    )
-      return true;
-    if (
-      normalizedMethod === "POST" &&
       normalizedPath === "/api/webhook/trigger"
     )
       return Boolean(process.env.WEBHOOK_SECRET?.trim());
@@ -113,11 +108,6 @@ export function createAuthGuard() {
 
     if (normalizedPath === "/api/auth/me") return true;
     if (normalizedPath.startsWith("/api/workspaces")) return true;
-    if (normalizedPath === "/api/settings/codex-auth") return true;
-    if (normalizedPath === "/api/settings/rx-resumes") return true;
-    if (/^\/api\/settings\/rx-resumes\/[^/]+\/projects$/.test(normalizedPath)) {
-      return true;
-    }
 
     return false;
   }

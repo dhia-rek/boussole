@@ -15,12 +15,14 @@ export async function renderResumePdf(args: {
   outputPath: string;
   jobId: string;
   language?: NormalizeResumeJsonToLatexDocumentOptions["language"];
+  /** Local image for the round header photo; omitted → no photo. */
+  photoPath?: string | null;
 }): Promise<void> {
   const document = normalizeResumeJsonToLatexDocument(args.resumeJson, {
     language: args.language,
   });
   await renderLatexPdf({
-    document,
+    document: { ...document, photoPath: args.photoPath ?? null },
     outputPath: args.outputPath,
     jobId: args.jobId,
   });

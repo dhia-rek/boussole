@@ -47,20 +47,14 @@ Open:
 
 The onboarding wizard helps you validate and save:
 
-1. **LLM Provider**: OpenRouter by default (or OpenAI/Gemini/local URL).
-2. **Import your current resume**: Either upload a PDF/DOCX into Boussole or choose the Reactive Resume option and connect with your v5 API key.
+1. **Claude**: Boussole checks that the Claude Code CLI is installed and signed in on the host (run `claude` once in a terminal). Every AI step uses your Claude subscription; there is no API key. In Docker or on a server, set `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
+2. **Import your current CV**: upload a PDF or DOCX. Claude reads it and creates your CV in the CV editor.
 3. **Search terms**: Boussole generates a first list of job-title search terms from your selected resume. Edit or regenerate them before saving.
 4. **First-run account**: Create the first username/password account. This account becomes the system admin and owns the initial private workspace.
 
 Settings and user accounts are saved to the local database. If you are upgrading an older single-user install, Boussole migrates existing rows into one default private workspace. When `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are present during that migration, they seed the first system admin account; otherwise the sign-in screen requires first-run setup before private APIs are usable.
 
 System admins can create more users from **Settings → Environment & Workspaces**. Each created user receives a separate private workspace with isolated jobs, settings, resumes, integrations, PDFs, pipeline runs, chat, analytics, and post-application data.
-
-## Codex sign-in
-
-For full Codex auth troubleshooting (including device-code authorization errors), see:
-
-- [Codex Authentication](/docs/getting-started/codex-auth)
 
 ## Gmail OAuth (Tracking Inbox)
 
@@ -143,25 +137,10 @@ docker compose pull
 docker compose up -d
 ```
 
-## Self-hosted Reactive Resume
+## PDF rendering
 
-If you self-host Reactive Resume, set:
-
-- `RXRESUME_URL=http://rxresume.local.net`
-- `RXRESUME_API_KEY=...` (or configure `rxresumeApiKey` in Boussole Settings)
-
-
-
-## Local LaTeX PDF rendering
-
-Boussole supports 2 PDF renderers:
-
-- `rxresume`: export the final PDF through RxResume
-- `latex`: render locally from tailored resume data using LaTeX and `tectonic`
-
-When using the LaTeX renderer:
+Boussole renders every CV locally with LaTeX and `tectonic`, in one layout (see [CV Editor](/docs/features/design-resume)).
 
 - The Docker image installs `tectonic` for you.
 - For non-Docker local runs, install `tectonic` yourself and optionally set `TECTONIC_BIN` if it is not on your `PATH`.
-
-RxResume remains the source of truth for base resume data, project visibility, and tailoring inputs in both modes.
+- The first render downloads the LaTeX packages it needs, so it takes longer than the next ones.

@@ -116,9 +116,9 @@ describe.sequential("Extractor health API routes", () => {
 
   it("returns service unavailable when the extractor run fails", async () => {
     const manifest: ExtractorManifest = {
-      id: "gradcracker",
-      displayName: "Gradcracker",
-      providesSources: ["gradcracker"],
+      id: "companyats",
+      displayName: "Company Career Pages",
+      providesSources: ["companyats"],
       run: vi.fn().mockResolvedValue({
         success: false,
         jobs: [],
@@ -127,7 +127,7 @@ describe.sequential("Extractor health API routes", () => {
     };
     mockGetExtractorRegistry.mockResolvedValue(createRegistry([manifest]));
 
-    const res = await fetch(`${baseUrl}/api/gradcracker/health`);
+    const res = await fetch(`${baseUrl}/api/companyats/health`);
     const body = await res.json();
 
     expect(res.status).toBe(503);
@@ -139,9 +139,9 @@ describe.sequential("Extractor health API routes", () => {
 
   it("returns service unavailable when zero jobs are returned", async () => {
     const manifest: ExtractorManifest = {
-      id: "workingnomads",
-      displayName: "Working Nomads",
-      providesSources: ["workingnomads"],
+      id: "wellfound",
+      displayName: "Wellfound",
+      providesSources: ["wellfound"],
       run: vi.fn().mockResolvedValue({
         success: true,
         jobs: [],
@@ -149,7 +149,7 @@ describe.sequential("Extractor health API routes", () => {
     };
     mockGetExtractorRegistry.mockResolvedValue(createRegistry([manifest]));
 
-    const res = await fetch(`${baseUrl}/api/workingnomads/health`);
+    const res = await fetch(`${baseUrl}/api/wellfound/health`);
     const body = await res.json();
 
     expect(res.status).toBe(503);
@@ -193,6 +193,12 @@ describe.sequential("Extractor health API routes", () => {
     expect(unknownRes.status).toBe(404);
     expect(unknownBody.ok).toBe(false);
     expect(unknownBody.error.code).toBe("NOT_FOUND");
+
+    // Sources outside France were removed and are unknown now.
+    const removedRes = await fetch(`${baseUrl}/api/gradcracker/health`);
+    const removedBody = await removedRes.json();
+    expect(removedRes.status).toBe(404);
+    expect(removedBody.error.code).toBe("NOT_FOUND");
 
     const unavailableRes = await fetch(`${baseUrl}/api/manual/health`);
     const unavailableBody = await unavailableRes.json();

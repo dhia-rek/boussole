@@ -17,7 +17,7 @@ import { getRequestId, runWithRequestContext } from "@infra/request-context";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import * as agentRunsRepo from "@server/repositories/agent-runs";
 import * as jobsRepo from "@server/repositories/jobs";
-import { resolveLlmRuntimeSettings } from "@server/services/modelSelection";
+import { resolveLlmModel } from "@server/services/modelSelection";
 import { getProfileForJob } from "@server/services/profile";
 import { getActiveTenantId } from "@server/tenancy/context";
 import type {
@@ -95,13 +95,7 @@ async function withAgentTables<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function resolveAgentModelSpec(): Promise<string | null> {
-  const runtime = await resolveLlmRuntimeSettings("tailoring");
-  if (runtime.provider !== "claude_cli") {
-    throw conflict(
-      "AI agents run on the Claude CLI provider. Switch Settings → AI provider to “Claude (CLI)” to use them.",
-    );
-  }
-  return runtime.model?.trim() || null;
+  return (await resolveLlmModel()).trim() || null;
 }
 
 /** Marks queued/running rows without a live process (e.g. after a restart). */

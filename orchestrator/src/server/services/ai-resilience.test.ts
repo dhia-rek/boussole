@@ -1,6 +1,7 @@
 import { createJob } from "@shared/testing/factories";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as settingsRepo from "../repositories/settings";
+import { ClaudeCliClient } from "./llm/claude-cli/client";
 import { pickProjectIdsForJob } from "./projectSelection";
 import { scoreJobSuitability } from "./scorer";
 
@@ -10,12 +11,17 @@ vi.mock("../repositories/settings", () => ({
   getAllSettings: vi.fn().mockResolvedValue({}),
 }));
 
-// We need to mock 'fetch' globally for these tests
-const globalFetch = global.fetch;
+/**
+ * Only the Claude CLI process is faked: the real LlmService still parses,
+ * retries and reports errors, so these tests cover the full resilience path.
+ */
+function mockClaudeCli() {
+  return vi.spyOn(ClaudeCliClient.prototype, "callJson");
+}
 
 const mockJob = createJob({
   id: "test-job",
-  source: "gradcracker",
+  source: "wttj",
   title: "Senior Engineer",
   employer: "Test Corp",
   jobDescription: "Looking for a TypeScript and React expert.",
@@ -28,111 +34,66 @@ const mockProfile = { name: "Test User" };
 
 describe("AI Service Resilience", () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
-    delete process.env.LLM_API_KEY;
-    process.env.OPENROUTER_API_KEY = "mock-key"; // Ensure logic tries to call API
-    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({
-      llmProvider: "openrouter",
-      llmApiKey: "mock-key",
-    });
+    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({});
   });
 
   afterEach(() => {
-    global.fetch = globalFetch;
-    delete process.env.LLM_API_KEY;
-    delete process.env.OPENROUTER_API_KEY;
     vi.restoreAllMocks();
   });
 
   describe("scoreJobSuitability (Scorer)", () => {
-    it("should return parsed score when API returns valid JSON", async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({ score: 85, reason: "Great match" }),
-              },
-            },
-          ],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+    it("should return parsed score when Claude returns valid JSON", async () => {
+      const claude = mockClaudeCli().mockResolvedValue({
+        text: JSON.stringify({ score: 85, reason: "Great match" }),
+      });
 
       const result = await scoreJobSuitability(mockJob, mockProfile);
 
       expect(result.score).toBe(85);
       expect(result.reason).toBe("Great match");
+      expect(claude).toHaveBeenCalledOnce();
     });
 
-    it("should fallback to mock scoring if API Key is missing", async () => {
-      delete process.env.OPENROUTER_API_KEY;
-      vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({});
+    it("should fallback to mock scoring if the Claude CLI is not installed", async () => {
+      const claude = mockClaudeCli().mockRejectedValue(
+        new Error("spawn claude ENOENT"),
+      );
 
-      // Should NOT call fetch
       const result = await scoreJobSuitability(mockJob, mockProfile);
 
-      expect(global.fetch).not.toHaveBeenCalled();
-      // Mock score logic gives 50 + points for keywords.
-      // 'TypeScript' and 'React' are in JD (5+5) -> 60?
-      // "Senior" is bad keyword (-10)? -> 50?
-      // Let's just check it didn't crash and returned a number
+      // Not a transient failure, so it is not retried.
+      expect(claude).toHaveBeenCalledOnce();
       expect(typeof result.score).toBe("number");
       expect(result.reason).toContain("keyword matching");
     });
 
-    it("should handle API 500/400 errors gracefully (fallback)", async () => {
-      vi.mocked(global.fetch).mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-      } as any);
-
-      // Spy on console.error to keep test output clean
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+    it("should handle Claude CLI errors gracefully (fallback)", async () => {
+      mockClaudeCli().mockRejectedValue(
+        new Error("Claude CLI exited with code 1."),
+      );
 
       const result = await scoreJobSuitability(mockJob, mockProfile);
 
       expect(result.score).toBeDefined(); // Fallback score
       expect(result.reason).toContain("keyword matching"); // Fallback reason
-      expect(consoleSpy).toHaveBeenCalled();
     });
 
-    it("should handle Malformed/Invalid JSON in API response", async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [
-            { message: { content: "This is not JSON at all, just text." } },
-          ],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
-      vi.spyOn(console, "error").mockImplementation(() => {});
+    it("should handle Malformed/Invalid JSON in Claude's answer", async () => {
+      const claude = mockClaudeCli().mockResolvedValue({
+        text: "This is not JSON at all, just text.",
+      });
 
       const result = await scoreJobSuitability(mockJob, mockProfile);
 
+      // Parse failures are retried (maxRetries: 2) before falling back.
+      expect(claude).toHaveBeenCalledTimes(3);
       expect(result.reason).toContain("keyword matching"); // Fell back
     });
 
     it("should extract JSON from markdown code blocks", async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content:
-                  'Here is the score: ```json\n{ "score": 90, "reason": "Good" }\n```',
-              },
-            },
-          ],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      mockClaudeCli().mockResolvedValue({
+        text: 'Here is the score: ```json\n{ "score": 90, "reason": "Good" }\n```',
+      });
 
       const result = await scoreJobSuitability(mockJob, mockProfile);
       expect(result.score).toBe(90);
@@ -160,19 +121,9 @@ describe("AI Service Resilience", () => {
     ];
 
     it("should return projects selected by AI", async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({ selectedProjectIds: ["p1"] }),
-              },
-            },
-          ],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      mockClaudeCli().mockResolvedValue({
+        text: JSON.stringify({ selectedProjectIds: ["p1"] }),
+      });
 
       const result = await pickProjectIdsForJob({
         jobDescription: "React dev",
@@ -183,8 +134,10 @@ describe("AI Service Resilience", () => {
       expect(result).toEqual(["p1"]);
     });
 
-    it("should fallback if API fails", async () => {
-      vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
+    it("should fallback if the Claude CLI fails", async () => {
+      mockClaudeCli().mockRejectedValue(
+        new Error("Claude CLI exited with code 1."),
+      );
 
       const result = await pickProjectIdsForJob({
         jobDescription: "React dev", // Should match p1 due to keyword 'React'
@@ -198,13 +151,7 @@ describe("AI Service Resilience", () => {
     });
 
     it("should fallback if AI returns garbage", async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: "No valid JSON here" } }],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      mockClaudeCli().mockResolvedValue({ text: "No valid JSON here" });
 
       const result = await pickProjectIdsForJob({
         jobDescription: "Python dev", // Should match p2
@@ -217,19 +164,9 @@ describe("AI Service Resilience", () => {
 
     it("should validate returned IDs exist in eligible list", async () => {
       // AI returns an ID that doesn't exist ('p999')
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({ selectedProjectIds: ["p999", "p1"] }),
-              },
-            },
-          ],
-        }),
-      };
-      vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
+      mockClaudeCli().mockResolvedValue({
+        text: JSON.stringify({ selectedProjectIds: ["p999", "p1"] }),
+      });
 
       const result = await pickProjectIdsForJob({
         jobDescription: "stuff",

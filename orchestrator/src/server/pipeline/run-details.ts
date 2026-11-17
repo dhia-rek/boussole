@@ -83,21 +83,12 @@ function buildEffectiveConfigSnapshot(args: {
     blockedCompanyKeywordsCount:
       args.settings.blockedCompanyKeywords.value.length,
     sourceLimits: {
-      ukvisajobsMaxJobs: args.settings.ukvisajobsMaxJobs.value,
       adzunaMaxJobsPerTerm: args.settings.adzunaMaxJobsPerTerm.value,
-      gradcrackerMaxJobsPerTerm: args.settings.gradcrackerMaxJobsPerTerm.value,
       startupjobsMaxJobsPerTerm: args.settings.startupjobsMaxJobsPerTerm.value,
-      jobindexMaxJobsPerTerm: args.settings.jobindexMaxJobsPerTerm.value,
-      naukriMaxJobsPerTerm: args.settings.naukriMaxJobsPerTerm.value,
       jobspyResultsWanted: args.settings.jobspyResultsWanted.value,
     },
     autoSkipScoreThreshold: args.settings.autoSkipScoreThreshold.value,
-    pdfRenderer: args.settings.pdfRenderer.value,
-    models: {
-      scorer: args.settings.modelScorer.value,
-      tailoring: args.settings.modelTailoring.value,
-      projectSelection: args.settings.modelProjectSelection.value,
-    },
+    model: args.settings.model.value,
     resumeProjects: {
       maxProjects: args.settings.resumeProjects.value.maxProjects,
       lockedProjectCount:

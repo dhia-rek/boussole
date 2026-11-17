@@ -3,6 +3,7 @@
  */
 
 import { logger } from "@infra/logger";
+import { LlmService } from "@server/services/llm/service";
 import {
   applyDesignResumeHeadlinePrefix,
   stripJobTitleGenderMarkers,
@@ -17,7 +18,7 @@ import {
   type TailoringRules,
 } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
-import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
+import { resolveLlmModel } from "./modelSelection";
 import {
   detectLanguageFromText,
   detectProfileLanguage,
@@ -170,7 +171,7 @@ export async function generateTailoring(
   }
 
   const [model, writingStyle] = await Promise.all([
-    resolveLlmModel("tailoring"),
+    resolveLlmModel(),
     getWritingStyle(),
   ]);
   const jobTitle = options.jobTitle?.trim() || null;
@@ -181,7 +182,7 @@ export async function generateTailoring(
     rules,
   );
 
-  const llm = await createConfiguredLlmService("tailoring");
+  const llm = new LlmService();
   const result = await llm.callJson<TailoredData>({
     model,
     messages: [{ role: "user", content: prompt }],
@@ -190,16 +191,7 @@ export async function generateTailoring(
   });
 
   if (!result.success) {
-    const context = `provider=${llm.getProvider()} baseUrl=${llm.getBaseUrl()}`;
-    if (result.error.toLowerCase().includes("api key")) {
-      const message = `LLM API key not set, cannot generate tailoring. (${context})`;
-      logger.warn(message);
-      return { success: false, error: message };
-    }
-    return {
-      success: false,
-      error: `${result.error} (${context})`,
-    };
+    return { success: false, error: result.error };
   }
 
   const { summary, headline, skills } = result.data;

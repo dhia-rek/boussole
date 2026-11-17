@@ -47,8 +47,8 @@ describe("extractor registry", () => {
 
     vi.mocked(discovery.discoverManifestPaths).mockResolvedValue([
       "/tmp/jobspy.ts",
-      "/tmp/naukri.ts",
-      "/tmp/ukvisajobs.ts",
+      "/tmp/wttj.ts",
+      "/tmp/companyats.ts",
     ]);
     vi.mocked(discovery.loadManifestFromFile).mockImplementation(
       async (path) =>
@@ -58,17 +58,21 @@ describe("extractor registry", () => {
               ["indeed", "linkedin", "glassdoor"],
               "JobSpy",
             )
-          : path === "/tmp/naukri.ts"
-            ? makeManifest("naukri", ["naukri"], "Naukri")
-            : makeManifest("ukvisajobs", ["ukvisajobs"], "UK Visa Jobs"),
+          : path === "/tmp/wttj.ts"
+            ? makeManifest("wttj", ["wttj"], "Welcome to the Jungle")
+            : makeManifest(
+                "companyats",
+                ["companyats"],
+                "Company Career Pages",
+              ),
     );
 
     const registry = await registryModule.initializeExtractorRegistry();
 
     expect(registry.manifests.size).toBe(3);
     expect(registry.manifestBySource.get("linkedin")?.id).toBe("jobspy");
-    expect(registry.manifestBySource.get("naukri")?.id).toBe("naukri");
-    expect(registry.manifestBySource.get("ukvisajobs")?.id).toBe("ukvisajobs");
+    expect(registry.manifestBySource.get("wttj")?.id).toBe("wttj");
+    expect(registry.manifestBySource.get("companyats")?.id).toBe("companyats");
   });
 
   it("throws on duplicate manifest ids in strict mode", async () => {
@@ -124,13 +128,17 @@ describe("extractor registry", () => {
 
     vi.mocked(discovery.discoverManifestPaths).mockResolvedValue([
       "/tmp/unknown.ts",
+      "/tmp/removed.ts",
       "/tmp/valid.ts",
     ]);
     vi.mocked(discovery.loadManifestFromFile).mockImplementation(
       async (path) =>
         path === "/tmp/unknown.ts"
           ? makeManifest("unknown", ["not-a-real-source"], "Unknown")
-          : makeManifest("valid", ["indeed"], "Valid"),
+          : path === "/tmp/removed.ts"
+            ? // A source that was removed from the catalog (UK only).
+              makeManifest("ukvisajobs", ["ukvisajobs"], "UK Visa Jobs")
+            : makeManifest("valid", ["indeed"], "Valid"),
     );
 
     const registry = await registryModule.initializeExtractorRegistry();
