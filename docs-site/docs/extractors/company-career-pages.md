@@ -87,7 +87,7 @@ Every request failed, usually because there is no network access or a proxy bloc
 
 ## Related pages
 
-- [Extractors overview](/docs/next/extractors/overview)
-- [Welcome to the Jungle](/docs/next/extractors/welcome-to-the-jungle)
-- [Pipeline run](/docs/next/features/pipeline-run)
-- [Add an Extractor](/docs/next/workflows/add-an-extractor)
+- [Extractors overview](/docs/extractors/overview)
+- [Welcome to the Jungle](/docs/extractors/welcome-to-the-jungle)
+- [Pipeline run](/docs/features/pipeline-run)
+- [Add an Extractor](/docs/workflows/add-an-extractor)

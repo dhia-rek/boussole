@@ -44,5 +44,5 @@ Fix:
 
 ## Related pages
 
-- [Self-Hosting (Docker Compose)](/docs/next/getting-started/self-hosting)
-- [Common Problems](/docs/next/troubleshooting/common-problems)
+- [Self-Hosting (Docker Compose)](/docs/getting-started/self-hosting)
+- [Common Problems](/docs/troubleshooting/common-problems)

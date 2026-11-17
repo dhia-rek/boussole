@@ -43,7 +43,7 @@ npm --workspace docs-site run build
 - Fix:
   - Enable device-code authorization in ChatGPT Security Settings and retry sign-in
 - Full guide:
-  - [Codex Authentication](/docs/next/getting-started/codex-auth)
+  - [Codex Authentication](/docs/getting-started/codex-auth)
 
 ## Resume tailoring or scoring says the model does not exist
 
