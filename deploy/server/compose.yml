@@ -1,0 +1,34 @@
+# Boussole on one Linux server, reachable only through Tailscale.
+# Started and updated by deploy.sh (pull-based continuous deployment).
+# Data lives in $BOUSSOLE_HOME/data, outside the code, so updates never touch it.
+name: boussole
+
+services:
+  boussole:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: boussole:current
+    container_name: boussole
+    restart: unless-stopped
+    ports:
+      # Loopback only: Tailscale Serve publishes it privately over HTTPS.
+      - "127.0.0.1:${BOUSSOLE_PORT:-3005}:3001"
+    volumes:
+      - ${BOUSSOLE_HOME:-/opt/boussole}/data:/app/data
+      - codex-home:/app/codex-home
+    env_file:
+      - path: ${BOUSSOLE_HOME:-/opt/boussole}/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATA_DIR: /app/data
+      PYTHON_PATH: /usr/bin/python3
+      CODEX_HOME: /app/codex-home
+    # Leave room for the other services on the same server.
+    mem_limit: 4g
+    cpus: 3
+
+volumes:
+  codex-home:
