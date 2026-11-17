@@ -62,7 +62,10 @@ const memoryLinks = [
   },
 ];
 
-const getSuitabilityScoreTokens = (score: number | null) => {
+/** Single source of truth for suitability-score color tiers, shared by the
+ *  detail ScoreRing and the list row pill so a score reads identically
+ *  everywhere (≥70 strong, ≥60 medium, else weak). */
+export const getSuitabilityScoreTokens = (score: number | null) => {
   if (score === null) {
     return {
       shell: "border-border/60 bg-muted/15 text-muted-foreground",

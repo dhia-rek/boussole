@@ -5,13 +5,22 @@
 
 import { existsSync } from "node:fs";
 import { access, mkdir, writeFile } from "node:fs/promises";
-import { AppError, type AppErrorCode, notFound } from "@infra/errors";
+import { AppError, type AppErrorCode } from "@infra/errors";
 import { logger } from "@infra/logger";
 import { getSetting } from "@server/repositories/settings";
 import { getForsaPublicAvailability } from "@server/services/tracer-links";
+import { writingLanguageFromDesignResumeLanguage } from "@shared/design-resume-variants";
 import { settingsRegistry } from "@shared/settings-registry";
-import type { DesignResumePdfResponse, PdfRenderer } from "@shared/types";
-import { getCurrentDesignResume } from "./design-resume";
+import type {
+  DesignResumeAiGuidance,
+  DesignResumeDocument,
+  DesignResumePdfResponse,
+  PdfRenderer,
+} from "@shared/types";
+import {
+  getDesignResumeForJobLanguage,
+  requireCurrentDesignResume,
+} from "./design-resume";
 import { resolveWritingOutputLanguageForResumeJson } from "./output-language";
 import {
   getLegacyJobPdfPath,
@@ -79,7 +88,17 @@ async function resolvePdfRenderer(): Promise<PdfRenderer> {
   );
 }
 
-async function resolveLatexResumeLanguage(resumeJson: Record<string, unknown>) {
+/**
+ * Language of the LaTeX section titles: the CV variant's own language tag
+ * wins (a French CV gets "Expérience", whatever the AI writing settings);
+ * untagged CVs fall back to the writing style / detection.
+ */
+async function resolveLatexResumeLanguage(
+  resumeJson: Record<string, unknown>,
+  variantLanguage?: string | null,
+) {
+  const fromVariant = writingLanguageFromDesignResumeLanguage(variantLanguage);
+  if (fromVariant) return fromVariant;
   const writingStyle = await getWritingStyle();
   return resolveWritingOutputLanguageForResumeJson({
     style: writingStyle,
@@ -205,17 +224,14 @@ function classifyPdfGenerationError(error: unknown): AppErrorCode {
 async function resolveDesignResumeForRenderer(args: {
   renderer: PdfRenderer;
   requestOrigin?: string | null;
+  designResume: DesignResumeDocument;
 }): Promise<{
   documentId: string;
   title: string;
   data: Record<string, unknown>;
   mode: "v5";
 }> {
-  const designResume = await getCurrentDesignResume();
-  if (!designResume?.resumeJson) {
-    throw notFound("Design Resume has not been imported yet.");
-  }
-
+  const { designResume } = args;
   const localDocument = parseV5ResumeData(
     designResume.resumeJson as Record<string, unknown>,
   ) as Record<string, unknown>;
@@ -275,28 +291,25 @@ async function resolveDesignResumeForRenderer(args: {
 async function loadBaseResumeSource(args: {
   renderer: PdfRenderer;
   requestOrigin?: string | null;
+  jobDescription?: string | null;
 }): Promise<{
   data: Record<string, unknown>;
   mode: "v5";
+  aiGuidance: DesignResumeAiGuidance | null;
+  language: string | null;
 }> {
-  const designResume = await getCurrentDesignResume();
+  const designResume = await getDesignResumeForJobLanguage(args.jobDescription);
   if (designResume?.resumeJson) {
-    if (args.renderer === "rxresume") {
-      const resolved = await resolveDesignResumeForRenderer({
-        renderer: args.renderer,
-        requestOrigin: args.requestOrigin ?? null,
-      });
-      return {
-        data: resolved.data,
-        mode: "v5",
-      };
-    }
-
+    const resolved = await resolveDesignResumeForRenderer({
+      renderer: args.renderer,
+      requestOrigin: args.requestOrigin ?? null,
+      designResume,
+    });
     return {
-      data: parseV5ResumeData(
-        designResume.resumeJson as Record<string, unknown>,
-      ) as Record<string, unknown>,
+      data: resolved.data,
       mode: "v5",
+      aiGuidance: designResume.aiGuidance,
+      language: designResume.language,
     };
   }
 
@@ -315,6 +328,8 @@ async function loadBaseResumeSource(args: {
   return {
     data: baseResume.data as Record<string, unknown>,
     mode: "v5",
+    aiGuidance: null,
+    language: null,
   };
 }
 
@@ -346,6 +361,7 @@ export async function generatePdf(
     const baseResume = await loadBaseResumeSource({
       renderer,
       requestOrigin: options?.requestOrigin ?? null,
+      jobDescription,
     });
 
     let preparedResume: Awaited<
@@ -357,6 +373,7 @@ export async function generatePdf(
         tailoredContent,
         jobDescription,
         selectedProjectIds,
+        aiGuidance: baseResume.aiGuidance,
         jobId,
         tracerLinks: {
           enabled: Boolean(options?.tracerLinksEnabled),
@@ -374,7 +391,10 @@ export async function generatePdf(
 
     const outputPath = getTenantJobPdfPath(jobId);
     if (renderer === "latex") {
-      const language = await resolveLatexResumeLanguage(preparedResume.data);
+      const language = await resolveLatexResumeLanguage(
+        preparedResume.data,
+        baseResume.language,
+      );
       await renderResumePdf({
         resumeJson: preparedResume.data,
         outputPath,
@@ -405,14 +425,21 @@ export async function generatePdf(
 
 export async function generateDesignResumePdf(options?: {
   requestOrigin?: string | null;
+  /** CV variant to render (e.g. "en"); omitted → the primary CV. */
+  language?: string | null;
 }): Promise<DesignResumePdfResponse> {
   const renderer = await resolvePdfRenderer();
+  const document = await requireCurrentDesignResume({
+    language: options?.language ?? null,
+  });
   const designResume = await resolveDesignResumeForRenderer({
     renderer,
     requestOrigin: options?.requestOrigin ?? null,
+    designResume: document,
   });
   const generatedAt = new Date().toISOString();
-  const outputPath = getTenantDesignResumePdfPath();
+  const languageParam = options?.language ?? null;
+  const outputPath = getTenantDesignResumePdfPath(languageParam);
   const preparedResume: PreparedRxResumePdfPayload = {
     mode: "v5",
     data: structuredClone(designResume.data) as Record<string, unknown>,
@@ -428,7 +455,10 @@ export async function generateDesignResumePdf(options?: {
   });
 
   if (renderer === "latex") {
-    const language = await resolveLatexResumeLanguage(designResume.data);
+    const language = await resolveLatexResumeLanguage(
+      designResume.data,
+      document.language,
+    );
     await renderResumePdf({
       resumeJson: designResume.data,
       outputPath,
@@ -445,9 +475,15 @@ export async function generateDesignResumePdf(options?: {
     });
   }
 
+  const query = new URLSearchParams({ v: generatedAt });
+  if (languageParam) query.set("language", languageParam);
   return {
-    fileName: sanitizePdfFileName(designResume.title),
-    pdfUrl: `/api/design-resume/pdf?v=${encodeURIComponent(generatedAt)}`,
+    fileName: sanitizePdfFileName(
+      document.language
+        ? `${designResume.title}_${document.language}`
+        : designResume.title,
+    ),
+    pdfUrl: `/api/design-resume/pdf?${query.toString()}`,
     generatedAt,
   };
 }

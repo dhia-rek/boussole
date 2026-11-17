@@ -21,12 +21,11 @@ export const formatSecretHint = (hint: string | null) =>
 
 export const LLM_PROVIDERS = [
   "openrouter",
-  "lmstudio",
-  "ollama",
   "openai",
   "openai_compatible",
   "gemini",
   "gemini_cli",
+  "claude_cli",
   "codex",
 ] as const;
 
@@ -35,17 +34,16 @@ export const LLM_MODEL_SUGGESTION_PROVIDERS = [
   "openai",
   "gemini",
   "gemini_cli",
-  "ollama",
+  "claude_cli",
 ] as const;
 
 export const LLM_PROVIDER_LABELS: Record<LlmProviderId, string> = {
   openrouter: "OpenRouter",
-  lmstudio: "LM Studio",
-  ollama: "Ollama",
   openai: "OpenAI",
   openai_compatible: "OpenAI-compatible",
   gemini: "Gemini",
   gemini_cli: "Gemini (CLI)",
+  claude_cli: "Claude (CLI)",
   codex: "Codex",
 };
 
@@ -56,23 +54,19 @@ const PROVIDERS_WITH_API_KEY = new Set<LlmProviderId>([
   "gemini",
 ]);
 
-const PROVIDERS_WITH_BASE_URL = new Set<LlmProviderId>([
-  "lmstudio",
-  "ollama",
-  "openai_compatible",
-]);
+const PROVIDERS_WITH_BASE_URL = new Set<LlmProviderId>(["openai_compatible"]);
 
 const PROVIDER_HINTS: Record<LlmProviderId, string> = {
   openrouter:
     "OpenRouter uses your API key and supports model routing across providers.",
-  lmstudio: "LM Studio runs locally via its OpenAI-compatible server.",
-  ollama: "Ollama typically runs locally and does not require an API key.",
   openai: "OpenAI uses the Responses API with structured outputs.",
   openai_compatible:
     "Use a bearer token with any chat-completions-compatible endpoint.",
   gemini: "Gemini uses the native AI Studio API and requires a key.",
   gemini_cli:
     "Gemini (CLI) runs the official Google Gemini CLI on this host using your OAuth session or CLI API key — no Forsa LLM key.",
+  claude_cli:
+    'Claude (CLI) runs Claude Code on this host with your Claude subscription — no API key. Add an effort with a suffix, e.g. "opus:medium".',
   codex:
     "Codex runs through a local app-server process and uses your Codex login session.",
 };
@@ -85,8 +79,6 @@ const PROVIDER_KEY_HELPERS: Record<
     text: "Create a key at openrouter.ai",
     href: "https://openrouter.ai/keys",
   },
-  lmstudio: { text: "No API key required for LM Studio" },
-  ollama: { text: "No API key required for Ollama" },
   openai: {
     text: "Create a key at platform.openai.com",
     href: "https://platform.openai.com/api-keys",
@@ -101,15 +93,16 @@ const PROVIDER_KEY_HELPERS: Record<
   gemini_cli: {
     text: "Authenticate with the Gemini CLI (gemini login / OAuth); see docs link below",
   },
+  claude_cli: {
+    text: "No API key required when Claude Code is logged in (run `claude` once)",
+  },
   codex: { text: "No API key required when Codex is authenticated locally" },
 };
 
-const BASE_URL_PROVIDERS = ["lmstudio", "ollama", "openai_compatible"] as const;
+const BASE_URL_PROVIDERS = ["openai_compatible"] as const;
 type BaseUrlProviderId = (typeof BASE_URL_PROVIDERS)[number];
 
 const PROVIDER_BASE_URLS: Record<BaseUrlProviderId, string> = {
-  lmstudio: "http://localhost:1234",
-  ollama: "http://localhost:11434",
   openai_compatible: "https://api.example.com/v1/chat/completions",
 };
 

@@ -3,14 +3,17 @@ import type {
   DesignResumeStatusResponse,
 } from "@shared/types";
 import { useQuery } from "@tanstack/react-query";
-import { queryClient as appQueryClient } from "@/client/lib/queryClient";
 import { queryKeys } from "@/client/lib/queryKeys";
 import * as api from "../api";
 
-export function useDesignResume() {
+/**
+ * Loads one CV variant (by language tag; omitted → the primary CV) plus the
+ * workspace's CV status, which lists every variant.
+ */
+export function useDesignResume(language?: string | null) {
   const documentQuery = useQuery<DesignResumeDocument | null>({
-    queryKey: queryKeys.designResume.current(),
-    queryFn: api.getDesignResume,
+    queryKey: queryKeys.designResume.current(language),
+    queryFn: () => api.getDesignResume(language),
     retry: false,
   });
 
@@ -28,8 +31,4 @@ export function useDesignResume() {
       await Promise.all([documentQuery.refetch(), statusQuery.refetch()]);
     },
   };
-}
-
-export function _resetDesignResumeCache() {
-  appQueryClient.removeQueries({ queryKey: queryKeys.designResume.all });
 }

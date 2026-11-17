@@ -262,7 +262,7 @@ export const InProgressBoardPage: React.FC = () => {
           </div>
         }
       />
-      <PageMain className="flex h-[calc(100dvh-5rem)] max-w-[1600px] flex-col">
+      <PageMain className="flex h-[calc(100dvh-11.5rem)] max-w-[1600px] flex-col lg:h-[calc(100dvh-7.5rem)]">
         {isLoading ? (
           <div className="rounded-lg border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
             Loading board...

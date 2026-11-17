@@ -3,6 +3,8 @@
  */
 
 import {
+  AGENT_RUN_KINDS,
+  AGENT_RUN_STATUSES,
   APPLICATION_OUTCOMES,
   APPLICATION_STAGES,
   APPLICATION_TASK_TYPES,
@@ -497,6 +499,10 @@ export const designResumeDocuments = sqliteTable("design_resume_documents", {
   revision: integer("revision").notNull().default(1),
   sourceResumeId: text("source_resume_id"),
   sourceMode: text("source_mode"),
+  /** Language of this CV variant ("en", "fr", …). Null = untagged. */
+  language: text("language"),
+  /** Candidate-authored AI guidance (JSON). Null = defaults. */
+  aiGuidance: text("ai_guidance", { mode: "json" }),
   importedAt: text("imported_at"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
@@ -739,6 +745,69 @@ export const tracerClickEvents = sqliteTable(
     uniqueFingerprintIndex: index(
       "idx_tracer_click_events_unique_fingerprint_hash",
     ).on(table.uniqueFingerprintHash),
+  }),
+);
+
+/** Deep Agents runs (application agent, preference learner), per tenant. */
+export const agentRuns = sqliteTable(
+  "agent_runs",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    jobId: text("job_id").references(() => jobs.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: AGENT_RUN_KINDS }).notNull(),
+    status: text("status", { enum: AGENT_RUN_STATUSES })
+      .notNull()
+      .default("queued"),
+    model: text("model"),
+    /** JSON array of AgentRunEvent, bounded. */
+    events: text("events", { mode: "json" }).notNull().default(sql`'[]'`),
+    /** JSON AgentRunOutput once the run succeeded. */
+    output: text("output", { mode: "json" }),
+    error: text("error"),
+    modelCalls: integer("model_calls").notNull().default(0),
+    toolCalls: integer("tool_calls").notNull().default(0),
+    requestId: text("request_id"),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    startedAt: text("started_at"),
+    finishedAt: text("finished_at"),
+  },
+  (table) => ({
+    tenantJobIndex: index("idx_agent_runs_tenant_job").on(
+      table.tenantId,
+      table.jobId,
+      table.createdAt,
+    ),
+    tenantStatusIndex: index("idx_agent_runs_tenant_status").on(
+      table.tenantId,
+      table.status,
+    ),
+  }),
+);
+
+/** LangGraph BaseStore items (Deep Agents `/memories/`), per tenant. */
+export const agentMemories = sqliteTable(
+  "agent_memories",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    /** JSON-encoded namespace array, e.g. ["forsa","memories"]. */
+    namespace: text("namespace").notNull(),
+    key: text("key").notNull(),
+    value: text("value", { mode: "json" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    tenantNamespaceKeyUnique: uniqueIndex(
+      "idx_agent_memories_tenant_namespace_key_unique",
+    ).on(table.tenantId, table.namespace, table.key),
   }),
 );
 

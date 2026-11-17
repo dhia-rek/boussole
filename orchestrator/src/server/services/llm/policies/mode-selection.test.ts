@@ -18,7 +18,7 @@ describe("mode-selection policy", () => {
 
   it("prefers cached mode first", () => {
     clearModeCache();
-    const key = buildModeCacheKey("lmstudio", "http://localhost:1234");
+    const key = buildModeCacheKey("openai_compatible", "http://localhost:1234");
     rememberSuccessfulMode(key, "text");
 
     expect(getOrderedModes(key, ["json_schema", "text", "none"])).toEqual([
@@ -30,8 +30,14 @@ describe("mode-selection policy", () => {
 
   it("keeps cache scoped by provider+baseUrl", () => {
     clearModeCache();
-    const keyA = buildModeCacheKey("lmstudio", "http://localhost:1234");
-    const keyB = buildModeCacheKey("lmstudio", "http://localhost:1235");
+    const keyA = buildModeCacheKey(
+      "openai_compatible",
+      "http://localhost:1234",
+    );
+    const keyB = buildModeCacheKey(
+      "openai_compatible",
+      "http://localhost:1235",
+    );
     rememberSuccessfulMode(keyA, "text");
 
     expect(getOrderedModes(keyA, ["json_schema", "text", "none"])).toEqual([

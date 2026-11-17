@@ -36,12 +36,75 @@ export interface WWRResult {
   error?: string;
 }
 
-function parseRssItem(item: string): {
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  rsquo: "'",
+  lsquo: "'",
+  rdquo: '"',
+  ldquo: '"',
+  ndash: "–",
+  mdash: "—",
+  hellip: "…",
+};
+
+function decodeEntities(value: string): string {
+  return value.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity) => {
+    const key = String(entity).toLowerCase();
+    if (key.startsWith("#x")) {
+      const code = Number.parseInt(key.slice(2), 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    if (key.startsWith("#")) {
+      const code = Number.parseInt(key.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    return NAMED_ENTITIES[key] ?? match;
+  });
+}
+
+/** WWR descriptions are entity-escaped HTML (`&lt;p&gt;…`), not CDATA. */
+function htmlToText(value: string): string {
+  // Decode once to turn escaped markup into tags, strip the tags, then decode
+  // again for entities that were double-escaped (e.g. `&amp;nbsp;`).
+  return decodeEntities(
+    decodeEntities(value)
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * WWR feed titles are "Company: Role" and the feed has no <author>, so the
+ * company must be taken from the title (falls back to <author> if present).
+ */
+export function splitCompanyFromTitle(
+  rawTitle: string,
+  author?: string,
+): { company: string; title: string } {
+  const title = rawTitle.trim();
+  const separator = title.indexOf(": ");
+  if (separator > 0) {
+    const company = title.slice(0, separator).trim();
+    const role = title.slice(separator + 2).trim();
+    if (company && role) return { company, title: role };
+  }
+  return { company: author?.trim() ?? "", title };
+}
+
+export function parseRssItem(item: string): {
   title: string;
   link: string;
   company: string;
   pubDate: string;
   description: string;
+  region: string;
 } | null {
   const get = (tag: string) => {
     const m =
@@ -54,26 +117,28 @@ function parseRssItem(item: string): {
     return m ? m[1].trim() : "";
   };
 
-  const title = get("title");
+  const rawTitle = decodeEntities(get("title"));
   const link =
     get("link") || item.match(/<link>([^<]+)<\/link>/i)?.[1]?.trim() || "";
-  const company = get("author") || "";
+  const { company, title } = splitCompanyFromTitle(
+    rawTitle,
+    decodeEntities(get("author")),
+  );
   const pubDate = get("pubDate");
-  const description = get("description")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const description = htmlToText(get("description"));
+  const region = decodeEntities(get("region")).trim();
 
   if (!title || !link) return null;
-  return { title, link, company, pubDate, description };
+  return { title, link, company, pubDate, description, region };
 }
 
 function matchesTerm(
-  job: { title: string; description: string },
+  job: { title: string; company: string; description: string },
   terms: string[],
 ): boolean {
   if (!terms.length) return true;
-  const haystack = `${job.title} ${job.description}`.toLowerCase();
+  const haystack =
+    `${job.title} ${job.company} ${job.description}`.toLowerCase();
   return terms.some((t) => haystack.includes(t.toLowerCase()));
 }
 
@@ -131,13 +196,7 @@ export async function runWWR(opts: RunWWROptions): Promise<WWRResult> {
       if (jobs.length >= maxJobs) break;
       const parsed = parseRssItem(item);
       if (!parsed || seen.has(parsed.link)) continue;
-      if (
-        !matchesTerm(
-          { title: parsed.title, description: parsed.description },
-          searchTerms,
-        )
-      )
-        continue;
+      if (!matchesTerm(parsed, searchTerms)) continue;
 
       seen.add(parsed.link);
       jobs.push({
@@ -148,7 +207,9 @@ export async function runWWR(opts: RunWWROptions): Promise<WWRResult> {
         jobDescription: parsed.description || undefined,
         datePosted: parsed.pubDate || undefined,
         isRemote: true,
-        location: "Remote",
+        // e.g. "Remote (USA Only)" — keeps WWR's region restriction visible
+        // to location filtering instead of a bare "Remote".
+        location: parsed.region ? `Remote (${parsed.region})` : "Remote",
       });
       added++;
     }

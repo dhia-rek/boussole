@@ -1,0 +1,29 @@
+[
+  {
+    "id": "5c1d2e3f-0000-4000-8000-000000000001",
+    "text": "Data Scientist Intern",
+    "categories": {
+      "commitment": "Internship",
+      "location": "Paris, France",
+      "team": "Data"
+    },
+    "createdAt": 1793000000000,
+    "descriptionPlain": "Join the data team to build machine learning models for session replay analytics.",
+    "description": "<div>Join the data team to build <b>machine learning</b> models.</div>",
+    "hostedUrl": "https://jobs.lever.co/contentsquare/5c1d2e3f-0000-4000-8000-000000000001",
+    "applyUrl": "https://jobs.lever.co/contentsquare/5c1d2e3f-0000-4000-8000-000000000001/apply"
+  },
+  {
+    "id": "5c1d2e3f-0000-4000-8000-000000000002",
+    "text": "Enterprise Sales Manager",
+    "categories": {
+      "commitment": "Full-time",
+      "location": "Paris, France",
+      "team": "Sales"
+    },
+    "createdAt": 1793000000000,
+    "descriptionPlain": "Grow our enterprise accounts.",
+    "hostedUrl": "https://jobs.lever.co/contentsquare/5c1d2e3f-0000-4000-8000-000000000002",
+    "applyUrl": "https://jobs.lever.co/contentsquare/5c1d2e3f-0000-4000-8000-000000000002/apply"
+  }
+]

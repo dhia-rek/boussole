@@ -1,18 +1,71 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "../db/index";
 import { getActiveTenantId } from "../tenancy/context";
 
 const { designResumeAssets, designResumeDocuments } = schema;
 
-export async function getLatestDesignResumeDocument() {
+/**
+ * Ordering that defines the PRIMARY CV of a workspace: an untagged CV
+ * (language IS NULL) wins, otherwise the first CV ever created. The primary is
+ * what the editor opens by default and what jobs fall back to when their
+ * language has no dedicated variant. It never depends on edit recency, so
+ * saving one variant can't silently change which CV the pipeline uses.
+ */
+const primaryOrder = [
+  sql`${designResumeDocuments.language} IS NULL DESC`,
+  asc(designResumeDocuments.createdAt),
+  asc(designResumeDocuments.id),
+] as const;
+
+export async function getPrimaryDesignResumeDocument() {
   const tenantId = getActiveTenantId();
   const [row] = await db
     .select()
     .from(designResumeDocuments)
     .where(eq(designResumeDocuments.tenantId, tenantId))
+    .orderBy(...primaryOrder)
+    .limit(1);
+  return row ?? null;
+}
+
+/** All CV variants of the active workspace, primary first. */
+export async function listDesignResumeDocuments() {
+  const tenantId = getActiveTenantId();
+  return db
+    .select()
+    .from(designResumeDocuments)
+    .where(eq(designResumeDocuments.tenantId, tenantId))
+    .orderBy(...primaryOrder);
+}
+
+export async function getDesignResumeDocumentByLanguage(language: string) {
+  const tenantId = getActiveTenantId();
+  const [row] = await db
+    .select()
+    .from(designResumeDocuments)
+    .where(
+      and(
+        eq(designResumeDocuments.tenantId, tenantId),
+        eq(designResumeDocuments.language, language),
+      ),
+    )
     .orderBy(desc(designResumeDocuments.updatedAt))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Base CV for a job's language: the variant tagged with that language when one
+ * exists, otherwise the primary CV.
+ */
+export async function resolveDesignResumeForLanguage(
+  language: string | null | undefined,
+) {
+  if (language) {
+    const tagged = await getDesignResumeDocumentByLanguage(language);
+    if (tagged) return tagged;
+  }
+  return getPrimaryDesignResumeDocument();
 }
 
 export async function getDesignResumeDocumentById(id: string) {
@@ -75,6 +128,10 @@ export async function upsertDesignResumeDocument(input: {
   revision: number;
   sourceResumeId: string | null;
   sourceMode: string | null;
+  /** Omit to keep the stored value on update (null on insert). */
+  language?: string | null;
+  /** Omit to keep the stored value on update (null on insert). */
+  aiGuidance?: Record<string, unknown> | null;
   importedAt: string | null;
   createdAt?: string;
   updatedAt: string;
@@ -90,6 +147,10 @@ export async function upsertDesignResumeDocument(input: {
         revision: input.revision,
         sourceResumeId: input.sourceResumeId,
         sourceMode: input.sourceMode,
+        ...(input.language !== undefined ? { language: input.language } : {}),
+        ...(input.aiGuidance !== undefined
+          ? { aiGuidance: input.aiGuidance }
+          : {}),
         importedAt: input.importedAt,
         updatedAt: input.updatedAt,
       })
@@ -108,6 +169,8 @@ export async function upsertDesignResumeDocument(input: {
       revision: input.revision,
       sourceResumeId: input.sourceResumeId,
       sourceMode: input.sourceMode,
+      language: input.language ?? null,
+      aiGuidance: input.aiGuidance ?? null,
       importedAt: input.importedAt,
       createdAt: input.createdAt ?? input.updatedAt,
       updatedAt: input.updatedAt,

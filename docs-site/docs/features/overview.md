@@ -1,13 +1,13 @@
 ---
 id: overview
-title: Overview
+title: Analytics (Overview)
 description: Dashboard analytics for application volume, conversion, and response rate by source over selectable time windows.
 sidebar_position: 1
 ---
 
 ## What it is
 
-The Overview page is the analytics dashboard for your pipeline outcomes.
+The Analytics page (formerly called Overview, still at `/overview`) is the analytics dashboard for your pipeline outcomes. For a quick daily summary, use [Today](/docs/next/features/today) instead.
 
 ![Overview dashboard](/img/features/overview-dashboard.png)
 
@@ -37,7 +37,7 @@ Use it to quickly answer:
 
 ## How to use it
 
-1. Open **Overview**.
+1. Open **Analytics** in the sidebar (**Insights** group).
 2. Select a time window (`7d`, `14d`, `30d`, `90d`) in the top-right selector.
 3. Review:
    - **Applications per day** for volume trend

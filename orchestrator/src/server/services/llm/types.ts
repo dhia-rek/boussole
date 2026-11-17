@@ -1,11 +1,10 @@
 export type LlmProvider =
   | "openrouter"
-  | "lmstudio"
-  | "ollama"
   | "openai"
   | "openai_compatible"
   | "gemini"
   | "gemini_cli"
+  | "claude_cli"
   | "codex";
 
 export type ResponseMode = "json_schema" | "json_object" | "text" | "none";
@@ -51,6 +50,11 @@ export interface LlmRequestOptions<_T> {
   jobId?: string;
   /** Optional abort signal for cancellation */
   signal?: AbortSignal;
+  /**
+   * Skip the response cache (default false). Set for user-initiated
+   * regenerations, which must produce a fresh answer for the same prompt.
+   */
+  bypassCache?: boolean;
 }
 
 export interface LlmResult<T> {

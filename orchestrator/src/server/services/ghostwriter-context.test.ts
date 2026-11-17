@@ -17,7 +17,7 @@ vi.mock("../repositories/settings", () => ({
 }));
 
 vi.mock("./profile", () => ({
-  getProfile: vi.fn(),
+  getProfileForJob: vi.fn(),
 }));
 
 vi.mock("./writing-style", async (importOriginal) => {
@@ -32,7 +32,7 @@ vi.mock("./writing-style", async (importOriginal) => {
 import { getJobById, listJobNotesByIds } from "../repositories/jobs";
 import { getSetting } from "../repositories/settings";
 import { listJobPostApplicationEmailsByIds } from "./post-application/job-emails";
-import { getProfile } from "./profile";
+import { getProfileForJob } from "./profile";
 import { getWritingStyle } from "./writing-style";
 
 describe("buildJobChatPromptContext", () => {
@@ -72,7 +72,7 @@ describe("buildJobChatPromptContext", () => {
       summaryMaxWords: null,
       maxKeywordsPerSkill: null,
     });
-    vi.mocked(getProfile).mockResolvedValue({
+    vi.mocked(getProfileForJob).mockResolvedValue({
       basics: {
         name: "Test User",
         headline: "Full-stack engineer",
@@ -135,7 +135,9 @@ describe("buildJobChatPromptContext", () => {
   it("falls back to empty profile snapshot when profile loading fails", async () => {
     const job = createJob({ id: "job-ctx-2" });
     vi.mocked(getJobById).mockResolvedValue(job);
-    vi.mocked(getProfile).mockRejectedValue(new Error("profile unavailable"));
+    vi.mocked(getProfileForJob).mockRejectedValue(
+      new Error("profile unavailable"),
+    );
 
     const context = await buildJobChatPromptContext(job.id);
 
@@ -157,7 +159,7 @@ describe("buildJobChatPromptContext", () => {
       summaryMaxWords: null,
       maxKeywordsPerSkill: null,
     });
-    vi.mocked(getProfile).mockResolvedValue({
+    vi.mocked(getProfileForJob).mockResolvedValue({
       basics: {
         name: "Claire",
         summary:
@@ -191,7 +193,7 @@ describe("buildJobChatPromptContext", () => {
       summaryMaxWords: null,
       maxKeywordsPerSkill: null,
     });
-    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(getProfileForJob).mockResolvedValue({});
 
     const context = await buildJobChatPromptContext(job.id);
 
@@ -207,7 +209,7 @@ describe("buildJobChatPromptContext", () => {
   it("uses a stored Ghostwriter prompt template override", async () => {
     const job = createJob({ id: "job-ctx-5" });
     vi.mocked(getJobById).mockResolvedValue(job);
-    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(getProfileForJob).mockResolvedValue({});
     vi.mocked(getSetting).mockImplementation(async (key) =>
       key === "ghostwriterSystemPromptTemplate"
         ? "Custom Ghostwriter {{tone}} {{unknownToken}}"
@@ -223,7 +225,7 @@ describe("buildJobChatPromptContext", () => {
   it("adds Stop Slop instructions when enabled", async () => {
     const job = createJob({ id: "job-ctx-stop-slop" });
     vi.mocked(getJobById).mockResolvedValue(job);
-    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(getProfileForJob).mockResolvedValue({});
     vi.mocked(getSetting).mockImplementation(async (key) =>
       key === "ghostwriterStopSlopEnabled" ? "1" : null,
     );
@@ -239,7 +241,7 @@ describe("buildJobChatPromptContext", () => {
   it("builds selected job notes context with shared truncation limits", async () => {
     const job = createJob({ id: "job-ctx-notes" });
     vi.mocked(getJobById).mockResolvedValue(job);
-    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(getProfileForJob).mockResolvedValue({});
     vi.mocked(listJobNotesByIds).mockResolvedValue([
       {
         id: "note-2",
@@ -276,7 +278,7 @@ describe("buildJobChatPromptContext", () => {
   it("builds selected job emails context with shared truncation limits", async () => {
     const job = createJob({ id: "job-ctx-emails" });
     vi.mocked(getJobById).mockResolvedValue(job);
-    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(getProfileForJob).mockResolvedValue({});
     vi.mocked(listJobPostApplicationEmailsByIds).mockResolvedValue([
       {
         message: {

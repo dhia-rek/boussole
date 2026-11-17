@@ -72,6 +72,20 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    watch: {
+      // The backend writes the SQLite DB, generated PDFs, and resume assets
+      // into the project tree while the pipeline runs. Without this, every
+      // DB write triggers a full-page reload in the browser.
+      ignored: [
+        "**/data/**",
+        "**/storage/**",
+        "**/dist/**",
+        "**/*.db",
+        "**/*.db-wal",
+        "**/*.db-shm",
+        "**/*.pdf",
+      ],
+    },
   },
   build: {
     outDir: "dist/client",

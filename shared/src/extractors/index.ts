@@ -19,6 +19,7 @@ export const EXTRACTOR_SOURCE_IDS = [
   "remoteco",
   "weworkremotely",
   "bravesearch",
+  "companyats",
   "manual",
 ] as const;
 
@@ -111,6 +112,11 @@ export const EXTRACTOR_SOURCE_METADATA: Record<
     order: 112,
     category: "pipeline",
     requiresCredentials: true,
+  },
+  companyats: {
+    label: "Company Career Pages",
+    order: 115,
+    category: "pipeline",
   },
   manual: { label: "Manual", order: 120, category: "manual" },
 };

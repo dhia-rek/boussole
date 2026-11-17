@@ -3,6 +3,10 @@ import type { ChatStyleManualLanguage } from "@shared/types";
 export interface LatexResumeContactItem {
   text: string;
   url?: string | null;
+  /** Explicit icon name (e.g. "calendar", "map-pin"); inferred when absent. */
+  icon?: string | null;
+  /** Custom basics fields (availability, …) render on their own header line. */
+  kind?: "custom";
 }
 
 export interface LatexResumeEntry {
@@ -27,6 +31,20 @@ export interface LatexResumeSectionTitles {
   education: string;
   projects: string;
   skills: string;
+  certifications: string;
+  awards: string;
+  publications: string;
+  volunteer: string;
+  languages: string;
+  interests: string;
+  other: string;
+}
+
+export interface LatexResumeExtraSection {
+  title: string;
+  /** certifications | awards | publications | volunteer | custom */
+  kind?: string;
+  entries: LatexResumeEntry[];
 }
 
 export interface LatexResumeDocument {
@@ -38,6 +56,9 @@ export interface LatexResumeDocument {
   education: LatexResumeEntry[];
   projects: LatexResumeEntry[];
   skillGroups: LatexResumeSkillGroup[];
+  languages?: string[];
+  interests?: string[];
+  extraSections?: LatexResumeExtraSection[];
   sectionTitles?: LatexResumeSectionTitles;
 }
 

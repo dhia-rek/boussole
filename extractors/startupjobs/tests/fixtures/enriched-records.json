@@ -1,0 +1,29 @@
+[
+  {
+    "title": "Internship - Software Engineering - ML (H/F)",
+    "employer": "View company profile",
+    "employerUrl": "https://www.withings.com",
+    "jobUrl": "https://startup.jobs/internship-software-engineering-ml-h-f-withings-7666268",
+    "disciplines": "Software Engineering | Internship",
+    "location": "France | On-site",
+    "jobDescription": "Withings is looking for a machine learning engineering intern."
+  },
+  {
+    "title": "Machine Learning Internship - Foundation Models for Radiology",
+    "employer": "View company profile",
+    "employerUrl": "https://startup.jobs/company/raidium",
+    "jobUrl": "https://startup.jobs/machine-learning-internship-foundation-models-for-radiology-raidium-10692133",
+    "disciplines": "Machine Learning | Internship",
+    "location": "Paris, France | On-site",
+    "jobDescription": "Train foundation models on CT scans."
+  },
+  {
+    "title": "Data Scientist Intern",
+    "employer": "Mirakl",
+    "employerUrl": "https://startup.jobs/company/mirakl",
+    "jobUrl": "https://startup.jobs/data-scientist-intern-mirakl-10700001",
+    "disciplines": "Data Science | Internship",
+    "location": "Paris, France | Hybrid",
+    "jobDescription": "Join the Mirakl data team."
+  }
+]

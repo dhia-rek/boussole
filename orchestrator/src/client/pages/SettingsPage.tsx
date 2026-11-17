@@ -183,7 +183,7 @@ const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
           "openai",
           "gemini",
           "gemini_cli",
-          "ollama",
+          "claude",
           "codex",
         ],
       },
@@ -1690,7 +1690,7 @@ export const SettingsPage: React.FC = () => {
 
       <main className="container mx-auto px-4 py-6 pb-12">
         <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-6 lg:self-start">
+          <aside className="lg:sticky lg:top-[8.5rem] lg:self-start">
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
               <div className="border-b px-4 py-4">
                 <div className="relative">

@@ -545,7 +545,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     <Tabs
       value={inspectorTab}
       onValueChange={(value) => setInspectorTab(value as InspectorTab)}
-      className="flex min-h-0 min-w-0 flex-1 flex-col lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto p-1"
+      className="flex min-h-0 min-w-0 flex-1 flex-col lg:sticky lg:top-[8.5rem] lg:self-start lg:max-h-[calc(100vh-10.5rem)] lg:overflow-y-auto p-1"
     >
       <TooltipProvider delayDuration={0}>
         <TabsList className="grid h-auto grid-cols-3 gap-1 rounded-lg text-sm bg-muted/90 mb-4">
@@ -614,6 +614,24 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                 <KbdHint shortcut="a" className="ml-1" />
               ) : null}
             </Button>
+
+            {canSkip && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void handleSkip()}
+                disabled={skipJobMutation.isPending}
+                aria-label="Skip this job"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                {skipJobMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5" />
+                )}
+                Skip
+              </Button>
+            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -693,18 +711,6 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                     >
                       <Download className="mr-2 h-4 w-4" />
                       {pdfLabels.download}
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {canSkip && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => void handleSkip()}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Skip job
                     </DropdownMenuItem>
                   </>
                 )}

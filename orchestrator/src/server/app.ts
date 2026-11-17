@@ -15,6 +15,7 @@ import {
 } from "@infra/http";
 import { logger } from "@infra/logger";
 import { runWithRequestContext } from "@infra/request-context";
+import { securityHeaders } from "@infra/security-headers";
 import { verifyToken } from "@server/auth/jwt";
 import { isDemoMode } from "@server/config/demo";
 import * as usersRepo from "@server/repositories/users";
@@ -199,10 +200,23 @@ export function createAuthGuard() {
   };
 }
 
+/** Origins allowed to call the API cross-origin (`FORSA_CORS_ORIGINS`, comma-separated). */
+export function resolveCorsOrigins(
+  raw: string | undefined = process.env.FORSA_CORS_ORIGINS,
+): string[] | false {
+  const origins = (raw ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return origins.length > 0 ? origins : false;
+}
+
 export function createApp() {
   const app = express();
   const authGuard = createAuthGuard();
-  const corsMiddleware = cors();
+  // The web app calls the API from its own origin (Vite proxies in dev), so
+  // cross-origin access is off unless FORSA_CORS_ORIGINS lists origins.
+  const corsMiddleware = cors({ origin: resolveCorsOrigins() });
 
   const handleTracerRedirect = async (
     req: express.Request,
@@ -248,6 +262,7 @@ export function createApp() {
     }
   };
 
+  app.use(securityHeaders());
   app.use(corsMiddleware);
   app.use(requestContextMiddleware());
   app.use(

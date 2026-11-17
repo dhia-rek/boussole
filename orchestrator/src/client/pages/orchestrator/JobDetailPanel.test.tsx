@@ -467,7 +467,7 @@ describe("JobDetailPanel", () => {
     expect(onJobUpdated).toHaveBeenCalled();
   });
 
-  it("skips a job from the menu", async () => {
+  it("skips a job from the skip button", async () => {
     const onJobUpdated = vi.fn().mockResolvedValue(undefined);
     vi.mocked(api.skipJob).mockResolvedValue(undefined as any);
 
@@ -479,11 +479,10 @@ describe("JobDetailPanel", () => {
       onJobUpdated,
     });
 
-    fireEvent.pointerDown(
-      screen.getByRole("button", { name: /more actions/i }),
-    );
-    const skipItem = await screen.findByRole("menuitem", { name: /skip job/i });
-    fireEvent.click(skipItem);
+    const skipButton = await screen.findByRole("button", {
+      name: /skip this job/i,
+    });
+    fireEvent.click(skipButton);
 
     await waitFor(() => expect(api.skipJob).toHaveBeenCalledWith("job-1"));
     expect(onJobUpdated).toHaveBeenCalled();
