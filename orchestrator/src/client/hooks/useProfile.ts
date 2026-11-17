@@ -29,7 +29,8 @@ export function useProfile() {
     profile,
     error: error ?? null,
     isLoading: isLoading || (!!isFetching && !profile && !error),
-    personName: profile?.basics?.name || "Resume",
+    /** The CV's name; null until the person has a CV. */
+    personName: profile?.basics?.name?.trim() || null,
     refreshProfile,
   };
 }

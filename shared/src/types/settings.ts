@@ -2,6 +2,7 @@ import type {
   LocationMatchStrictness,
   LocationSearchScope,
 } from "../location-preferences";
+import type { AiProvider } from "./ai-account";
 import type { DesignResumeAiGuidance } from "./design-resume";
 
 export interface ResumeProjectCatalogItem {
@@ -156,7 +157,9 @@ export type Resolved<T> = { value: T; default: T; override: T | null };
 
 export interface AppSettings {
   // Typed settings (Resolved):
+  aiProvider: Resolved<AiProvider>;
   model: Resolved<string>;
+  chatgptModel: Resolved<string>;
   pipelineWebhookUrl: Resolved<string>;
   jobCompleteWebhookUrl: Resolved<string>;
   resumeProjects: Resolved<ResumeProjectsSettings>;

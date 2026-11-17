@@ -60,7 +60,6 @@ export function useOnboardingFlow() {
   const { control, getValues, reset, setValue, watch } =
     useForm<OnboardingFormData>({
       defaultValues: {
-        model: "",
         searchTerms: [],
         searchTermDraft: "",
         basicAuthUser: "",
@@ -85,7 +84,6 @@ export function useOnboardingFlow() {
     setLlmValidation(EMPTY_VALIDATION_STATE);
     setBaseResumeValidation(EMPTY_VALIDATION_STATE);
     reset({
-      model: settings.model?.override ?? "",
       searchTerms: settings.searchTerms?.value ?? [],
       searchTermDraft: "",
       basicAuthUser: settings.basicAuthUser ?? "",
@@ -140,7 +138,10 @@ export function useOnboardingFlow() {
       } catch (error) {
         const result = {
           valid: false,
-          message: formatUserFacingError(error, "Claude check failed"),
+          message: formatUserFacingError(
+            error,
+            "Could not check your AI account",
+          ),
         };
         setLlmValidation(toValidationState(result, options));
         return result;
@@ -206,8 +207,8 @@ export function useOnboardingFlow() {
     () => [
       {
         id: "llm",
-        label: "Claude",
-        subtitle: "Check that Claude is connected",
+        label: "AI account",
+        subtitle: "Sign in with Claude or ChatGPT",
         complete: llmValidated,
         disabled: false,
       },
@@ -267,32 +268,32 @@ export function useOnboardingFlow() {
     searchTermsValid: searchTermsComplete,
   });
 
-  const handleSaveLlm = useCallback(async () => {
-    const modelValue = getValues().model.trim();
+  /** "Continue" on a step that is already done: open the next one. */
+  const goToNextStep = useCallback(() => {
+    const index = steps.findIndex((step) => step.id === currentStep);
+    const next = index >= 0 ? steps[index + 1] : undefined;
+    if (next) setCurrentStep(next.id);
+    return settings ?? null;
+  }, [currentStep, settings, steps]);
+
+  // The AI account panel saves the account and model itself; this step
+  // only checks that the chosen account is signed in.
+  const handleLlmStep = useCallback(async () => {
+    if (llmValidated) return goToNextStep();
+
     const validation = await validateLlm();
-
     if (!validation.valid) {
-      toast.error(validation.message || "Claude check failed");
+      toast.error(validation.message || "Your AI account is not connected yet");
       return null;
     }
 
-    try {
-      setIsSaving(true);
-      const nextSettings = await api.updateSettings({
-        model: modelValue || null,
-      });
-      syncSettingsCache(nextSettings);
-      toast.success("Claude is connected", {
-        description: `Model: ${nextSettings.model.value}.`,
-      });
-      return nextSettings;
-    } catch (error) {
-      showErrorToast(error, "Failed to save the AI model");
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [getValues, syncSettingsCache, validateLlm]);
+    toast.success("Your AI account is connected");
+    return settings ?? null;
+  }, [goToNextStep, llmValidated, settings, validateLlm]);
+
+  const handleAiAccountChange = useCallback(() => {
+    void validateLlm();
+  }, [validateLlm]);
 
   const markSearchTermsStale = useCallback(() => {
     const currentTerms = getValues().searchTerms;
@@ -353,6 +354,8 @@ export function useOnboardingFlow() {
   ]);
 
   const handleSaveBaseResume = useCallback(async () => {
+    if (baseResumeValidation.valid) return goToNextStep();
+
     try {
       const validation = await validateBaseResume();
       if (!validation.valid) {
@@ -366,7 +369,7 @@ export function useOnboardingFlow() {
       showErrorToast(error, "Failed to validate resume");
       return null;
     }
-  }, [settings, validateBaseResume]);
+  }, [baseResumeValidation.valid, goToNextStep, settings, validateBaseResume]);
 
   const handleImportResumeFile = useCallback(
     async (file: File) => {
@@ -504,7 +507,7 @@ export function useOnboardingFlow() {
   const handlePrimaryAction = useCallback(async () => {
     if (!currentStep) return null;
     if (currentStep === "llm") {
-      return await handleSaveLlm();
+      return await handleLlmStep();
     }
     if (currentStep === "baseresume") {
       return await handleSaveBaseResume();
@@ -516,8 +519,8 @@ export function useOnboardingFlow() {
   }, [
     currentStep,
     handleCompleteBasicAuth,
+    handleLlmStep,
     handleSaveBaseResume,
-    handleSaveLlm,
     handleSaveSearchTerms,
   ]);
 
@@ -538,11 +541,11 @@ export function useOnboardingFlow() {
   const primaryLabel =
     currentStep === "llm"
       ? llmValidated
-        ? "Revalidate connection"
-        : "Save connection"
+        ? "Continue"
+        : "Check connection"
       : currentStep === "baseresume"
         ? baseResumeValidation.valid
-          ? "Recheck CV"
+          ? "Continue"
           : "Check CV"
         : currentStep === "searchterms"
           ? hasSavedSearchTermsInSession
@@ -582,6 +585,7 @@ export function useOnboardingFlow() {
     setCurrentStep,
     setBasicAuthChoice,
     setValue,
+    handleAiAccountChange,
     handleRegenerateSearchTerms: async () => {
       await handleGenerateSearchTerms({ showToast: true });
     },

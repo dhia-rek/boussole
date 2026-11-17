@@ -34,6 +34,8 @@ import type { ChatResult } from "@langchain/core/outputs";
 import type { Runnable } from "@langchain/core/runnables";
 import { convertToOpenAITool } from "@langchain/core/utils/function_calling";
 import { ClaudeCliClient } from "@server/services/llm/claude-cli/client";
+import { CodexCliClient } from "@server/services/llm/codex-cli/client";
+import { resolveActiveAiProvider } from "@server/services/modelSelection";
 
 const DEFAULT_AGENT_CLI_TIMEOUT_MS = 300_000;
 /** Longest single transcript entry sent to the CLI (tool results can be big). */
@@ -71,8 +73,12 @@ export type ChatClaudeCliFields = BaseChatModelParams & {
 
 export class AgentProtocolError extends Error {}
 
+/** Runs on the workspace's own AI account: Claude or ChatGPT. */
 const defaultRunner: ClaudeCliRunner = async (args) => {
-  const client = new ClaudeCliClient();
+  const client =
+    (await resolveActiveAiProvider()) === "chatgpt"
+      ? new CodexCliClient()
+      : new ClaudeCliClient();
   const { text } = await client.complete(args);
   return text;
 };

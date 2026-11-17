@@ -16,6 +16,10 @@ export const queryKeys = {
     all: ["settings"] as const,
     current: () => [...queryKeys.settings.all, "current"] as const,
   },
+  aiAccount: {
+    all: ["ai-account"] as const,
+    overview: () => [...queryKeys.aiAccount.all, "overview"] as const,
+  },
   profile: {
     all: ["profile"] as const,
     current: () => [...queryKeys.profile.all, "current"] as const,

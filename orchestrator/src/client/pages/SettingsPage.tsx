@@ -1,14 +1,18 @@
 import * as api from "@client/api";
+import {
+  isAiAccountUsable,
+  useAiAccountOverview,
+} from "@client/components/ai-account/useAiAccountOverview";
 import { PageHeader } from "@client/components/layout";
 import { useUpdateSettingsMutation } from "@client/hooks/queries/useSettingsMutation";
 import { useTracerReadiness } from "@client/hooks/useTracerReadiness";
+import { AiAccountSettingsSection } from "@client/pages/settings/components/AiAccountSettingsSection";
 import { BackupSettingsSection } from "@client/pages/settings/components/BackupSettingsSection";
 import { ChatSettingsSection } from "@client/pages/settings/components/ChatSettingsSection";
 import { DangerZoneSection } from "@client/pages/settings/components/DangerZoneSection";
 import { DisplaySettingsSection } from "@client/pages/settings/components/DisplaySettingsSection";
 import { EnvironmentSettingsSection } from "@client/pages/settings/components/EnvironmentSettingsSection";
 import { HunterSection } from "@client/pages/settings/components/HunterSection";
-import { ModelSettingsSection } from "@client/pages/settings/components/ModelSettingsSection";
 import { NotionSection } from "@client/pages/settings/components/NotionSection";
 import { PromptTemplatesSection } from "@client/pages/settings/components/PromptTemplatesSection";
 import { ScoringSettingsSection } from "@client/pages/settings/components/ScoringSettingsSection";
@@ -21,7 +25,11 @@ import {
   type UpdateSettingsInput,
   updateSettingsSchema,
 } from "@shared/settings-schema.js";
-import type { AppSettings, JobStatus } from "@shared/types.js";
+import {
+  AI_PROVIDER_LABELS,
+  type AppSettings,
+  type JobStatus,
+} from "@shared/types.js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Settings } from "lucide-react";
 import type React from "react";
@@ -44,7 +52,6 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
-  model: "",
   pipelineWebhookUrl: "",
   jobCompleteWebhookUrl: "",
   resumeProjects: null,
@@ -78,7 +85,7 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
 };
 
 type SettingsSectionId =
-  | "model"
+  | "ai-account"
   | "chat"
   | "prompt-templates"
   | "scoring"
@@ -119,10 +126,21 @@ const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
     label: "AI",
     items: [
       {
-        id: "model",
-        label: "AI model",
-        description: "The Claude model every AI step runs on.",
-        searchTerms: ["llm", "claude", "model", "opus", "effort"],
+        id: "ai-account",
+        label: "AI account",
+        description:
+          "Sign in with your Claude or ChatGPT account, choose which one Boussole uses, and pick its model.",
+        searchTerms: [
+          "llm",
+          "claude",
+          "chatgpt",
+          "openai",
+          "anthropic",
+          "sign in",
+          "model",
+          "opus",
+          "effort",
+        ],
       },
       {
         id: "chat",
@@ -236,7 +254,8 @@ const SECTION_FIELD_MAP: Record<
   SettingsSectionId,
   Array<keyof UpdateSettingsInput>
 > = {
-  model: ["model"],
+  // Saves on its own: sign-in, account choice and models.
+  "ai-account": [],
   chat: [
     "chatStyleTone",
     "chatStyleFormality",
@@ -288,6 +307,7 @@ function matchesSettingsSearch(
 
 const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   model: null,
+  chatgptModel: null,
   pipelineWebhookUrl: null,
   jobCompleteWebhookUrl: null,
   resumeProjects: null,
@@ -325,7 +345,6 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
 };
 
 const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
-  model: data.model.override ?? "",
   pipelineWebhookUrl: data.pipelineWebhookUrl.override ?? "",
   jobCompleteWebhookUrl: data.jobCompleteWebhookUrl.override ?? "",
   resumeProjects: data.resumeProjects.override,
@@ -385,10 +404,6 @@ const nullIfSame = <T,>(value: T | null | undefined, defaultValue: T) =>
 
 const getDerivedSettings = (settings: AppSettings | null) => {
   return {
-    model: {
-      effective: settings?.model?.value ?? "",
-      default: settings?.model?.default ?? "",
-    },
     pipelineWebhook: {
       effective: settings?.pipelineWebhookUrl?.value ?? "",
       default: settings?.pipelineWebhookUrl?.default ?? "",
@@ -521,7 +536,7 @@ export const SettingsPage: React.FC = () => {
   const location = useLocation();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [activeSection, setActiveSection] =
-    useState<SettingsSectionId>("model");
+    useState<SettingsSectionId>("ai-account");
   const [openGroups, setOpenGroups] = useState<SettingsGroupId[]>([]);
 
   useEffect(() => {
@@ -581,6 +596,7 @@ export const SettingsPage: React.FC = () => {
     queryKey: queryKeys.backups.list(),
     queryFn: api.getBackups,
   });
+  const aiAccount = useAiAccountOverview().data;
   const updateSettingsMutation = useUpdateSettingsMutation();
   const isLoading = settingsQuery.isLoading;
   const backups = backupsQuery.data?.backups ?? [];
@@ -598,7 +614,6 @@ export const SettingsPage: React.FC = () => {
 
   const derived = getDerivedSettings(settings);
   const {
-    model,
     pipelineWebhook,
     jobCompleteWebhook,
     display,
@@ -737,7 +752,6 @@ export const SettingsPage: React.FC = () => {
       }
 
       const payload: Partial<UpdateSettingsInput> = {
-        model: normalizeString(data.model),
         pipelineWebhookUrl: normalizeString(data.pipelineWebhookUrl),
         jobCompleteWebhookUrl: normalizeString(data.jobCompleteWebhookUrl),
         resumeProjects: resumeProjectsOverride,
@@ -907,6 +921,8 @@ export const SettingsPage: React.FC = () => {
       );
       setSettings(updated);
       reset(mapSettingsToForm(updated));
+      // The model choices live in the AI account panel.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiAccount.all });
       toast.success("Reset to default");
     } catch (error) {
       showErrorToast(error, "Failed to reset settings");
@@ -971,11 +987,14 @@ export const SettingsPage: React.FC = () => {
     }
 
     switch (sectionId) {
-      case "model":
-        return {
-          label: model.effective || "Claude",
-          variant: "outline" as const,
-        };
+      case "ai-account":
+        if (!aiAccount) return null;
+        return isAiAccountUsable(aiAccount.accounts[aiAccount.activeProvider])
+          ? {
+              label: `Using ${AI_PROVIDER_LABELS[aiAccount.activeProvider]}`,
+              variant: "outline" as const,
+            }
+          : { label: "Not signed in", variant: "destructive" as const };
       case "chat":
         return chat.tone.effective || chat.constraints.effective
           ? { label: "Ready", variant: "outline" as const }
@@ -1036,15 +1055,8 @@ export const SettingsPage: React.FC = () => {
 
   let activeSectionContent: React.ReactNode;
   switch (activeSection) {
-    case "model":
-      activeSectionContent = (
-        <ModelSettingsSection
-          values={model}
-          isLoading={isLoading}
-          isSaving={isSaving}
-          layoutMode="panel"
-        />
-      );
+    case "ai-account":
+      activeSectionContent = <AiAccountSettingsSection layoutMode="panel" />;
       break;
     case "chat":
       activeSectionContent = (
