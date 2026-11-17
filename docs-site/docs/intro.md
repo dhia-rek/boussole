@@ -135,5 +135,5 @@ When adding user-visible behavior:
 
 ## Support
 
-- Open an [issue](https://github.com/dhia-rek/forsa/issues) for documentation errors.
+- Open an [issue](https://github.com/dhia-rek/boussole/issues) for documentation errors.
 - Check these docs before opening support requests.

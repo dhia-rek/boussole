@@ -5,7 +5,7 @@ export const BRAND = {
   taglineEn: "Stop searching. Start aiming.",
   author: "Dhia Rekik",
   authorUrl: "https://dhiarekik.me",
-  repoUrl: "https://github.com/dhia-rek/forsa",
+  repoUrl: "https://github.com/dhia-rek/boussole",
 } as const;
 
 /**

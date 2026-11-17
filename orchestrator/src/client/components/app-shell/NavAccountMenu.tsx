@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-const RELEASES_URL = "https://github.com/dhia-rek/forsa/releases";
+const RELEASES_URL = "https://github.com/dhia-rek/boussole/releases";
 
 function buildSignInPath(username: string, nextPath: string): string {
   const params = new URLSearchParams();
