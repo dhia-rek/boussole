@@ -29,6 +29,14 @@ vi.mock("./pages/TodayPage", () => ({
   TodayPage: () => <div>today</div>,
 }));
 
+vi.mock("./pages/LandingPage", () => ({
+  LandingPage: () => <div>landing</div>,
+}));
+
+vi.mock("./api/auth-session", () => ({
+  hasAuthenticatedSession: vi.fn(() => true),
+}));
+
 vi.mock("./components/OnboardingGate", () => ({
   OnboardingGate: () => null,
 }));
@@ -152,5 +160,21 @@ describe("App shell", () => {
     expect(isShellFreePath("/onboarding")).toBe(true);
     expect(isShellFreePath("/oauth/gmail/callback")).toBe(true);
     expect(isShellFreePath("/jobs/ready")).toBe(false);
+    expect(isShellFreePath("/welcome")).toBe(true);
+    expect(isShellFreePath("/")).toBe(true);
+  });
+
+  it("sends visitors without a session to the landing page, outside the shell", async () => {
+    const { hasAuthenticatedSession } = await import("./api/auth-session");
+    vi.mocked(hasAuthenticatedSession).mockReturnValue(false);
+    vi.mocked(useDemoInfo).mockReturnValue(null);
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("landing")).toBeInTheDocument();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+    vi.mocked(hasAuthenticatedSession).mockReturnValue(true);
   });
 });
