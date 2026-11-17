@@ -62,6 +62,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Allow the Tailscale name (e.g. http://my-mac.tail1234.ts.net:5173) so
+    // the app opens from your phone over your private Tailscale network.
+    allowedHosts: [".ts.net"],
     proxy: {
       "/api": {
         target: "http://localhost:3001",
