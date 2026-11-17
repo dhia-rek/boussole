@@ -97,20 +97,21 @@ async function runVersionCheck(): Promise<VersionCheckResult> {
 
   try {
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
+      // The list endpoint answers [] (not 404) while there is no release yet.
+      `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=1`,
     );
     if (!response.ok) throw new Error("Failed to fetch");
 
     const data: unknown = await response.json();
-    if (
-      !data ||
-      typeof data !== "object" ||
-      typeof (data as { tag_name?: unknown }).tag_name !== "string" ||
-      !(data as { tag_name: string }).tag_name.trim()
-    ) {
-      throw new Error("Invalid response format");
+    const newest = Array.isArray(data) ? (data[0] as unknown) : null;
+    const tagName =
+      newest && typeof newest === "object"
+        ? (newest as { tag_name?: unknown }).tag_name
+        : null;
+    if (typeof tagName !== "string" || !tagName.trim()) {
+      throw new Error("No release yet");
     }
-    const latestVersion = parseVersion((data as { tag_name: string }).tag_name);
+    const latestVersion = parseVersion(tagName);
 
     const result: VersionCheckResult = {
       currentVersion,

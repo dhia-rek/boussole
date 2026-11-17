@@ -45,12 +45,11 @@ Open:
 
 - **Dashboard**: `http://localhost:3005`
 
-The onboarding wizard helps you validate and save:
+On the first visit, create the first username/password account. It becomes the system admin and owns the initial private workspace. The onboarding wizard then walks through three steps:
 
-1. **Claude**: Boussole checks that the Claude Code CLI is installed and signed in on the host (run `claude` once in a terminal). Every AI step uses your Claude subscription; there is no API key. In Docker or on a server, set `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
-2. **Import your current CV**: upload a PDF or DOCX. Claude reads it and creates your CV in the CV editor.
-3. **Search terms**: Boussole generates a first list of job-title search terms from your selected resume. Edit or regenerate them before saving.
-4. **First-run account**: Create the first username/password account. This account becomes the system admin and owns the initial private workspace.
+1. **Connect your AI**: sign in with your Claude or ChatGPT account and pick the model (see [AI Account](/docs/features/ai-account)). The owner's workspace can also use the server's own Claude login (`claude` once on the host, or `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` in Docker or on a server).
+2. **Import your current CV**: upload a PDF or DOCX. Your AI account reads it and creates your CV in the CV editor.
+3. **Search terms**: Boussole generates a first list of job-title search terms from your CV. Edit or regenerate them before saving.
 
 Settings and user accounts are saved to the local database. If you are upgrading an older single-user install, Boussole migrates existing rows into one default private workspace. When `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are present during that migration, they seed the first system admin account; otherwise the sign-in screen requires first-run setup before private APIs are usable.
 

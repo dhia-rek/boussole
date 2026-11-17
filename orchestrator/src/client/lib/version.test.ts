@@ -27,7 +27,7 @@ describe("checkForUpdate", () => {
   it("shares one request between concurrent callers", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ tag_name: "v9.9.9" }),
+      json: async () => [{ tag_name: "v9.9.9" }],
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -39,6 +39,21 @@ describe("checkForUpdate", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(first.latestVersion).toBe("v9.9.9");
     expect(second.latestVersion).toBe("v9.9.9");
+  });
+
+  it("asks for the release list, which is empty (not a 404) before the first release", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await checkForUpdate();
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "/releases?per_page=1",
+    );
+    expect(result.updateAvailable).toBe(false);
+    expect(result.latestVersion).toBeNull();
   });
 
   it("remembers a failed check instead of retrying on every page load", async () => {

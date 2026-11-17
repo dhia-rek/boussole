@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
-  hasCompletedBasicAuthOnboarding,
   hasSavedSearchTermsOnboarding,
   isOnboardingComplete,
 } from "./onboarding";
 
 describe("onboarding helpers", () => {
-  it("treats a skipped basic-auth decision as complete", () => {
+  it("does not need a basic-auth decision to finish (real accounts replace it)", () => {
     expect(
-      hasCompletedBasicAuthOnboarding({
-        basicAuthActive: false,
-        onboardingBasicAuthDecision: "skipped",
-      } as any),
+      isOnboardingComplete({
+        demoMode: false,
+        settings: {
+          basicAuthActive: false,
+          onboardingBasicAuthDecision: null,
+          searchTerms: { value: ["data"], default: [], override: ["data"] },
+        } as never,
+        llmValid: true,
+        baseResumeValid: true,
+      }),
     ).toBe(true);
   });
 

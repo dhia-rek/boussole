@@ -194,6 +194,59 @@ describe("latex resume renderer", () => {
   describe("formatting fidelity", () => {
     const template = "__FIT__|__HEADER__\n__BODY__";
 
+    it("lists ungrouped skills on one line instead of one per row", () => {
+      const latex = buildLatexDocument(
+        {
+          ...baseDocument,
+          skillGroups: [
+            { name: "Python", keywords: [] },
+            { name: "SQL", keywords: [] },
+            { name: "dbt", keywords: [] },
+          ],
+        },
+        template,
+      );
+      expect(latex).toContain("Python $\\cdot$ SQL $\\cdot$ dbt");
+      expect(latex).not.toContain("tabularx");
+    });
+
+    it("adds ungrouped skills to grouped ones as an Other row", () => {
+      const latex = buildLatexDocument(
+        {
+          ...baseDocument,
+          skillGroups: [
+            { name: "Languages", keywords: ["Python", "SQL"] },
+            { name: "Docker", keywords: [] },
+          ],
+        },
+        template,
+      );
+      expect(latex).toContain("Languages & Python, SQL");
+      expect(latex).toContain("Other & Docker");
+    });
+
+    it("uses a plain heading once four or more short sections are combined", () => {
+      const entry = { title: "Item", subtitle: null, date: null, bullets: [] };
+      const latex = buildLatexDocument(
+        {
+          ...baseDocument,
+          interests: ["Chess"],
+          extraSections: [
+            {
+              kind: "certifications",
+              title: "Certifications",
+              entries: [entry],
+            },
+            { kind: "awards", title: "Awards", entries: [entry] },
+            { kind: "custom", title: "Talks & Workshops", entries: [entry] },
+          ],
+        },
+        template,
+      );
+      expect(latex).toContain("\\section{Additional information}");
+      expect(latex).toContain("\\textbf{Talks \\& Workshops}");
+    });
+
     it("renders bold runs from the CV as \\textbf and escapes the rest", () => {
       const latex = buildLatexDocument(
         {
@@ -380,6 +433,25 @@ describe("latex resume renderer", () => {
   });
 
   describe("normalizeResumeJsonToLatexDocument", () => {
+    it("keeps the title of an imported custom section", () => {
+      const document = normalizeResumeJsonToLatexDocument({
+        basics: { name: "Amara Okafor" },
+        sections: {},
+        customSections: [
+          {
+            id: "talks",
+            title: "Talks & Workshops",
+            hidden: false,
+            items: [{ id: "t1", name: "PyData Lyon", hidden: false }],
+          },
+        ],
+      });
+      expect(
+        document.extraSections?.find((section) => section.kind === "custom")
+          ?.title,
+      ).toBe("Talks & Workshops");
+    });
+
     it("carries the CV language and postal location into the document", () => {
       const french = normalizeResumeJsonToLatexDocument(
         {

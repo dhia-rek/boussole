@@ -104,9 +104,6 @@ export const OnboardingPage: React.FC = () => {
                 <CardContent className="flex flex-1 flex-col gap-6 pt-6">
                   <OnboardingStepContent
                     baseResumeValidation={flow.baseResumeValidation}
-                    basicAuthChoice={flow.basicAuthChoice}
-                    basicAuthPassword={flow.watch("basicAuthPassword")}
-                    basicAuthUser={flow.watch("basicAuthUser")}
                     currentStep={flow.currentStep}
                     hasSavedSearchTermsInSession={
                       flow.hasSavedSearchTermsInSession
@@ -120,13 +117,6 @@ export const OnboardingPage: React.FC = () => {
                     searchTermsSource={flow.searchTermsSource}
                     searchTermsStale={flow.searchTermsStale}
                     onAiAccountChange={flow.handleAiAccountChange}
-                    onBasicAuthChoiceChange={flow.setBasicAuthChoice}
-                    onBasicAuthPasswordChange={(value) =>
-                      flow.setValue("basicAuthPassword", value)
-                    }
-                    onBasicAuthUserChange={(value) =>
-                      flow.setValue("basicAuthUser", value)
-                    }
                     onImportResumeFile={flow.handleImportResumeFile}
                     onRegenerateSearchTerms={flow.handleRegenerateSearchTerms}
                     onSearchTermDraftChange={(value) =>
