@@ -10,9 +10,7 @@ import {
 import { settingsRegistry } from "@shared/settings-registry";
 import type { UpdateSettingsInput } from "@shared/settings-schema";
 
-export type DeferredSideEffect =
-  | "refreshBackupScheduler"
-  | "clearRxResumeCaches";
+export type DeferredSideEffect = "refreshBackupScheduler";
 
 export type SettingsUpdateAction = {
   settingKey: SettingKey;
@@ -37,7 +35,6 @@ export type SettingUpdateHandler<K extends keyof UpdateSettingsInput> = (args: {
 
 export type SettingsUpdatePlan = {
   shouldRefreshBackupScheduler: boolean;
-  shouldClearRxResumeCaches: boolean;
   updatedSettingKeys: SettingKey[];
 };
 
@@ -78,12 +75,6 @@ export const settingsUpdateRegistry: Partial<{
 
 /** Marks a stored basic-auth password as a hash rather than plain text. */
 export const BASIC_AUTH_HASH_PREFIX = "scrypt:";
-
-const RXRESUME_CACHE_INVALIDATION_KEYS = new Set<keyof UpdateSettingsInput>([
-  "rxresumeUrl",
-  "rxresumeApiKey",
-  "rxresumeBaseResumeId",
-]);
 
 for (const [key, def] of Object.entries(settingsRegistry)) {
   if (def.kind === "virtual") continue;
@@ -137,18 +128,6 @@ for (const [key, def] of Object.entries(settingsRegistry)) {
     continue;
   }
 
-  if (key === "rxresumeBaseResumeId") {
-    settingsUpdateRegistry.rxresumeBaseResumeId = async ({ value }) => {
-      const serialized = normalizeEnvInput(value as string | null | undefined);
-
-      return result({
-        actions: [persistAction("rxresumeBaseResumeId", serialized)],
-        deferred: ["clearRxResumeCaches"],
-      });
-    };
-    continue;
-  }
-
   // Generic handler for all others
   settingsUpdateRegistry[key as keyof UpdateSettingsInput] = ({ value }) => {
     let serialized: string | null;
@@ -162,11 +141,6 @@ for (const [key, def] of Object.entries(settingsRegistry)) {
     const deferred: DeferredSideEffect[] = [];
     if (isBackup) {
       deferred.push("refreshBackupScheduler");
-    }
-    if (
-      RXRESUME_CACHE_INVALIDATION_KEYS.has(key as keyof UpdateSettingsInput)
-    ) {
-      deferred.push("clearRxResumeCaches");
     }
 
     const legacyKeysToClear =

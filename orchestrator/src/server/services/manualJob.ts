@@ -3,9 +3,11 @@
  */
 
 import { logger } from "@infra/logger";
+import { LlmService } from "@server/services/llm/service";
 import type { ManualJobDraft } from "@shared/types";
 import type { JsonSchemaDefinition } from "./llm/types";
-import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
+import { isAiSignInError } from "./llm/utils/sign-in";
+import { resolveLlmModel } from "./modelSelection";
 
 export interface ManualJobInferenceResult {
   job: ManualJobDraft;
@@ -96,7 +98,7 @@ export async function inferManualJobDetails(
   const model = await resolveLlmModel();
   const prompt = buildInferencePrompt(jobDescription);
 
-  const llm = await createConfiguredLlmService();
+  const llm = new LlmService();
   const result = await llm.callJson<ManualJobApiResponse>({
     model,
     messages: [{ role: "user", content: prompt }],
@@ -104,10 +106,11 @@ export async function inferManualJobDetails(
   });
 
   if (!result.success) {
-    if (result.error.toLowerCase().includes("api key")) {
+    if (isAiSignInError(result.error)) {
       return {
         job: {},
-        warning: "LLM API key not set. Fill details manually.",
+        warning:
+          "Your AI account is not signed in. Connect it in Settings, or fill in the details manually.",
       };
     }
     logger.warn("Manual job inference failed", { error: result.error });

@@ -304,15 +304,6 @@ function createDefaultSupportedCountryKeys(
   source: JobSource | string,
 ): string[] | null {
   switch (source) {
-    case "gradcracker":
-    case "ukvisajobs":
-      return ["united kingdom"];
-    case "seek":
-      return ["australia", "new zealand"];
-    case "naukri":
-      return ["india"];
-    case "jobindex":
-      return ["denmark"];
     case "glassdoor":
       return [
         "australia",

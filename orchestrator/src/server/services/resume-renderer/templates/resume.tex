@@ -1,0 +1,117 @@
+%-------------------------
+% Boussole CV layout: Source Sans, round header photo, indigo uppercase
+% section titles over coral rules, aligned skills and a "Stack:" line under
+% each entry. Adapted from the author's own CV, itself built on Jake
+% Gutierrez's resume template (MIT).
+% A4 / 9pt / single page.
+%-------------------------
+
+\documentclass[a4paper,9pt]{extarticle}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[__BABEL__]{babel}
+\usepackage{iftex}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage[T1]{fontenc}
+\usepackage[default,scale=0.95]{sourcesanspro}
+\usepackage{microtype}
+\usepackage{fontawesome}
+\usepackage{tikz}
+
+\ifPDFTeX
+  \input{glyphtounicode}
+  \pdfgentounicode=1
+\fi
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Same printable area as the original CV, expressed with geometry so the
+% one-page auto-fit can tighten it.
+\usepackage[a4paper,top=0.35in,bottom=0.35in,left=0.55in,right=0.6in]{geometry}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Boussole colours: indigo text, coral rules and photo ring.
+\definecolor{namecolor}{HTML}{1D1B54}
+\definecolor{sectioncolor}{HTML}{1D1B54}
+\definecolor{rulecolor}{HTML}{FF6B57}
+\definecolor{stackaccent}{HTML}{1D1B54}
+\definecolor{iconcolor}{HTML}{1D1B54}
+\definecolor{photoring}{HTML}{FF6B57}
+
+\titleformat{\section}{
+  \vspace{-6pt}\bfseries\raggedright\normalsize\color{sectioncolor}
+}{}{0em}{\MakeUppercase}[\color{rulecolor}{\titlerule[0.8pt]} \vspace{-5pt}]
+
+\newcommand{\resumeItem}[1]{\item{\small #1}}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{0pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\[3pt]
+      \hspace{1.2em}\textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-2pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \vspace{4pt}\item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-2pt}
+}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\setlist[itemize]{topsep=2pt, itemsep=0pt, parsep=0pt, partopsep=0pt}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-1pt}}
+
+% \stack{label}{technologies}: the coloured line under an entry.
+\newcommand{\stack}[2]{%
+  \vspace{1pt}\par\hspace*{0.2in}%
+  {\small\textcolor{stackaccent}{\textbf{#1}}~#2}%
+  \vspace{0pt}%
+}
+
+% Round header photo with a thin coral ring.
+\newcommand{\cvphoto}[1]{%
+  \begin{tikzpicture}%
+    \begin{scope}\clip (0,0) circle (1.2cm);%
+      \node[inner sep=0] at (0,0) {\includegraphics[width=2.4cm]{#1}};%
+    \end{scope}%
+    \draw[photoring, line width=1pt] (0,0) circle (1.2cm);%
+  \end{tikzpicture}%
+}
+\newcommand{\cvicon}[1]{\textcolor{iconcolor}{#1}}
+
+% One-page auto-fit: the renderer injects progressively tighter spacing here
+% when the CV would otherwise spill onto a second page.
+__FIT__
+
+\begin{document}
+
+__HEADER__
+
+__BODY__
+
+\end{document}

@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import * as settingsRepo from "@server/repositories/settings";
-import { settingsRegistry } from "@shared/settings-registry";
-import type { Job, JobPdfFreshness, PdfRenderer } from "@shared/types";
+import type { Job, JobPdfFreshness } from "@shared/types";
 import { getCurrentDesignResumeOrNullOnLegacy } from "./design-resume";
-import { getConfiguredRxResumeBaseResumeId } from "./rxresume/baseResumeId";
 
-const PDF_FINGERPRINT_VERSION = "v1";
+/**
+ * Bump when the payload or the CV layout changes, so PDFs made before are
+ * reported stale and re-rendered. v2: single Boussole LaTeX layout.
+ */
+const PDF_FINGERPRINT_VERSION = "v2";
 type JobPdfFingerprintInput = Pick<
   Job,
   | "tailoredSummary"
@@ -25,28 +26,15 @@ export interface PdfFingerprintContext {
   designResumeDocumentId: string | null;
   designResumeRevision: number | null;
   designResumeUpdatedAt: string | null;
-  pdfRenderer: PdfRenderer;
-  rxresumeBaseResumeId: string | null;
 }
 
 export async function resolvePdfFingerprintContext(): Promise<PdfFingerprintContext> {
-  const [designResume, rawRenderer, configuredBaseResume] = await Promise.all([
-    getCurrentDesignResumeOrNullOnLegacy(),
-    settingsRepo.getSetting("pdfRenderer"),
-    getConfiguredRxResumeBaseResumeId(),
-  ]);
-
-  const parsedRenderer = settingsRegistry.pdfRenderer.parse(
-    rawRenderer ?? undefined,
-  );
-
+  const designResume = await getCurrentDesignResumeOrNullOnLegacy();
   return {
     version: PDF_FINGERPRINT_VERSION,
     designResumeDocumentId: designResume?.id ?? null,
     designResumeRevision: designResume?.revision ?? null,
     designResumeUpdatedAt: designResume?.updatedAt ?? null,
-    pdfRenderer: parsedRenderer ?? settingsRegistry.pdfRenderer.default(),
-    rxresumeBaseResumeId: configuredBaseResume.resumeId ?? null,
   };
 }
 
@@ -56,8 +44,6 @@ export function createJobPdfFingerprint(
 ): string {
   const payload = {
     version: context.version,
-    renderer: context.pdfRenderer,
-    rxresumeBaseResumeId: context.rxresumeBaseResumeId,
     designResumeDocumentId: context.designResumeDocumentId,
     designResumeRevision: context.designResumeRevision,
     designResumeUpdatedAt: context.designResumeUpdatedAt,

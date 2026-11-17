@@ -8,7 +8,6 @@ import { useOnboardingRequirement } from "./useOnboardingRequirement";
 
 vi.mock("@client/api", () => ({
   validateLlm: vi.fn(),
-  validateRxresume: vi.fn(),
   validateResumeConfig: vi.fn(),
 }));
 
@@ -19,6 +18,16 @@ vi.mock("@client/hooks/useDemoInfo", () => ({
 vi.mock("@client/hooks/useSettings", () => ({
   useSettings: vi.fn(),
 }));
+
+function mockSettings(getSettings: () => any) {
+  vi.mocked(useSettings).mockImplementation(() => ({
+    settings: getSettings(),
+    isLoading: false,
+    refreshSettings: vi.fn(),
+    error: null,
+    renderMarkdownInJobDescriptions: true,
+  }));
+}
 
 describe("useOnboardingRequirement", () => {
   beforeEach(() => {
@@ -33,10 +42,6 @@ describe("useOnboardingRequirement", () => {
       baselineName: null,
     });
 
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -49,14 +54,9 @@ describe("useOnboardingRequirement", () => {
 
   it("treats the persisted onboarding basic-auth decision as the source of truth", async () => {
     let currentSettings: any = {
-      llmProvider: {
-        value: "openai_compatible",
-        default: "openai_compatible",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "http://localhost:1234",
-        default: "",
+      model: {
+        value: "opus:medium",
+        default: "opus:medium",
         override: null,
       },
       searchTerms: {
@@ -64,19 +64,10 @@ describe("useOnboardingRequirement", () => {
         default: ["web developer"],
         override: null,
       },
-      rxresumeUrl: null,
       basicAuthActive: false,
       onboardingBasicAuthDecision: null,
     };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
+    mockSettings(() => currentSettings);
 
     const { result, rerender } = renderHookWithQueryClient(() =>
       useOnboardingRequirement(),
@@ -103,21 +94,16 @@ describe("useOnboardingRequirement", () => {
     });
   });
 
-  it("validates non-api-key providers before treating onboarding as complete", async () => {
+  it("validates the Claude connection before treating onboarding as complete", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "The AI endpoint is unreachable",
+      message: "Claude is not signed in",
     });
 
     const currentSettings: any = {
-      llmProvider: {
-        value: "openai_compatible",
-        default: "openai_compatible",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "http://localhost:1234",
-        default: "",
+      model: {
+        value: "opus:medium",
+        default: "opus:medium",
         override: null,
       },
       searchTerms: {
@@ -125,44 +111,33 @@ describe("useOnboardingRequirement", () => {
         default: ["web developer"],
         override: ["Platform Engineer"],
       },
-      rxresumeUrl: null,
       basicAuthActive: false,
       onboardingBasicAuthDecision: "skipped",
     };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
+    mockSettings(() => currentSettings);
 
     const { result } = renderHookWithQueryClient(() =>
       useOnboardingRequirement(),
     );
 
     await waitFor(() => {
-      expect(api.validateLlm).toHaveBeenCalledWith({
-        provider: "openai_compatible",
-        baseUrl: "http://localhost:1234",
-      });
+      expect(api.validateLlm).toHaveBeenCalledWith();
     });
 
     await waitFor(() => {
       expect(result.current.checking).toBe(false);
     });
 
+    expect(api.validateLlm).toHaveBeenCalledTimes(1);
     expect(result.current.complete).toBe(false);
   });
 
-  it("revalidates when validation inputs change after an earlier failure", async () => {
+  it("revalidates when the model changes after an earlier failure", async () => {
     const validateLlm = vi.mocked(api.validateLlm);
     validateLlm
       .mockResolvedValueOnce({
         valid: false,
-        message: "The AI endpoint is unreachable",
+        message: "Claude is not signed in",
       })
       .mockResolvedValue({
         valid: true,
@@ -170,19 +145,9 @@ describe("useOnboardingRequirement", () => {
       });
 
     let currentSettings: any = {
-      llmProvider: {
-        value: "openai_compatible",
-        default: "openai_compatible",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "http://localhost:1234",
-        default: "",
-        override: null,
-      },
-      pdfRenderer: {
-        value: "latex",
-        default: "rxresume",
+      model: {
+        value: "opus:medium",
+        default: "opus:medium",
         override: null,
       },
       searchTerms: {
@@ -190,19 +155,10 @@ describe("useOnboardingRequirement", () => {
         default: ["web developer"],
         override: ["Platform Engineer"],
       },
-      rxresumeUrl: null,
       basicAuthActive: false,
       onboardingBasicAuthDecision: "skipped",
     };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
+    mockSettings(() => currentSettings);
 
     const { result, rerender } = renderHookWithQueryClient(() =>
       useOnboardingRequirement(),
@@ -212,22 +168,20 @@ describe("useOnboardingRequirement", () => {
       expect(result.current.checking).toBe(false);
     });
     expect(result.current.complete).toBe(false);
+    expect(validateLlm).toHaveBeenCalledTimes(1);
 
     currentSettings = {
       ...currentSettings,
-      llmBaseUrl: {
-        value: "http://localhost:1235",
-        default: "",
-        override: "http://localhost:1235",
+      model: {
+        value: "sonnet",
+        default: "opus:medium",
+        override: "sonnet",
       },
     };
     rerender();
 
     await waitFor(() => {
-      expect(validateLlm).toHaveBeenCalledWith({
-        provider: "openai_compatible",
-        baseUrl: "http://localhost:1235",
-      });
+      expect(validateLlm).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
       expect(result.current.checking).toBe(false);
@@ -235,26 +189,17 @@ describe("useOnboardingRequirement", () => {
     expect(result.current.complete).toBe(true);
   });
 
-  it("does not require Reactive Resume when LaTeX rendering and a local resume are ready", async () => {
-    vi.mocked(api.validateRxresume).mockResolvedValue({
+  it("requires a valid CV before treating onboarding as complete", async () => {
+    vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: false,
-      message: "Reactive Resume is not configured",
+      message:
+        "No CV yet. Upload a PDF or DOCX CV, or create one in the CV editor.",
     });
 
     const currentSettings: any = {
-      llmProvider: {
-        value: "openrouter",
-        default: "openrouter",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "",
-        default: "",
-        override: null,
-      },
-      pdfRenderer: {
-        value: "latex",
-        default: "rxresume",
+      model: {
+        value: "opus:medium",
+        default: "opus:medium",
         override: null,
       },
       searchTerms: {
@@ -262,19 +207,10 @@ describe("useOnboardingRequirement", () => {
         default: ["web developer"],
         override: ["Platform Engineer"],
       },
-      rxresumeUrl: null,
       basicAuthActive: false,
       onboardingBasicAuthDecision: "skipped",
     };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
+    mockSettings(() => currentSettings);
 
     const { result } = renderHookWithQueryClient(() =>
       useOnboardingRequirement(),
@@ -284,127 +220,15 @@ describe("useOnboardingRequirement", () => {
       expect(result.current.checking).toBe(false);
     });
 
-    expect(api.validateRxresume).not.toHaveBeenCalled();
-    expect(result.current.complete).toBe(true);
-  });
-
-  it("does not block app access on Reactive Resume validation when a resume source is already ready", async () => {
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: false,
-      message: "Reactive Resume is not configured",
-    });
-
-    const currentSettings: any = {
-      llmProvider: {
-        value: "openrouter",
-        default: "openrouter",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "",
-        default: "",
-        override: null,
-      },
-      pdfRenderer: {
-        value: "rxresume",
-        default: "rxresume",
-        override: null,
-      },
-      searchTerms: {
-        value: ["Platform Engineer"],
-        default: ["web developer"],
-        override: ["Platform Engineer"],
-      },
-      rxresumeUrl: null,
-      basicAuthActive: false,
-      onboardingBasicAuthDecision: "skipped",
-    };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
-
-    const { result } = renderHookWithQueryClient(() =>
-      useOnboardingRequirement(),
-    );
-
-    await waitFor(() => {
-      expect(result.current.checking).toBe(false);
-    });
-
-    expect(api.validateRxresume).toHaveBeenCalledTimes(1);
-    expect(result.current.complete).toBe(true);
-  });
-
-  it("validates Reactive Resume when an RxResume base resume is configured", async () => {
-    const currentSettings: any = {
-      llmProvider: {
-        value: "openrouter",
-        default: "openrouter",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "",
-        default: "",
-        override: null,
-      },
-      pdfRenderer: {
-        value: "latex",
-        default: "rxresume",
-        override: null,
-      },
-      searchTerms: {
-        value: ["Platform Engineer"],
-        default: ["web developer"],
-        override: ["Platform Engineer"],
-      },
-      rxresumeBaseResumeId: "resume-1",
-      rxresumeUrl: null,
-      basicAuthActive: false,
-      onboardingBasicAuthDecision: "skipped",
-    };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
-
-    const { result } = renderHookWithQueryClient(() =>
-      useOnboardingRequirement(),
-    );
-
-    await waitFor(() => {
-      expect(result.current.checking).toBe(false);
-    });
-
-    expect(api.validateRxresume).toHaveBeenCalledTimes(1);
-    expect(result.current.complete).toBe(true);
+    expect(api.validateResumeConfig).toHaveBeenCalledTimes(1);
+    expect(result.current.complete).toBe(false);
   });
 
   it("requires an explicit saved search-terms override before onboarding is complete", async () => {
     const currentSettings: any = {
-      llmProvider: {
-        value: "openrouter",
-        default: "openrouter",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "",
-        default: "",
-        override: null,
-      },
-      pdfRenderer: {
-        value: "latex",
-        default: "rxresume",
+      model: {
+        value: "opus:medium",
+        default: "opus:medium",
         override: null,
       },
       searchTerms: {
@@ -412,19 +236,10 @@ describe("useOnboardingRequirement", () => {
         default: ["web developer"],
         override: null,
       },
-      rxresumeUrl: null,
       basicAuthActive: false,
       onboardingBasicAuthDecision: "skipped",
     };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
+    mockSettings(() => currentSettings);
 
     const { result } = renderHookWithQueryClient(() =>
       useOnboardingRequirement(),

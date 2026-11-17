@@ -1,5 +1,4 @@
 import { FileImage, ImagePlus, Plus, Trash2 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -72,8 +71,6 @@ function ColorField({
 type PictureSectionProps = {
   picture: Record<string, unknown>;
   pictureUploading: boolean;
-  pictureEnabled: boolean;
-  pictureDisabledReason?: string | null;
   onUploadPicture: () => void;
   onDeletePicture: () => void;
   onUpdatePicture: (key: string, value: unknown) => void;
@@ -82,25 +79,12 @@ type PictureSectionProps = {
 export function PictureSection({
   picture,
   pictureUploading,
-  pictureEnabled,
-  pictureDisabledReason,
   onUploadPicture,
   onDeletePicture,
   onUpdatePicture,
 }: PictureSectionProps) {
-  const editDisabled = !pictureEnabled;
-
   return (
     <div className="grid gap-3">
-      {!pictureEnabled ? (
-        <Alert>
-          <AlertDescription>
-            {pictureDisabledReason ??
-              "Pictures require Boussole to be reachable at a public URL."}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {picture.url ? (
         <div
           className={`${insetPanelClassName} flex items-center gap-3 border-dashed p-3`}
@@ -115,7 +99,7 @@ export function PictureSection({
               type="button"
               variant="outline"
               onClick={onUploadPicture}
-              disabled={pictureUploading || editDisabled}
+              disabled={pictureUploading}
             >
               <ImagePlus className="mr-2 h-4 w-4" />
               Replace
@@ -138,7 +122,7 @@ export function PictureSection({
           variant="outline"
           className="justify-start border-dashed"
           onClick={onUploadPicture}
-          disabled={pictureUploading || editDisabled}
+          disabled={pictureUploading}
         >
           <FileImage className="mr-2 h-4 w-4" />
           {pictureUploading ? "Uploading..." : "Upload image"}
@@ -156,7 +140,6 @@ export function PictureSection({
             onUpdatePicture("url", event.currentTarget.value)
           }
           className={fieldClassName}
-          disabled={editDisabled}
         />
       </div>
 
@@ -174,7 +157,6 @@ export function PictureSection({
         <Switch
           checked={!toBoolean(picture.hidden, false)}
           onCheckedChange={(checked) => onUpdatePicture("hidden", !checked)}
-          disabled={editDisabled}
         />
       </div>
 
@@ -199,7 +181,6 @@ export function PictureSection({
                 onUpdatePicture(key, Number(event.currentTarget.value || 0))
               }
               className={fieldClassName}
-              disabled={editDisabled}
             />
           </div>
         ))}
@@ -212,7 +193,6 @@ export function PictureSection({
             id={fieldId("picture", key)}
             label={label}
             value={toText(picture[key])}
-            disabled={editDisabled}
             onChange={(nextValue) => onUpdatePicture(key, nextValue)}
           />
         ))}

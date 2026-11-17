@@ -301,20 +301,3 @@ export async function updateUserPassword(input: {
     })
     .where(eq(users.id, input.id));
 }
-
-export async function userBelongsToTenant(input: {
-  userId: string;
-  tenantId: string;
-}): Promise<boolean> {
-  const [row] = await db
-    .select({ id: tenantMemberships.id })
-    .from(tenantMemberships)
-    .where(
-      and(
-        eq(tenantMemberships.userId, input.userId),
-        eq(tenantMemberships.tenantId, input.tenantId),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
-}

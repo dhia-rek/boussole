@@ -144,12 +144,9 @@ function getSourceStatus(args: {
     ? formatCountryLabel(requestedCountry)
     : "";
   const sourceName = knownSource ? sourceLabel[knownSource] : source;
-  const isUkOnlySource = knownSource
-    ? Boolean(EXTRACTOR_SOURCE_METADATA[knownSource]?.ukOnly)
-    : false;
 
   if (!countrySelected) {
-    if (source === "glassdoor" || isUkOnlySource) {
+    if (source === "glassdoor") {
       return {
         badgeLabel: "Select country",
         detail:
@@ -193,14 +190,6 @@ function getSourceStatus(args: {
       badgeLabel: "Available",
       detail: "Glassdoor is available for this location intent.",
       available: true,
-    };
-  }
-
-  if (isUkOnlySource && !plan.canRun) {
-    return {
-      badgeLabel: "UK only",
-      detail: `${sourceName} is available only when country is United Kingdom.`,
-      available: false,
     };
   }
 
@@ -287,11 +276,7 @@ export const AutomaticRunTab: React.FC<AutomaticRunTabProps> = ({
     const fallbackRunBudget = normalizeRunBudget(
       settings?.jobspyResultsWanted?.value ??
         settings?.startupjobsMaxJobsPerTerm?.value ??
-        settings?.jobindexMaxJobsPerTerm?.value ??
         settings?.adzunaMaxJobsPerTerm?.value ??
-        settings?.gradcrackerMaxJobsPerTerm?.value ??
-        settings?.naukriMaxJobsPerTerm?.value ??
-        settings?.ukvisajobsMaxJobs?.value ??
         DEFAULT_VALUES.runBudget,
     );
     const rememberedPresetValues =

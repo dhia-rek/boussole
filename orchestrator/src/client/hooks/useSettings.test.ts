@@ -17,7 +17,6 @@ describe("useSettings", () => {
 
   it("fetches settings on mount if not already cached", async () => {
     const mockSettings = createAppSettings({
-      showSponsorInfo: { value: false, default: true, override: false },
       renderMarkdownInJobDescriptions: {
         value: false,
         default: true,
@@ -35,7 +34,6 @@ describe("useSettings", () => {
       expect(result.current.settings).toEqual(mockSettings);
     });
 
-    expect(result.current.showSponsorInfo).toBe(false);
     expect(result.current.renderMarkdownInJobDescriptions).toBe(false);
     expect(api.getSettings).toHaveBeenCalledTimes(1);
   });
@@ -46,16 +44,18 @@ describe("useSettings", () => {
     const { result } = renderHookWithQueryClient(() => useSettings());
 
     await waitFor(() => {
-      // settings is null, so showSponsorInfo should default to true
-      expect(result.current.showSponsorInfo).toBe(true);
-      expect(result.current.renderMarkdownInJobDescriptions).toBe(true);
+      expect(api.getSettings).toHaveBeenCalledTimes(1);
+      expect(result.current.isLoading).toBe(false);
     });
+
+    // settings is null, so renderMarkdownInJobDescriptions defaults to true
+    expect(result.current.settings).toBeNull();
+    expect(result.current.renderMarkdownInJobDescriptions).toBe(true);
   });
 
   it("provides a refresh function that updates settings", async () => {
     const initialSettings = createAppSettings();
     const updatedSettings = createAppSettings({
-      showSponsorInfo: { value: false, default: true, override: false },
       renderMarkdownInJobDescriptions: {
         value: false,
         default: true,
@@ -82,7 +82,6 @@ describe("useSettings", () => {
     });
 
     expect(refreshed).toEqual(updatedSettings);
-    expect(result.current.showSponsorInfo).toBe(false);
     expect(result.current.renderMarkdownInJobDescriptions).toBe(false);
   });
 

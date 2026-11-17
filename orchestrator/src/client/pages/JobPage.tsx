@@ -35,7 +35,6 @@ import { JobBriefPane } from "@/client/components/JobBriefPane";
 import { JobDescriptionPanel } from "@/client/components/JobDescriptionPanel";
 import { invalidateJobData } from "@/client/hooks/queries/invalidate";
 import {
-  useCheckSponsorMutation,
   useGenerateJobPdfMutation,
   useMarkAsAppliedMutation,
   useRescoreJobMutation,
@@ -191,7 +190,6 @@ export const JobPage: React.FC = () => {
   const skipJobMutation = useSkipJobMutation();
   const rescoreJobMutation = useRescoreJobMutation();
   const generatePdfMutation = useGenerateJobPdfMutation();
-  const checkSponsorMutation = useCheckSponsorMutation();
 
   const job = jobQuery.data ?? null;
   const events = mergeEvents(eventsQuery.data ?? [], pendingEventRef.current);
@@ -221,7 +219,7 @@ export const JobPage: React.FC = () => {
       ),
     [catalog, selectedProjectIds],
   );
-  const sourceLabel = job ? sourceLabels[job.source] : "";
+  const sourceLabel = job ? (sourceLabels[job.source] ?? job.source) : "";
   const jobPageBackTo = React.useMemo(() => {
     const state = location.state as JobPageLocationState | null;
     return isValidJobPageBackTarget(state?.jobPageBackTo)
@@ -450,14 +448,6 @@ export const JobPage: React.FC = () => {
       if (!job) return;
       await generatePdfMutation.mutateAsync(job.id);
       toast.success("Resume PDF generated");
-    });
-  };
-
-  const handleCheckSponsor = async () => {
-    await runAction("check-sponsor", async () => {
-      if (!job) return;
-      await checkSponsorMutation.mutateAsync(job.id);
-      toast.success("Sponsor check completed");
     });
   };
 
@@ -965,7 +955,6 @@ export const JobPage: React.FC = () => {
               onOpenEditDetails={openEditDetails}
               onCopyJobInfo={() => void handleCopyJobInfo()}
               onRescore={() => void handleRescore()}
-              onCheckSponsor={() => void handleCheckSponsor()}
             />
           )}
         </div>

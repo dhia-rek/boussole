@@ -77,10 +77,6 @@ vi.mock("./pages/TrackingInboxPage", () => ({
   TrackingInboxPage: () => null,
 }));
 
-vi.mock("./pages/VisaSponsorsPage", () => ({
-  VisaSponsorsPage: () => null,
-}));
-
 describe("App demo banner", () => {
   it("shows the demo banner in demo mode", () => {
     vi.mocked(useDemoInfo).mockReturnValue({

@@ -10,10 +10,8 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV PYTHON_PATH=/usr/bin/python3
 ENV DATA_DIR=/app/data
-ENV CODEX_HOME=/app/codex-home
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PATH=/root/.local/bin:${PATH}
-ARG CODEX_CLI_VERSION=0.120.0
 ARG CLAUDE_CODE_VERSION=2.1.318
 
 # Install runtime dependencies shared by build and production stages.
@@ -26,11 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
-# Install Codex CLI for local app-server based inference.
-RUN npm install -g @openai/codex@${CODEX_CLI_VERSION}
-
-# Install the Claude Code CLI for the claude_cli provider. On a server it signs
-# in with CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`).
+# Install the Claude Code CLI: every AI step runs on Claude through it. On a
+# server it signs in with CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`).
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 WORKDIR /app
@@ -64,19 +59,10 @@ COPY shared/package*.json ./shared/
 COPY orchestrator/package*.json ./orchestrator/
 COPY extractors/adzuna/package*.json ./extractors/adzuna/
 COPY extractors/hiringcafe/package*.json ./extractors/hiringcafe/
-COPY extractors/gradcracker/package*.json ./extractors/gradcracker/
-COPY extractors/jobindex/package*.json ./extractors/jobindex/
-COPY extractors/naukri/package*.json ./extractors/naukri/
 COPY extractors/startupjobs/package*.json ./extractors/startupjobs/
-COPY extractors/workingnomads/package*.json ./extractors/workingnomads/
-COPY extractors/golangjobs/package*.json ./extractors/golangjobs/
-COPY extractors/ukvisajobs/package*.json ./extractors/ukvisajobs/
-COPY extractors/seek/package*.json ./extractors/seek/
 COPY extractors/bravesearch/package*.json ./extractors/bravesearch/
 COPY extractors/companyats/package*.json ./extractors/companyats/
-COPY extractors/remoteco/package*.json ./extractors/remoteco/
 COPY extractors/wellfound/package*.json ./extractors/wellfound/
-COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
 COPY extractors/wttj/package*.json ./extractors/wttj/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
@@ -97,20 +83,11 @@ COPY orchestrator ./orchestrator
 COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
-COPY extractors/gradcracker ./extractors/gradcracker
-COPY extractors/jobindex ./extractors/jobindex
 COPY extractors/jobspy ./extractors/jobspy
-COPY extractors/naukri ./extractors/naukri
 COPY extractors/startupjobs ./extractors/startupjobs
-COPY extractors/workingnomads ./extractors/workingnomads
-COPY extractors/golangjobs ./extractors/golangjobs
-COPY extractors/ukvisajobs ./extractors/ukvisajobs
-COPY extractors/seek ./extractors/seek
 COPY extractors/bravesearch ./extractors/bravesearch
 COPY extractors/companyats ./extractors/companyats
-COPY extractors/remoteco ./extractors/remoteco
 COPY extractors/wellfound ./extractors/wellfound
-COPY extractors/weworkremotely ./extractors/weworkremotely
 COPY extractors/wttj ./extractors/wttj
 COPY extractors/browser-utils ./extractors/browser-utils
 
@@ -144,19 +121,10 @@ COPY shared/package*.json ./shared/
 COPY orchestrator/package*.json ./orchestrator/
 COPY extractors/adzuna/package*.json ./extractors/adzuna/
 COPY extractors/hiringcafe/package*.json ./extractors/hiringcafe/
-COPY extractors/gradcracker/package*.json ./extractors/gradcracker/
-COPY extractors/jobindex/package*.json ./extractors/jobindex/
-COPY extractors/naukri/package*.json ./extractors/naukri/
 COPY extractors/startupjobs/package*.json ./extractors/startupjobs/
-COPY extractors/workingnomads/package*.json ./extractors/workingnomads/
-COPY extractors/golangjobs/package*.json ./extractors/golangjobs/
-COPY extractors/ukvisajobs/package*.json ./extractors/ukvisajobs/
-COPY extractors/seek/package*.json ./extractors/seek/
 COPY extractors/bravesearch/package*.json ./extractors/bravesearch/
 COPY extractors/companyats/package*.json ./extractors/companyats/
-COPY extractors/remoteco/package*.json ./extractors/remoteco/
 COPY extractors/wellfound/package*.json ./extractors/wellfound/
-COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
 COPY extractors/wttj/package*.json ./extractors/wttj/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
@@ -206,25 +174,16 @@ COPY orchestrator ./orchestrator
 COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
-COPY extractors/gradcracker ./extractors/gradcracker
-COPY extractors/jobindex ./extractors/jobindex
 COPY extractors/jobspy ./extractors/jobspy
-COPY extractors/naukri ./extractors/naukri
 COPY extractors/startupjobs ./extractors/startupjobs
-COPY extractors/workingnomads ./extractors/workingnomads
-COPY extractors/golangjobs ./extractors/golangjobs
-COPY extractors/ukvisajobs ./extractors/ukvisajobs
-COPY extractors/seek ./extractors/seek
 COPY extractors/bravesearch ./extractors/bravesearch
 COPY extractors/companyats ./extractors/companyats
-COPY extractors/remoteco ./extractors/remoteco
 COPY extractors/wellfound ./extractors/wellfound
-COPY extractors/weworkremotely ./extractors/weworkremotely
 COPY extractors/wttj ./extractors/wttj
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # Create runtime directories.
-RUN mkdir -p /app/data/pdfs /app/data/cloudflare-cookies /app/codex-home
+RUN mkdir -p /app/data/pdfs /app/data/cloudflare-cookies
 
 ENV DISPLAY=:99
 ENV NOVNC_PORT=6080

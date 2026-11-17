@@ -652,7 +652,6 @@ describe("useOrchestratorData", () => {
           location: null,
           status: "discovered",
           suitabilityScore: null,
-          sponsorMatchScore: null,
           jobType: null,
           jobFunction: null,
           salaryMinAmount: null,

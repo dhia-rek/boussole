@@ -97,21 +97,12 @@ describe("OverviewPipelineRunsSection", () => {
           skippedSources: [],
           blockedCompanyKeywordsCount: 2,
           sourceLimits: {
-            ukvisajobsMaxJobs: 50,
             adzunaMaxJobsPerTerm: 50,
-            gradcrackerMaxJobsPerTerm: 50,
             startupjobsMaxJobsPerTerm: 50,
-            jobindexMaxJobsPerTerm: 50,
-            naukriMaxJobsPerTerm: 50,
             jobspyResultsWanted: 20,
           },
           autoSkipScoreThreshold: 60,
-          pdfRenderer: "rxresume",
-          models: {
-            scorer: "gpt-scorer",
-            tailoring: "gpt-tailor",
-            projectSelection: "gpt-projects",
-          },
+          model: "opus:medium",
           resumeProjects: {
             maxProjects: 3,
             lockedProjectCount: 1,
@@ -152,6 +143,8 @@ describe("OverviewPipelineRunsSection", () => {
     expect(screen.getByText("Saved settings")).toBeInTheDocument();
     expect(screen.getByText("Requested run")).toBeInTheDocument();
     expect(screen.getByText("Effective settings")).toBeInTheDocument();
+    expect(screen.getByText("Claude model")).toBeInTheDocument();
+    expect(screen.getByText("opus:medium")).toBeInTheDocument();
     expect(screen.getByText("Saved execution summary")).toBeInTheDocument();
     expect(screen.getByText("What changed")).toBeInTheDocument();
     expect(screen.getByText("Inferred from timestamps")).toBeInTheDocument();

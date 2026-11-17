@@ -1,5 +1,5 @@
 import { createJob } from "@shared/testing/factories.js";
-import type { Job } from "@shared/types.js";
+import type { Job, JobSource } from "@shared/types.js";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { forwardRef, useImperativeHandle } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -55,9 +55,7 @@ let mockPipelineTerminalEvent: {
   errorMessage: string | null;
   token: number;
 } | null = null;
-let mockPipelineSources = ["linkedin"] as Array<
-  "gradcracker" | "indeed" | "linkedin" | "ukvisajobs" | "adzuna" | "hiringcafe"
->;
+let mockPipelineSources: JobSource[] = ["linkedin"];
 let mockAutomaticRunValues: AutomaticRunValues = {
   topN: 12,
   minSuitabilityScore: 55,
@@ -158,10 +156,7 @@ vi.mock("./orchestrator/usePipelineSources", () => ({
 
 vi.mock("../hooks/useSettings", () => ({
   useSettings: () => ({
-    settings: {
-      ukvisajobsEmail: null,
-      ukvisajobsPasswordHint: null,
-    },
+    settings: {},
     refreshSettings: vi.fn(),
   }),
 }));
@@ -211,7 +206,6 @@ vi.mock("./orchestrator/OrchestratorFilters", () => ({
     onTabChange,
     onOpenCommandBar,
     onSourceFilterChange,
-    onSponsorFilterChange,
     onSalaryFilterChange,
     onDateFilterChange,
     onResetFilters,
@@ -222,7 +216,6 @@ vi.mock("./orchestrator/OrchestratorFilters", () => ({
     onTabChange: (t: FilterTab) => void;
     onOpenCommandBar: () => void;
     onSourceFilterChange: (source: string) => void;
-    onSponsorFilterChange: (value: string) => void;
     onSalaryFilterChange: (value: {
       mode: "at_least" | "at_most" | "between";
       min: number | null;
@@ -256,9 +249,6 @@ vi.mock("./orchestrator/OrchestratorFilters", () => ({
       </button>
       <button type="button" onClick={() => onSourceFilterChange("linkedin")}>
         Set Source
-      </button>
-      <button type="button" onClick={() => onSponsorFilterChange("confirmed")}>
-        Set Sponsor
       </button>
       <button
         type="button"
@@ -664,7 +654,7 @@ describe("OrchestratorPage", () => {
     render(
       <MemoryRouter
         initialEntries={[
-          "/jobs/ready?source=linkedin&sponsor=confirmed&salaryMode=between&salaryMin=60000&salaryMax=90000&q=backend&sort=title-asc",
+          "/jobs/ready?source=linkedin&salaryMode=between&salaryMin=60000&salaryMax=90000&q=backend&sort=title-asc",
         ]}
       >
         <LocationWatcher />
@@ -682,7 +672,6 @@ describe("OrchestratorPage", () => {
       expect(locationText).toContain("/discovered/job-2");
       expect(locationText).toContain("sort=title-asc");
       expect(locationText).not.toContain("source=");
-      expect(locationText).not.toContain("sponsor=");
       expect(locationText).not.toContain("salaryMode=");
       expect(locationText).not.toContain("salaryMin=");
       expect(locationText).not.toContain("salaryMax=");
@@ -740,7 +729,7 @@ describe("OrchestratorPage", () => {
     );
   });
 
-  it("syncs source, sponsor, and salary range filters to URL and resets them", () => {
+  it("syncs source and salary range filters to URL and resets them", () => {
     window.matchMedia = createMatchMedia(
       true,
     ) as unknown as typeof window.matchMedia;
@@ -758,11 +747,6 @@ describe("OrchestratorPage", () => {
     fireEvent.click(screen.getByText("Set Source"));
     expect(screen.getByTestId("location").textContent).toContain(
       "source=linkedin",
-    );
-
-    fireEvent.click(screen.getByText("Set Sponsor"));
-    expect(screen.getByTestId("location").textContent).toContain(
-      "sponsor=confirmed",
     );
 
     fireEvent.click(screen.getByText("Set Salary Range"));
@@ -798,7 +782,6 @@ describe("OrchestratorPage", () => {
     fireEvent.click(screen.getByText("Reset Filters"));
     const locationText = screen.getByTestId("location").textContent || "";
     expect(locationText).not.toContain("source=");
-    expect(locationText).not.toContain("sponsor=");
     expect(locationText).not.toContain("salaryMode=");
     expect(locationText).not.toContain("salaryMin=");
     expect(locationText).not.toContain("salaryMax=");
@@ -901,7 +884,7 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/jobs/ready?source=ukvisajobs"]}>
+      <MemoryRouter initialEntries={["/jobs/ready?source=indeed"]}>
         <LocationWatcher />
         <Routes>
           <Route path="/jobs/:tab" element={<OrchestratorPage />} />
@@ -911,7 +894,7 @@ describe("OrchestratorPage", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("location").textContent).not.toContain(
-        "source=ukvisajobs",
+        "source=indeed",
       );
     });
   });
@@ -940,13 +923,8 @@ describe("OrchestratorPage", () => {
         searchTerms: ["backend"],
         workplaceTypes: ["remote", "hybrid", "onsite"],
         jobspyResultsWanted: 150,
-        gradcrackerMaxJobsPerTerm: 150,
-        naukriMaxJobsPerTerm: 150,
-        ukvisajobsMaxJobs: 150,
         adzunaMaxJobsPerTerm: 150,
         startupjobsMaxJobsPerTerm: 150,
-        jobindexMaxJobsPerTerm: 150,
-        seekMaxJobsPerTerm: 150,
         jobspyCountryIndeed: "united kingdom",
         searchCities: null,
         locationSearchScope: "selected_only",
@@ -1157,13 +1135,13 @@ describe("OrchestratorPage", () => {
     window.matchMedia = createMatchMedia(
       true,
     ) as unknown as typeof window.matchMedia;
-    mockPipelineSources = ["gradcracker", "ukvisajobs"];
+    mockPipelineSources = ["adzuna", "glassdoor"];
     mockAutomaticRunValues = {
       topN: 12,
       minSuitabilityScore: 55,
       searchTerms: ["backend"],
       runBudget: 150,
-      country: "united states",
+      country: "japan",
       cityLocations: [],
       workplaceTypes: ["remote", "hybrid", "onsite"],
       searchScope: "selected_only",
@@ -1182,9 +1160,12 @@ describe("OrchestratorPage", () => {
     fireEvent.click(screen.getByTestId("run-automatic"));
 
     await waitFor(() => {
-      expect(api.updateSettings).not.toHaveBeenCalled();
-      expect(api.runPipeline).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        "Selected country Japan is not supported.",
+      );
     });
+    expect(api.updateSettings).not.toHaveBeenCalled();
+    expect(api.runPipeline).not.toHaveBeenCalled();
   });
 
   it("shows and hides Recalculate match based on selected statuses", async () => {

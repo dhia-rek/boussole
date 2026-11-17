@@ -10,24 +10,6 @@ import type {
 } from "@shared/types";
 import { fetchApi, withQuery } from "./core";
 
-export async function postApplicationProviderConnect(input: {
-  provider?: PostApplicationProvider;
-  accountKey?: string;
-  payload?: Record<string, unknown>;
-}): Promise<PostApplicationProviderActionResponse> {
-  const provider = input.provider ?? "gmail";
-  return fetchApi<PostApplicationProviderActionResponse>(
-    `/post-application/providers/${provider}/actions/connect`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        ...(input.accountKey ? { accountKey: input.accountKey } : {}),
-        ...(input.payload ? { payload: input.payload } : {}),
-      }),
-    },
-  );
-}
-
 export async function postApplicationGmailOauthStart(input?: {
   accountKey?: string;
 }): Promise<{

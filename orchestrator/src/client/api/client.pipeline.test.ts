@@ -154,23 +154,23 @@ describe("pipeline client helpers", () => {
         ok: true,
         data: {
           status: "solved",
-          extractorId: "gradcracker",
+          extractorId: "hiringcafe",
           challengesRemaining: 0,
         },
         meta: { requestId: "req-solve" },
       }),
     );
 
-    await expect(api.solvePipelineChallenge("gradcracker")).resolves.toEqual({
+    await expect(api.solvePipelineChallenge("hiringcafe")).resolves.toEqual({
       status: "solved",
-      extractorId: "gradcracker",
+      extractorId: "hiringcafe",
       challengesRemaining: 0,
     });
     expect(fetchSpy).toHaveBeenCalledWith(
       "/api/pipeline/solve-challenge",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ extractorId: "gradcracker" }),
+        body: JSON.stringify({ extractorId: "hiringcafe" }),
       }),
     );
   });

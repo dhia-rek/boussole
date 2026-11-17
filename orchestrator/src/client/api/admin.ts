@@ -5,12 +5,8 @@ import type {
   ManualJobDraft,
   ManualJobFetchResponse,
   ManualJobInferenceResponse,
-  VisaSponsor,
-  VisaSponsorSearchResponse,
-  VisaSponsorStatusResponse,
 } from "@shared/types";
-import { fetchApi, withQuery } from "./core";
-import { bucketQueryLength, trackProductEvent } from "./internal-shared";
+import { fetchApi } from "./core";
 
 export async function getDemoInfo(): Promise<DemoInfoResponse> {
   return fetchApi<DemoInfoResponse>("/demo/info");
@@ -80,53 +76,6 @@ export async function deleteJobsBelowScore(threshold: number): Promise<{
     threshold: number;
   }>(`/jobs/score/${threshold}`, {
     method: "DELETE",
-  });
-}
-
-export async function getVisaSponsorStatus(): Promise<VisaSponsorStatusResponse> {
-  return fetchApi<VisaSponsorStatusResponse>("/visa-sponsors/status");
-}
-
-export async function searchVisaSponsors(input: {
-  query: string;
-  limit?: number;
-  minScore?: number;
-  country?: string;
-}): Promise<VisaSponsorSearchResponse> {
-  if (input.query?.trim()) {
-    trackProductEvent("visa_sponsor_search", {
-      query_length_bucket: bucketQueryLength(input.query.trim()),
-      limit: input.limit,
-      min_score: input.minScore,
-      country: input.country ?? "all",
-    });
-  }
-  return fetchApi<VisaSponsorSearchResponse>("/visa-sponsors/search", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
-export async function getVisaSponsorOrganization(
-  name: string,
-  providerId?: string,
-): Promise<VisaSponsor[]> {
-  return fetchApi<VisaSponsor[]>(
-    withQuery(`/visa-sponsors/organization/${encodeURIComponent(name)}`, {
-      providerId,
-    }),
-  );
-}
-
-export async function updateVisaSponsorList(): Promise<{
-  message: string;
-  status: VisaSponsorStatusResponse;
-}> {
-  return fetchApi<{
-    message: string;
-    status: VisaSponsorStatusResponse;
-  }>("/visa-sponsors/update", {
-    method: "POST",
   });
 }
 

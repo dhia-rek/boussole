@@ -3,7 +3,6 @@ import { runWithRequestContext } from "@infra/request-context";
 import type { AutoPdfRegenerationReason } from "@server/infra/job-queue";
 import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as jobsRepo from "@server/repositories/jobs";
-import type { SettingKey } from "@server/repositories/settings";
 import { getActiveTenantId } from "@server/tenancy/context";
 import type { Job } from "@shared/types";
 import { generateFinalPdf } from "../pipeline";
@@ -14,13 +13,6 @@ import {
 
 const AUTO_PDF_REGEN_BATCH_LIMIT = 25;
 const AUTO_PDF_REGEN_RETRY_DELAY_MS = 5000;
-
-const SETTINGS_INVALIDATION_KEYS = new Set<SettingKey>([
-  "pdfRenderer",
-  "rxresumeBaseResumeId",
-  "rxresumeUrl",
-  "rxresumeApiKey",
-]);
 
 let workerPromise: Promise<void> | null = null;
 let workerRequested = false;
@@ -246,21 +238,6 @@ export async function enqueueAutoPdfRegenerationForReadyJobs(input: {
   );
 
   return jobs.length;
-}
-
-export async function enqueueAutoPdfRegenerationForSettingsChanges(input: {
-  updatedSettingKeys: ReadonlyArray<SettingKey>;
-  requestedBy: "system" | "user";
-}): Promise<number> {
-  const shouldRegenerate = input.updatedSettingKeys.some((key) =>
-    SETTINGS_INVALIDATION_KEYS.has(key),
-  );
-  if (!shouldRegenerate) return 0;
-
-  return enqueueAutoPdfRegenerationForReadyJobs({
-    reason: "settings_changed",
-    requestedBy: input.requestedBy,
-  });
 }
 
 export function shouldEnqueueTailoringAutoPdfRegeneration(

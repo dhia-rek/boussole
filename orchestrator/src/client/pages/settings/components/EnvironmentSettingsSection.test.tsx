@@ -14,9 +14,7 @@ const EnvironmentSettingsHarness = () => {
   });
   const methods = useForm<UpdateSettingsInput>({
     defaultValues: {
-      ukvisajobsEmail: "visa@example.com",
       basicAuthUser: "admin",
-      ukvisajobsPassword: "",
       adzunaAppId: "adzuna-id",
       adzunaAppKey: "",
       basicAuthPassword: "super-secret",
@@ -32,13 +30,11 @@ const EnvironmentSettingsHarness = () => {
           <EnvironmentSettingsSection
             values={{
               readable: {
-                ukvisajobsEmail: "visa@example.com",
                 adzunaAppId: "adzuna-id",
                 basicAuthUser: "admin",
                 basicAuthPassword: "super-secret",
               },
               private: {
-                ukvisajobsPasswordHint: "pass",
                 adzunaAppKeyHint: "adzu",
                 basicAuthPasswordHint: "abcd",
                 webhookSecretHint: "sec-",
@@ -58,10 +54,7 @@ describe("EnvironmentSettingsSection", () => {
   it("renders values grouped logically and masks private secrets with hints", () => {
     render(<EnvironmentSettingsHarness />);
 
-    expect(screen.getByDisplayValue("visa@example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("adzuna-id")).toBeInTheDocument();
-
-    expect(screen.getByText(/pass\*{8}/)).toBeInTheDocument();
     expect(screen.getByText(/adzu\*{8}/)).toBeInTheDocument();
     // Authentication
     expect(screen.getByLabelText("Enable authentication")).toBeChecked();
@@ -72,5 +65,6 @@ describe("EnvironmentSettingsSection", () => {
     expect(screen.getByText("Service Accounts")).toBeInTheDocument();
     expect(screen.getByText("Security")).toBeInTheDocument();
     expect(screen.queryByText("RxResume")).not.toBeInTheDocument();
+    expect(screen.queryByText("UKVisaJobs")).not.toBeInTheDocument();
   });
 });
