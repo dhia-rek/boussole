@@ -8,7 +8,6 @@ import {
   Link2,
   Send,
   Settings,
-  Shield,
 } from "lucide-react";
 
 /** Live counts that can be shown next to a navigation link. */
@@ -70,7 +69,6 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { to: "/overview", label: "Analytics", icon: BarChart3 },
       { to: "/tracer-links", label: "Tracer links", icon: Link2 },
-      { to: "/visa-sponsors", label: "Visa sponsors", icon: Shield },
     ],
   },
 ];

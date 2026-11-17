@@ -21,27 +21,18 @@ describe("orchestrator utils", () => {
     expect(getEnabledSources(createAppSettings())).toContain("startupjobs");
   });
 
-  it("enables workingnomads without credentials", () => {
-    expect(getEnabledSources(createAppSettings())).toContain("workingnomads");
-  });
-
-  it("enables golangjobs without credentials", () => {
-    expect(getEnabledSources(createAppSettings())).toContain("golangjobs");
-  });
-
-  it("enables jobindex without credentials", () => {
-    expect(getEnabledSources(createAppSettings())).toContain("jobindex");
-  });
-
-  it("enables seek only when apify token is configured", () => {
-    const withToken = createAppSettings({ apifyTokenHint: "sk-" });
-    const withoutToken = createAppSettings({ apifyTokenHint: null });
-    expect(getEnabledSources(withToken)).toContain("seek");
-    expect(getEnabledSources(withoutToken)).not.toContain("seek");
-  });
-
-  it("enables naukri without credentials", () => {
-    expect(getEnabledSources(createAppSettings())).toContain("naukri");
+  it("enables every other pipeline source, in order, without credentials", () => {
+    expect(getEnabledSources(createAppSettings())).toEqual([
+      "wttj",
+      "companyats",
+      "linkedin",
+      "indeed",
+      "glassdoor",
+      "hiringcafe",
+      "startupjobs",
+      "wellfound",
+      "bravesearch",
+    ]);
   });
 
   it("counts processing jobs in ready and discovered tabs", () => {

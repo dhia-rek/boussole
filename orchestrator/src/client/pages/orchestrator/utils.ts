@@ -154,24 +154,6 @@ const getSortDateValue = (job: JobListItem, sort: JobSort): number | null => {
   return dateValue(job.discoveredAt);
 };
 
-export const jobMatchesQuery = (job: JobListItem, query: string) => {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return true;
-  const haystack = [
-    job.title,
-    job.employer,
-    job.location,
-    job.source,
-    job.status,
-    job.jobType,
-    job.jobFunction,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(normalized);
-};
-
 export const getJobCounts = (
   jobs: JobListItem[],
 ): Record<FilterTab, number> => {
@@ -202,69 +184,17 @@ export const getSourcesWithJobs = (jobs: JobListItem[]): JobSource[] => {
   return orderedFilterSources.filter((source) => seen.has(source));
 };
 
+/** Sources a run can use: all of them, except Adzuna until its keys are set. */
 export const getEnabledSources = (
   settings: AppSettings | null,
 ): JobSource[] => {
   if (!settings) return [...orderedSources];
 
-  const enabled: JobSource[] = [];
-  const hasUkVisaJobsAuth = Boolean(
-    settings.ukvisajobsEmail?.trim() && settings.ukvisajobsPasswordHint,
-  );
   const hasAdzunaAuth = Boolean(
     settings.adzunaAppId?.trim() && settings.adzunaAppKeyHint,
   );
-  const hasApifyToken = Boolean(settings.apifyTokenHint);
-
-  for (const source of orderedSources) {
-    if (source === "gradcracker") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "ukvisajobs") {
-      if (hasUkVisaJobsAuth) enabled.push(source);
-      continue;
-    }
-    if (source === "adzuna") {
-      if (hasAdzunaAuth) enabled.push(source);
-      continue;
-    }
-    if (source === "seek") {
-      if (hasApifyToken) enabled.push(source);
-      continue;
-    }
-    if (source === "naukri") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "hiringcafe") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "startupjobs") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "workingnomads") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "golangjobs") {
-      enabled.push(source);
-      continue;
-    }
-    if (source === "jobindex") {
-      enabled.push(source);
-      continue;
-    }
-    if (
-      source === "indeed" ||
-      source === "linkedin" ||
-      source === "glassdoor"
-    ) {
-      enabled.push(source);
-    }
-  }
-
+  const enabled = orderedSources.filter(
+    (source) => source !== "adzuna" || hasAdzunaAuth,
+  );
   return enabled.length > 0 ? enabled : [...DEFAULT_PIPELINE_SOURCES];
 };

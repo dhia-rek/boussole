@@ -2,7 +2,6 @@ import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
 import {
   EXTRACTOR_SOURCE_IDS,
-  EXTRACTOR_SOURCE_METADATA,
   type ExtractorSourceId,
   PIPELINE_EXTRACTOR_SOURCE_IDS,
 } from "@shared/extractors";
@@ -219,21 +218,4 @@ export async function initializeExtractorRegistry(): Promise<ExtractorRegistry> 
 
 export async function getExtractorRegistry(): Promise<ExtractorRegistry> {
   return initializeExtractorRegistry();
-}
-
-export async function listAvailableSources(): Promise<
-  Array<{ id: ExtractorSourceId; label: string }>
-> {
-  const current = await getExtractorRegistry();
-  return current.availableSources.map((source) => ({
-    id: source,
-    label: EXTRACTOR_SOURCE_METADATA[source].label,
-  }));
-}
-
-export async function isSourceAvailable(
-  source: ExtractorSourceId,
-): Promise<boolean> {
-  const current = await getExtractorRegistry();
-  return current.manifestBySource.has(source);
 }

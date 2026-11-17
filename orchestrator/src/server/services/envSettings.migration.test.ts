@@ -17,7 +17,7 @@ describe.sequential("envSettings overrides", () => {
       DATA_DIR: tempDir,
       NODE_ENV: "test",
       MODEL: "test-model",
-      LLM_API_KEY: "sk-env-default",
+      ADZUNA_APP_KEY: "adzuna-env-default",
     };
 
     await import("../db/migrate");
@@ -31,26 +31,33 @@ describe.sequential("envSettings overrides", () => {
     process.env = { ...originalEnv };
   });
 
-  it("keeps stored llmApiKey overrides out of process env", async () => {
+  it("keeps stored secret overrides out of process env", async () => {
     const settingsRepo = await import("../repositories/settings");
-    const { applyStoredEnvOverrides } = await import("./envSettings");
+    const { applyStoredEnvOverrides, getEnvSettingsData } = await import(
+      "./envSettings"
+    );
 
-    await settingsRepo.setSetting("llmApiKey", "sk-db-override");
+    await settingsRepo.setSetting("adzunaAppKey", "adzuna-db-override");
 
     await applyStoredEnvOverrides();
 
-    expect(await settingsRepo.getSetting("llmApiKey")).toBe("sk-db-override");
-    expect(process.env.LLM_API_KEY).toBe("sk-env-default");
+    expect(await settingsRepo.getSetting("adzunaAppKey")).toBe(
+      "adzuna-db-override",
+    );
+    expect(process.env.ADZUNA_APP_KEY).toBe("adzuna-env-default");
+    // The stored value wins for this workspace, shown only as a short hint.
+    const data = await getEnvSettingsData();
+    expect(data.adzunaAppKeyHint).toBe("adzu");
   });
 
   it("leaves process env unchanged when override is explicitly cleared", async () => {
     const settingsRepo = await import("../repositories/settings");
     const { applyStoredEnvOverrides } = await import("./envSettings");
 
-    await settingsRepo.setSetting("llmApiKey", "");
+    await settingsRepo.setSetting("adzunaAppKey", "");
 
     await applyStoredEnvOverrides();
 
-    expect(process.env.LLM_API_KEY).toBe("sk-env-default");
+    expect(process.env.ADZUNA_APP_KEY).toBe("adzuna-env-default");
   });
 });

@@ -35,7 +35,7 @@ vi.mock("./pdf-fingerprint", () => ({
 }));
 
 import {
-  enqueueAutoPdfRegenerationForSettingsChanges,
+  enqueueAutoPdfRegenerationForReadyJobs,
   shouldEnqueueTailoringAutoPdfRegeneration,
 } from "./auto-pdf-regeneration";
 
@@ -54,18 +54,7 @@ describe("auto PDF regeneration", () => {
     mocks.getReadyJobsWithGeneratedPdfs.mockResolvedValue([]);
   });
 
-  it("skips enqueue for non-PDF-impacting setting changes", async () => {
-    const enqueued = await enqueueAutoPdfRegenerationForSettingsChanges({
-      updatedSettingKeys: ["model", "searchTerms"],
-      requestedBy: "user",
-    });
-
-    expect(enqueued).toBe(0);
-    expect(mocks.getReadyJobsWithGeneratedPdfs).not.toHaveBeenCalled();
-    expect(mocks.enqueue).not.toHaveBeenCalled();
-  });
-
-  it("enqueues ready generated PDFs with settings_changed reason", async () => {
+  it("re-renders stale ready PDFs after the CV in the editor changes", async () => {
     mocks.getReadyJobsWithGeneratedPdfs.mockResolvedValue([
       createJob({
         id: "job-1",
@@ -83,8 +72,8 @@ describe("auto PDF regeneration", () => {
       }),
     ]);
 
-    const enqueued = await enqueueAutoPdfRegenerationForSettingsChanges({
-      updatedSettingKeys: ["pdfRenderer"],
+    const enqueued = await enqueueAutoPdfRegenerationForReadyJobs({
+      reason: "design_resume_updated",
       requestedBy: "user",
     });
 
@@ -97,7 +86,7 @@ describe("auto PDF regeneration", () => {
       expect.objectContaining({
         tenantId: "tenant-test",
         jobId: "job-1",
-        reason: "settings_changed",
+        reason: "design_resume_updated",
         requestedBy: "user",
       }),
       { dedupeKey: "tenant-test:job-1" },
@@ -108,14 +97,14 @@ describe("auto PDF regeneration", () => {
       expect.objectContaining({
         tenantId: "tenant-test",
         jobId: "job-2",
-        reason: "settings_changed",
+        reason: "design_resume_updated",
         requestedBy: "user",
       }),
       { dedupeKey: "tenant-test:job-2" },
     );
   });
 
-  it("skips current generated PDFs when enqueueing settings refreshes", async () => {
+  it("skips generated PDFs that are already current", async () => {
     mocks.getReadyJobsWithGeneratedPdfs.mockResolvedValue([
       createJob({
         id: "job-current",
@@ -133,9 +122,9 @@ describe("auto PDF regeneration", () => {
       }),
     ]);
 
-    const enqueued = await enqueueAutoPdfRegenerationForSettingsChanges({
-      updatedSettingKeys: ["pdfRenderer"],
-      requestedBy: "user",
+    const enqueued = await enqueueAutoPdfRegenerationForReadyJobs({
+      reason: "design_resume_updated",
+      requestedBy: "system",
     });
 
     expect(enqueued).toBe(1);

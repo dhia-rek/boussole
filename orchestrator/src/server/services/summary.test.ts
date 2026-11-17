@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const callJsonMock = vi.fn();
 const getProviderMock = vi.fn();
-const getBaseUrlMock = vi.fn();
 
 vi.mock("../repositories/settings", () => ({
   getSetting: vi.fn(),
@@ -13,7 +12,6 @@ vi.mock("./llm/service", () => ({
   LlmService: class {
     callJson = callJsonMock;
     getProvider = getProviderMock;
-    getBaseUrl = getBaseUrlMock;
   },
 }));
 
@@ -38,8 +36,7 @@ import { getWritingStyle } from "./writing-style";
 describe("generateTailoring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getProviderMock.mockReturnValue("openrouter");
-    getBaseUrlMock.mockReturnValue("https://openrouter.ai");
+    getProviderMock.mockReturnValue("claude_cli");
     callJsonMock.mockResolvedValue({
       success: true,
       data: {

@@ -101,40 +101,17 @@ vi.mock("@server/services/challenge-viewer", () => ({
   proxyChallengeViewerRequest: vi.fn(),
 }));
 
-vi.mock("@server/services/visa-sponsors/index", () => ({
-  getStatus: vi.fn(),
-  searchSponsors: vi.fn(),
-  getOrganizationDetails: vi.fn(),
-  downloadLatestCsv: vi.fn(),
-  calculateSponsorMatchSummary: vi.fn((results) => {
-    if (!results || results.length === 0)
-      return { sponsorMatchScore: 0, sponsorMatchNames: null };
-    return {
-      sponsorMatchScore: results[0].score,
-      sponsorMatchNames: JSON.stringify(
-        results.map((r: any) => r.sponsor.organisationName),
-      ),
-    };
-  }),
-}));
-
 const originalEnv = { ...process.env };
 const isolatedEnvKeys = [
-  "RXRESUME_API_KEY",
-  "RXRESUME_EMAIL",
-  "RXRESUME_PASSWORD",
-  "RXRESUME_URL",
-  "RXRESUME_MODE",
-  "LLM_API_KEY",
-  "LLM_PROVIDER",
-  "LLM_BASE_URL",
+  "CLAUDE_CLI_BIN",
+  "CLAUDE_CLI_EFFORT",
+  "CLAUDE_CLI_REQUEST_TIMEOUT_MS",
+  "CLAUDE_CLI_VALIDATION_TIMEOUT_MS",
   "BASIC_AUTH_USER",
   "BASIC_AUTH_PASSWORD",
   "JWT_SECRET",
   "JWT_EXPIRY_SECONDS",
   "WEBHOOK_SECRET",
-  "UKVISAJOBS_EMAIL",
-  "UKVISAJOBS_PASSWORD",
   "ADZUNA_APP_ID",
   "ADZUNA_APP_KEY",
 ] as const;
@@ -194,6 +171,9 @@ export async function startServer(options?: {
     FORSA_TEST_AUTH_BYPASS: "1",
     MODEL: "test-model",
     JOBSPY_SEARCH_TERMS: "alpha|beta",
+    // Never reach the developer's real Claude Code CLI from route tests: any
+    // unmocked AI call fails fast as "Claude CLI not installed".
+    CLAUDE_CLI_BIN: join(tempDir, "claude-cli-not-installed"),
     ...envOverrides,
   };
 

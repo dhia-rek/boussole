@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getDefaultPromptTemplate } from "./prompt-template-definitions";
 import {
-  getDefaultModelForProvider,
+  DEFAULT_CLAUDE_CLI_MODEL,
   settingsRegistry,
 } from "./settings-registry";
 
@@ -110,30 +110,42 @@ describe("settingsRegistry helpers", () => {
 
   describe("number parsing and clamping", () => {
     it("returns null for empty/invalid values", () => {
-      expect(settingsRegistry.ukvisajobsMaxJobs.parse("")).toBeNull();
-      expect(settingsRegistry.ukvisajobsMaxJobs.parse("abc")).toBeNull();
-      expect(settingsRegistry.ukvisajobsMaxJobs.parse(undefined)).toBeNull();
+      expect(settingsRegistry.adzunaMaxJobsPerTerm.parse("")).toBeNull();
+      expect(settingsRegistry.adzunaMaxJobsPerTerm.parse("abc")).toBeNull();
+      expect(settingsRegistry.adzunaMaxJobsPerTerm.parse(undefined)).toBeNull();
     });
 
     it("parses valid numbers", () => {
-      expect(settingsRegistry.ukvisajobsMaxJobs.parse("42")).toBe(42);
+      expect(settingsRegistry.adzunaMaxJobsPerTerm.parse("42")).toBe(42);
     });
 
-    it("uses env-backed defaults for jobindex per-term caps", () => {
-      const previousJobindexMaxJobsPerTerm =
-        process.env.JOBINDEX_MAX_JOBS_PER_TERM;
+    it("uses env-backed defaults for per-term source caps", () => {
+      const previousAdzunaMaxJobsPerTerm = process.env.ADZUNA_MAX_JOBS_PER_TERM;
+      const previousStartupjobsMaxResults = process.env.STARTUPJOBS_MAX_RESULTS;
 
-      process.env.JOBINDEX_MAX_JOBS_PER_TERM = "75";
+      process.env.ADZUNA_MAX_JOBS_PER_TERM = "75";
+      process.env.STARTUPJOBS_MAX_RESULTS = "30";
 
       try {
-        expect(settingsRegistry.jobindexMaxJobsPerTerm.default()).toBe(75);
-        expect(settingsRegistry.jobindexMaxJobsPerTerm.parse("25")).toBe(25);
+        expect(settingsRegistry.adzunaMaxJobsPerTerm.default()).toBe(75);
+        expect(settingsRegistry.adzunaMaxJobsPerTerm.parse("25")).toBe(25);
+        expect(settingsRegistry.startupjobsMaxJobsPerTerm.default()).toBe(30);
+
+        delete process.env.ADZUNA_MAX_JOBS_PER_TERM;
+        delete process.env.STARTUPJOBS_MAX_RESULTS;
+        expect(settingsRegistry.adzunaMaxJobsPerTerm.default()).toBe(50);
+        expect(settingsRegistry.startupjobsMaxJobsPerTerm.default()).toBe(50);
       } finally {
-        if (previousJobindexMaxJobsPerTerm === undefined) {
-          delete process.env.JOBINDEX_MAX_JOBS_PER_TERM;
+        if (previousAdzunaMaxJobsPerTerm === undefined) {
+          delete process.env.ADZUNA_MAX_JOBS_PER_TERM;
         } else {
-          process.env.JOBINDEX_MAX_JOBS_PER_TERM =
-            previousJobindexMaxJobsPerTerm;
+          process.env.ADZUNA_MAX_JOBS_PER_TERM = previousAdzunaMaxJobsPerTerm;
+        }
+
+        if (previousStartupjobsMaxResults === undefined) {
+          delete process.env.STARTUPJOBS_MAX_RESULTS;
+        } else {
+          process.env.STARTUPJOBS_MAX_RESULTS = previousStartupjobsMaxResults;
         }
       }
     });
@@ -159,14 +171,14 @@ describe("settingsRegistry helpers", () => {
 
   describe("boolean (bit-bool) parsing and serialization", () => {
     it("parses bit bools correctly", () => {
-      expect(settingsRegistry.showSponsorInfo.parse("1")).toBe(true);
-      expect(settingsRegistry.showSponsorInfo.parse("true")).toBe(true);
-      expect(settingsRegistry.showSponsorInfo.parse("0")).toBe(false);
-      expect(settingsRegistry.showSponsorInfo.parse("false")).toBe(false);
-      expect(settingsRegistry.showSponsorInfo.parse("2")).toBeNull();
-      expect(settingsRegistry.showSponsorInfo.parse("yes")).toBeNull();
-      expect(settingsRegistry.showSponsorInfo.parse("")).toBeNull();
-      expect(settingsRegistry.showSponsorInfo.parse(undefined)).toBeNull();
+      expect(settingsRegistry.backupEnabled.parse("1")).toBe(true);
+      expect(settingsRegistry.backupEnabled.parse("true")).toBe(true);
+      expect(settingsRegistry.backupEnabled.parse("0")).toBe(false);
+      expect(settingsRegistry.backupEnabled.parse("false")).toBe(false);
+      expect(settingsRegistry.backupEnabled.parse("2")).toBeNull();
+      expect(settingsRegistry.backupEnabled.parse("yes")).toBeNull();
+      expect(settingsRegistry.backupEnabled.parse("")).toBeNull();
+      expect(settingsRegistry.backupEnabled.parse(undefined)).toBeNull();
       expect(settingsRegistry.renderMarkdownInJobDescriptions.parse("1")).toBe(
         true,
       );
@@ -180,10 +192,10 @@ describe("settingsRegistry helpers", () => {
     });
 
     it("serializes bit bools correctly", () => {
-      expect(settingsRegistry.showSponsorInfo.serialize(true)).toBe("1");
-      expect(settingsRegistry.showSponsorInfo.serialize(false)).toBe("0");
-      expect(settingsRegistry.showSponsorInfo.serialize(null)).toBeNull();
-      expect(settingsRegistry.showSponsorInfo.serialize(undefined)).toBeNull();
+      expect(settingsRegistry.backupEnabled.serialize(true)).toBe("1");
+      expect(settingsRegistry.backupEnabled.serialize(false)).toBe("0");
+      expect(settingsRegistry.backupEnabled.serialize(null)).toBeNull();
+      expect(settingsRegistry.backupEnabled.serialize(undefined)).toBeNull();
       expect(
         settingsRegistry.renderMarkdownInJobDescriptions.serialize(true),
       ).toBe("1");
@@ -251,16 +263,6 @@ describe("settingsRegistry helpers", () => {
     });
   });
 
-  describe("RxResume settings", () => {
-    it("has env-backed v5 api key secret setting", () => {
-      expect(settingsRegistry.rxresumeApiKey.envKey).toBe("RXRESUME_API_KEY");
-    });
-
-    it("has env-backed rxresumeUrl string setting", () => {
-      expect(settingsRegistry.rxresumeUrl.envKey).toBe("RXRESUME_URL");
-    });
-  });
-
   describe("writing-style language settings", () => {
     it("defaults to manual english", () => {
       const previousLanguageMode = process.env.CHAT_STYLE_LANGUAGE_MODE;
@@ -322,37 +324,53 @@ describe("settingsRegistry helpers", () => {
     });
   });
 
-  describe("LLM provider parsing", () => {
-    it("normalizes the documented openai-compatible alias", () => {
-      expect(settingsRegistry.llmProvider.parse("openai-compatible")).toBe(
-        "openai_compatible",
-      );
-      expect(settingsRegistry.llmProvider.parse("OPENAI-COMPATIBLE")).toBe(
-        "openai_compatible",
-      );
+  describe("Claude model setting", () => {
+    it("defaults to opus with medium effort when MODEL is unset", () => {
+      const previousModel = process.env.MODEL;
+      delete process.env.MODEL;
+
+      try {
+        expect(DEFAULT_CLAUDE_CLI_MODEL).toBe("opus:medium");
+        expect(settingsRegistry.model.default()).toBe("opus:medium");
+
+        process.env.MODEL = "  sonnet  ";
+        expect(settingsRegistry.model.default()).toBe("sonnet");
+
+        process.env.MODEL = "   ";
+        expect(settingsRegistry.model.default()).toBe("opus:medium");
+      } finally {
+        if (previousModel === undefined) {
+          delete process.env.MODEL;
+        } else {
+          process.env.MODEL = previousModel;
+        }
+      }
     });
 
-    it("accepts gemini_cli including hyphenated alias", () => {
-      expect(settingsRegistry.llmProvider.parse("gemini_cli")).toBe(
-        "gemini_cli",
-      );
-      expect(settingsRegistry.llmProvider.parse("gemini-cli")).toBe(
-        "gemini_cli",
-      );
+    it("parses and serializes model overrides", () => {
+      expect(settingsRegistry.model.parse("haiku")).toBe("haiku");
+      expect(settingsRegistry.model.parse("")).toBeNull();
+      expect(settingsRegistry.model.serialize("opus:high")).toBe("opus:high");
+      expect(settingsRegistry.model.serialize(null)).toBeNull();
     });
 
-    it("uses provider-specific default models", () => {
-      expect(getDefaultModelForProvider("openai")).toBe("gpt-5.4-mini");
-      expect(getDefaultModelForProvider("gemini")).toBe(
-        "google/gemini-3-flash-preview",
-      );
-      expect(getDefaultModelForProvider("gemini_cli")).toBe(
-        "google/gemini-3-flash-preview",
-      );
-      expect(getDefaultModelForProvider("codex")).toBe("");
-      expect(getDefaultModelForProvider("openrouter")).toBe(
-        "google/gemini-3-flash-preview",
-      );
+    it("no longer registers settings for other AI providers or removed sources", () => {
+      for (const removedKey of [
+        "llmProvider",
+        "llmBaseUrl",
+        "llmApiKey",
+        "modelScorer",
+        "modelTailoring",
+        "modelProjectSelection",
+        "showSponsorInfo",
+        "ukvisajobsMaxJobs",
+        "jobindexMaxJobsPerTerm",
+        "apifyToken",
+        "rxresumeApiKey",
+        "pdfRenderer",
+      ]) {
+        expect(Object.hasOwn(settingsRegistry, removedKey)).toBe(false);
+      }
     });
   });
 });

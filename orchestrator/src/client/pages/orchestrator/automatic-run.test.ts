@@ -142,7 +142,7 @@ describe("automatic-run utilities", () => {
         searchScope: "selected_only",
         matchStrictness: "exact_only",
       },
-      sources: ["indeed", "linkedin", "gradcracker", "ukvisajobs"],
+      sources: ["wttj", "companyats", "linkedin", "indeed"],
     });
 
     expect(estimate.discovered.cap).toBe(100);
@@ -156,11 +156,11 @@ describe("automatic-run utilities", () => {
     const limits = deriveExtractorLimits({
       budget: 750,
       searchTerms: ["a", "b", "c"],
-      sources: ["indeed", "linkedin", "glassdoor", "gradcracker"],
+      sources: ["indeed", "linkedin", "glassdoor", "adzuna"],
     });
 
     const cap =
-      3 * limits.jobspyResultsWanted * 3 + limits.gradcrackerMaxJobsPerTerm * 3;
+      3 * limits.jobspyResultsWanted * 3 + limits.adzunaMaxJobsPerTerm * 3;
 
     expect(cap).toBeLessThanOrEqual(750);
   });
@@ -174,17 +174,6 @@ describe("automatic-run utilities", () => {
 
     expect(limits.startupjobsMaxJobsPerTerm).toBeGreaterThan(0);
     expect(limits.startupjobsMaxJobsPerTerm).toBeLessThanOrEqual(120);
-  });
-
-  it("assigns a dedicated Jobindex max-jobs limit", () => {
-    const limits = deriveExtractorLimits({
-      budget: 120,
-      searchTerms: ["backend", "platform"],
-      sources: ["jobindex"],
-    });
-
-    expect(limits.jobindexMaxJobsPerTerm).toBeGreaterThan(0);
-    expect(limits.jobindexMaxJobsPerTerm).toBeLessThanOrEqual(120);
   });
 
   it("infers the balanced preset from legacy memory without an explicit preset id", () => {
@@ -307,7 +296,7 @@ describe("automatic-run utilities", () => {
         searchScope: "selected_only",
         matchStrictness: "exact_only",
       },
-      sources: ["indeed", "linkedin", "gradcracker", "ukvisajobs"],
+      sources: ["wttj", "companyats", "linkedin", "indeed"],
     });
 
     expect(estimate).toEqual({
@@ -378,66 +367,6 @@ describe("automatic-run utilities", () => {
         matchStrictness: "exact_only",
       },
       sources: ["startupjobs"],
-    });
-
-    expect(estimate.discovered.cap).toBeGreaterThan(0);
-    expect(estimate.discovered.cap).toBeLessThanOrEqual(120);
-  });
-
-  it("includes workingnomads in estimate caps using the shared term budget", () => {
-    const estimate = calculateAutomaticEstimate({
-      values: {
-        topN: 10,
-        minSuitabilityScore: 50,
-        searchTerms: ["backend", "platform"],
-        runBudget: 120,
-        country: "united kingdom",
-        cityLocations: [],
-        workplaceTypes: ["remote", "hybrid", "onsite"],
-        searchScope: "selected_only",
-        matchStrictness: "exact_only",
-      },
-      sources: ["workingnomads"],
-    });
-
-    expect(estimate.discovered.cap).toBeGreaterThan(0);
-    expect(estimate.discovered.cap).toBeLessThanOrEqual(120);
-  });
-
-  it("includes seek in estimate caps using the shared term budget", () => {
-    const estimate = calculateAutomaticEstimate({
-      values: {
-        topN: 10,
-        minSuitabilityScore: 50,
-        searchTerms: ["backend", "platform"],
-        runBudget: 120,
-        country: "australia",
-        cityLocations: [],
-        workplaceTypes: ["remote", "hybrid", "onsite"],
-        searchScope: "selected_only",
-        matchStrictness: "exact_only",
-      },
-      sources: ["seek"],
-    });
-
-    expect(estimate.discovered.cap).toBeGreaterThan(0);
-    expect(estimate.discovered.cap).toBeLessThanOrEqual(120);
-  });
-
-  it("includes naukri in estimate caps using the shared term budget", () => {
-    const estimate = calculateAutomaticEstimate({
-      values: {
-        topN: 10,
-        minSuitabilityScore: 50,
-        searchTerms: ["backend", "platform"],
-        runBudget: 120,
-        country: "india",
-        cityLocations: [],
-        workplaceTypes: ["remote", "hybrid", "onsite"],
-        searchScope: "selected_only",
-        matchStrictness: "exact_only",
-      },
-      sources: ["naukri"],
     });
 
     expect(estimate.discovered.cap).toBeGreaterThan(0);

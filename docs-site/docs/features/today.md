@@ -38,7 +38,7 @@ On screens 1024 px and wider, the sidebar is always visible:
 | Find | Jobs (badge: ready jobs), Spontaneous |
 | Apply | Applications (badge: applications in progress), Inbox |
 | Profile | CV |
-| Insights | Analytics, Tracer links, Visa sponsors |
+| Insights | Analytics, Tracer links |
 | *(bottom)* | Settings, Account (switch account, documentation, version, sign out) |
 
 Click **Collapse** at the bottom to shrink the sidebar to icons; hover an icon to see its name. Boussole remembers the choice in this browser.

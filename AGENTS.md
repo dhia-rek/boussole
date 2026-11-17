@@ -7,9 +7,8 @@ This document orients automated agents and contributors working in the Forsa cod
 Forsa is an npm-workspaces monorepo with one runtime application (the **orchestrator**) that drives a fleet of **extractors**.
 
 - **Orchestrator** (`orchestrator/`) — Express API + React/Vite client + SQLite. Owns the pipeline: search → score → tailor → export → track. It spawns extractors as subprocesses and persists results.
-- **Extractors** (`extractors/*`) — 17 independent job-source scrapers. Each is its own workspace exposing a `manifest` (declares id, required env vars, capabilities) and a `run` entrypoint.
+- **Extractors** (`extractors/*`) — independent job-source scrapers for a search in France (Welcome to the Jungle, company career pages, JobSpy for LinkedIn/Indeed/Glassdoor, Adzuna, Hiring Cafe, startup.jobs, Wellfound, Brave Search) plus a shared `browser-utils` helper. Each is its own workspace exposing a `manifest` (declares id, required env vars, capabilities) and a `run` entrypoint.
 - **Shared** (`shared/`) — types, the settings registry, and message catalogs shared by all workspaces.
-- **Visa-sponsor providers** (`visa-sponsor-providers/`) — sponsorship-data providers (currently UK).
 
 ### Extractor Contract
 
@@ -123,8 +122,8 @@ Before marking work complete, run the CI-parity checks from the repository root:
 1. `./orchestrator/node_modules/.bin/biome ci .`
 2. `npm run check:types:shared`
 3. `npm --workspace orchestrator run check:types`
-4. `npm --workspace gradcracker-extractor run check:types`
-5. `npm --workspace ukvisajobs-extractor run check:types`
+4. `npm --workspace adzuna-extractor run check:types`
+5. `npm --workspace startupjobs-extractor run check:types`
 6. `npm --workspace orchestrator run build:client`
 7. `npm --workspace orchestrator run test:run`
 

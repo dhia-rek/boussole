@@ -33,7 +33,6 @@ import { SpontaneousPage } from "./pages/SpontaneousPage";
 import { TodayPage } from "./pages/TodayPage";
 import { TracerLinksPage } from "./pages/TracerLinksPage";
 import { TrackingInboxPage } from "./pages/TrackingInboxPage";
-import { VisaSponsorsPage } from "./pages/VisaSponsorsPage";
 
 /** Backwards-compatibility redirects: old URL paths -> new URL paths */
 const REDIRECTS: Array<{ from: string; to: string }> = [
@@ -148,7 +147,6 @@ export const App: React.FC = () => {
             <Route path="/sign-in" element={<SignInPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/tracer-links" element={<TracerLinksPage />} />
-            <Route path="/visa-sponsors" element={<VisaSponsorsPage />} />
             <Route path="/spontaneous" element={<SpontaneousPage />} />
             <Route path="/tracking-inbox" element={<TrackingInboxPage />} />
             <Route path="/jobs/:tab" element={<OrchestratorPage />} />

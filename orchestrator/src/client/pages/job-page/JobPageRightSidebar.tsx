@@ -21,7 +21,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatTimestamp } from "@/lib/utils";
@@ -52,7 +51,6 @@ type JobPageRightSidebarProps = {
   onOpenEditDetails: () => void;
   onCopyJobInfo: () => void;
   onRescore: () => void;
-  onCheckSponsor: () => void;
 };
 
 export const JobPageRightSidebar: React.FC<JobPageRightSidebarProps> = ({
@@ -81,7 +79,6 @@ export const JobPageRightSidebar: React.FC<JobPageRightSidebarProps> = ({
   onOpenEditDetails,
   onCopyJobInfo,
   onRescore,
-  onCheckSponsor,
 }) => (
   <aside className="space-y-4 xl:sticky xl:top-5">
     <section className="rounded-xl border border-border/50 bg-card/85 p-3">
@@ -253,10 +250,6 @@ export const JobPageRightSidebar: React.FC<JobPageRightSidebarProps> = ({
                 Recalculate match
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={onCheckSponsor}>
-              Check sponsorship status
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -126,9 +126,9 @@ describe.sequential("Pipeline API routes", () => {
         enableAutoTailoring: true,
       },
       effectiveConfig: {
-        country: "united states",
-        countryLabel: "United States",
-        searchCities: ["London"],
+        country: "france",
+        countryLabel: "France",
+        searchCities: ["Paris"],
         searchTermsCount: 2,
         workplaceTypes: ["remote"],
         locationSearchScope: "selected_only",
@@ -137,21 +137,12 @@ describe.sequential("Pipeline API routes", () => {
         skippedSources: [],
         blockedCompanyKeywordsCount: 1,
         sourceLimits: {
-          ukvisajobsMaxJobs: 50,
           adzunaMaxJobsPerTerm: 50,
-          gradcrackerMaxJobsPerTerm: 50,
           startupjobsMaxJobsPerTerm: 50,
-          jobindexMaxJobsPerTerm: 50,
-          naukriMaxJobsPerTerm: 50,
           jobspyResultsWanted: 20,
         },
         autoSkipScoreThreshold: 65,
-        pdfRenderer: "rxresume",
-        models: {
-          scorer: "model-scorer",
-          tailoring: "model-tailoring",
-          projectSelection: "model-project-selection",
-        },
+        model: "opus:medium",
         resumeProjects: {
           maxProjects: 3,
           lockedProjectCount: 1,
@@ -221,6 +212,15 @@ describe.sequential("Pipeline API routes", () => {
         requestedConfig: expect.objectContaining({
           topN: 10,
           sources: ["linkedin", "indeed"],
+        }),
+        effectiveConfig: expect.objectContaining({
+          country: "france",
+          model: "opus:medium",
+          sourceLimits: {
+            adzunaMaxJobsPerTerm: 50,
+            startupjobsMaxJobsPerTerm: 50,
+            jobspyResultsWanted: 20,
+          },
         }),
         resultSummary: expect.objectContaining({
           stage: "processing",
@@ -309,12 +309,12 @@ describe.sequential("Pipeline API routes", () => {
         minSuitabilityScore: 65,
         runBudget: 150,
         searchTerms: ["backend engineer"],
-        country: "united kingdom",
-        cityLocations: ["London"],
+        country: "france",
+        cityLocations: ["Paris"],
         workplaceTypes: ["remote", "hybrid"],
         searchScope: "selected_plus_remote_worldwide",
         matchStrictness: "flexible",
-        sources: ["gradcracker"],
+        sources: ["wttj"],
       }),
     });
     const runBody = await runRes.json();
@@ -323,11 +323,11 @@ describe.sequential("Pipeline API routes", () => {
       expect.objectContaining({
         topN: 5,
         minSuitabilityScore: 65,
-        sources: ["gradcracker"],
+        sources: ["wttj"],
         locationIntent: expect.objectContaining({
-          selectedCountry: "united kingdom",
-          country: "united kingdom",
-          cityLocations: ["London"],
+          selectedCountry: "france",
+          country: "france",
+          cityLocations: ["Paris"],
           workplaceTypes: ["remote", "hybrid"],
           geoScope: "selected_plus_remote_worldwide",
           searchScope: "selected_plus_remote_worldwide",
@@ -341,7 +341,7 @@ describe.sequential("Pipeline API routes", () => {
         source_count: 1,
         top_n: 5,
         min_suitability_score: 65,
-        country: "united kingdom",
+        country: "france",
         has_city_locations: true,
         search_terms_count: 1,
       }),
@@ -365,7 +365,7 @@ describe.sequential("Pipeline API routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sources: ["adzuna"],
-        country: "united kingdom",
+        country: "france",
       }),
     });
     const adzunaRunBody = await adzunaRunRes.json();
@@ -375,8 +375,8 @@ describe.sequential("Pipeline API routes", () => {
       expect.objectContaining({
         sources: ["adzuna"],
         locationIntent: expect.objectContaining({
-          selectedCountry: "united kingdom",
-          country: "united kingdom",
+          selectedCountry: "france",
+          country: "france",
           cityLocations: [],
           workplaceTypes: [],
           geoScope: "selected_only",
@@ -386,7 +386,21 @@ describe.sequential("Pipeline API routes", () => {
       }),
     );
 
-    const naukriRunRes = await fetch(`${baseUrl}/api/pipeline/run`, {
+    const blockedAdzunaRes = await fetch(`${baseUrl}/api/pipeline/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sources: ["adzuna"],
+        country: "japan",
+      }),
+    });
+    const blockedAdzunaBody = await blockedAdzunaRes.json();
+    expect(blockedAdzunaRes.status).toBe(400);
+    expect(blockedAdzunaBody.ok).toBe(false);
+    expect(blockedAdzunaBody.error.message).toContain("incompatible");
+
+    // Sources outside France were removed and are rejected as invalid input.
+    const removedSourceRes = await fetch(`${baseUrl}/api/pipeline/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -394,31 +408,11 @@ describe.sequential("Pipeline API routes", () => {
         country: "india",
       }),
     });
-    const naukriRunBody = await naukriRunRes.json();
-    expect(naukriRunBody.ok).toBe(true);
-    expect(runPipeline).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        sources: ["naukri"],
-        locationIntent: expect.objectContaining({
-          selectedCountry: "india",
-          country: "india",
-        }),
-      }),
-    );
-
-    const blockedNaukriRes = await fetch(`${baseUrl}/api/pipeline/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sources: ["naukri"],
-        country: "united kingdom",
-      }),
-    });
-    const blockedNaukriBody = await blockedNaukriRes.json();
-    expect(blockedNaukriRes.status).toBe(400);
-    expect(blockedNaukriBody.ok).toBe(false);
-    expect(blockedNaukriBody.error.message).toContain("incompatible");
+    const removedSourceBody = await removedSourceRes.json();
+    expect(removedSourceRes.status).toBe(400);
+    expect(removedSourceBody.ok).toBe(false);
+    expect(removedSourceBody.error.code).toBe("INVALID_REQUEST");
+    expect(runPipeline).toHaveBeenCalledTimes(2);
   });
 
   it("returns conflict when cancelling with no active pipeline", async () => {

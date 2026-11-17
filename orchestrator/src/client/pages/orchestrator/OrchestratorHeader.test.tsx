@@ -11,7 +11,7 @@ const renderHeader = (
   const props: React.ComponentProps<typeof OrchestratorHeader> = {
     isPipelineRunning: false,
     isCancelling: false,
-    pipelineSources: ["gradcracker"],
+    pipelineSources: ["wttj"],
     onOpenAutomaticRun: vi.fn(),
     onCancelPipeline: vi.fn(),
     ...overrides,

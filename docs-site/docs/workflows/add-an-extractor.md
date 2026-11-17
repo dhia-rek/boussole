@@ -44,7 +44,7 @@ That keeps runtime wiring dynamic while preserving compile-time safety in API an
 6. Run the full CI checks.
 7. Confirm the runtime health endpoint succeeds for your source after startup:
    - `GET /api/<source>/health`
-   - Example: `GET /api/gradcracker/health`
+   - Example: `GET /api/wttj/health`
 
 Example manifest:
 
@@ -95,4 +95,4 @@ Subprocess extractors are supported. Keep subprocess spawning inside `run(contex
 - [Extractors Overview](/docs/extractors/overview)
 - [Adzuna Extractor](/docs/extractors/adzuna)
 - [Hiring Cafe Extractor](/docs/extractors/hiring-cafe)
-- [UKVisaJobs Extractor](/docs/extractors/ukvisajobs)
+- [Welcome to the Jungle Extractor](/docs/extractors/welcome-to-the-jungle)

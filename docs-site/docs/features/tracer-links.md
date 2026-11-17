@@ -9,7 +9,7 @@ sidebar_position: 8
 
 Tracer Links are per-job redirect links that are generated when a PDF is created.
 
-When enabled for a job, Boussole rewrites eligible outbound RxResume links to your Boussole host, then redirects to the original destination after recording a click event.
+When enabled for a job, Boussole rewrites eligible outbound links in the job's CV (website, profiles, project links) to your Boussole host, then redirects to the original destination after recording a click event.
 
 Examples:
 
@@ -146,6 +146,6 @@ Fix:
 ## Related pages
 
 - [Settings](/docs/features/settings)
-- [Reactive Resume](/docs/features/reactive-resume)
+- [CV Editor](/docs/features/design-resume)
 - [Find Jobs and Apply Workflow](/docs/workflows/find-jobs-and-apply-workflow)
 - [Post-Application Tracking](/docs/features/post-application-tracking)

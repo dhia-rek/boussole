@@ -31,7 +31,6 @@ export async function notifyJobCompleteWebhook(job: Job) {
         employer: job.employer,
         status: job.status,
         suitabilityScore: job.suitabilityScore,
-        sponsorMatchScore: job.sponsorMatchScore,
       },
     });
 
