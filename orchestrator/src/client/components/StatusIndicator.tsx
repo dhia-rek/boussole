@@ -107,7 +107,7 @@ const getJobStatusIndicator = (status: JobStatus) => {
 
 const getTracerStatusIndicator = (enabled: boolean) => ({
   label: enabled ? "Tracer On" : "Tracer Off",
-  dotColor: enabled ? "bg-violet-500" : "bg-slate-500",
+  dotColor: enabled ? "bg-brand-periwinkle" : "bg-slate-500",
 });
 
 const StatusBadgeIndicator: React.FC<

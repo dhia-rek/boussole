@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BoussoleMark, BoussoleWordmark } from "../brand/BoussoleMark";
 import { SETTINGS_LINK } from "../navigation";
 import { NavAccountMenu } from "./NavAccountMenu";
 import { NavGroups, NavLinkItem } from "./NavLinks";
@@ -59,15 +60,10 @@ export const AppSidebar: React.FC = () => {
           to="/today"
           className="flex min-w-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <img src="/favicon.svg" alt="" className="size-7 rounded-md" />
-          <span
-            className={cn(
-              "truncate text-sm font-semibold tracking-tight",
-              collapsed && "sr-only",
-            )}
-          >
-            Boussole
-          </span>
+          <BoussoleMark className="size-8 text-foreground" />
+          <BoussoleWordmark
+            className={cn("truncate text-xl", collapsed && "sr-only")}
+          />
         </Link>
       </div>
 

@@ -27,8 +27,10 @@ import {
   RUN_STATUS_LABELS,
   STEP_LABELS,
 } from "../components/app-shell/pipeline-status";
+import { BoussoleMark } from "../components/brand/BoussoleMark";
 import { PageHeader, PageMain, SectionCard } from "../components/layout";
 import { usePipelineLiveStatus } from "../hooks/usePipelineLiveStatus";
+import { useProfile } from "../hooks/useProfile";
 import { useSettings } from "../hooks/useSettings";
 import { formatDuration, formatRelativeTime } from "../lib/relative-time";
 
@@ -106,6 +108,46 @@ const CardTitle: React.FC<{
     {action}
   </div>
 );
+
+function greetingFor(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+/** First name from the CV, or null for the "Resume" placeholder. */
+export function firstNameOf(
+  personName: string | null | undefined,
+): string | null {
+  const name = personName?.trim();
+  if (!name || name === "Resume") return null;
+  return name.split(/\s+/)[0] ?? null;
+}
+
+const TodayHero: React.FC<{ ready: number | null }> = ({ ready }) => {
+  const { personName } = useProfile();
+  const firstName = firstNameOf(personName);
+  const greeting = greetingFor(new Date().getHours());
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-[radial-gradient(120%_140%_at_100%_0%,rgba(155,147,255,0.18),transparent_55%),radial-gradient(90%_120%_at_0%_100%,rgba(255,107,87,0.12),transparent_60%)] px-6 py-7 sm:px-8">
+      <BoussoleMark className="boussole-needle pointer-events-none absolute -right-6 -top-10 size-44 text-brand-periwinkle/20" />
+      <h2 className="relative max-w-3xl font-display text-[clamp(1.7rem,3.4vw,2.6rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
+        {greeting}
+        {firstName ? `, ${firstName}` : ""}.{" "}
+        {ready === null ? null : ready > 0 ? (
+          <>
+            <span className="text-brand-coral">
+              {ready} {ready === 1 ? "job is" : "jobs are"}
+            </span>{" "}
+            ready for you.
+          </>
+        ) : (
+          <>Nothing is ready yet: run the pipeline to find new jobs.</>
+        )}
+      </h2>
+    </section>
+  );
+};
 
 const NextActionsCard: React.FC<{
   counts: Record<JobStatus, number> | null;
@@ -470,6 +512,7 @@ export const TodayPage: React.FC = () => {
     <>
       <PageHeader icon={Home} title="Today" subtitle={subtitle} />
       <PageMain>
+        <TodayHero ready={counts ? counts.ready : null} />
         <div className="grid gap-4 lg:grid-cols-3">
           <NextActionsCard counts={counts} />
           <PipelineCard className="lg:col-span-2" />

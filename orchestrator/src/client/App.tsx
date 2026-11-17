@@ -13,15 +13,18 @@ import {
 import { CSSTransition, SwitchTransition } from "react-transition-group";
 
 import { Toaster } from "@/components/ui/sonner";
+import { hasAuthenticatedSession } from "./api/auth-session";
 import { AppShell } from "./components/app-shell/AppShell";
 import { OnboardingGate } from "./components/OnboardingGate";
 import { useDemoInfo } from "./hooks/useDemoInfo";
 import { setAuthNavigator } from "./lib/auth-navigation";
+import { isPublicPath } from "./lib/public-paths";
 import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
 import { HomePage } from "./pages/HomePage";
 import { InProgressBoardPage } from "./pages/InProgressBoardPage";
 import { JobPage } from "./pages/JobPage";
+import { LandingPage } from "./pages/LandingPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrchestratorPage } from "./pages/OrchestratorPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -34,7 +37,6 @@ import { VisaSponsorsPage } from "./pages/VisaSponsorsPage";
 
 /** Backwards-compatibility redirects: old URL paths -> new URL paths */
 const REDIRECTS: Array<{ from: string; to: string }> = [
-  { from: "/", to: "/today" },
   { from: "/home", to: "/overview" },
   { from: "/ready", to: "/jobs/ready" },
   { from: "/ready/:jobId", to: "/jobs/ready/:jobId" },
@@ -54,10 +56,18 @@ const REDIRECTS: Array<{ from: string; to: string }> = [
 const SHELL_FREE_PATHS = ["/sign-in", "/onboarding", "/oauth/gmail/callback"];
 
 export function isShellFreePath(pathname: string): boolean {
-  return SHELL_FREE_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  return (
+    isPublicPath(pathname) ||
+    SHELL_FREE_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    )
   );
 }
+
+/** Signed-in people start on Today; everyone else sees the landing page. */
+const RootRedirect: React.FC = () => (
+  <Navigate to={hasAuthenticatedSession() ? "/today" : "/welcome"} replace />
+);
 
 export const App: React.FC = () => {
   const location = useLocation();
@@ -66,7 +76,8 @@ export const App: React.FC = () => {
   const isSignInPage = location.pathname === "/sign-in";
   const withShell = !isShellFreePath(location.pathname);
   const demoInfo = useDemoInfo({ enabled: !isSignInPage });
-  const showDemoBanners = !isSignInPage && demoInfo?.demoMode;
+  const showDemoBanners =
+    !isSignInPage && !isPublicPath(location.pathname) && demoInfo?.demoMode;
 
   // Determine a stable key for transitions to avoid unnecessary unmounts when switching sub-tabs
   const pageKey = React.useMemo(() => {
@@ -118,6 +129,8 @@ export const App: React.FC = () => {
             ))}
 
             {/* Application routes */}
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/welcome" element={<LandingPage />} />
             <Route path="/today" element={<TodayPage />} />
             <Route path="/overview" element={<HomePage />} />
             <Route

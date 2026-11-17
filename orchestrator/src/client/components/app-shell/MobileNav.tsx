@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { BoussoleMark, BoussoleWordmark } from "../brand/BoussoleMark";
 import { isNavActive, MOBILE_TAB_LINKS, SETTINGS_LINK } from "../navigation";
 import { useAppShell } from "./AppShellContext";
 import { NavAccountMenu } from "./NavAccountMenu";
@@ -79,9 +80,9 @@ export const MobileNav: React.FC = () => {
           className="flex w-72 flex-col gap-0 p-0"
         >
           <SheetHeader className="border-b border-border/60 px-4 py-3">
-            <SheetTitle className="flex items-center gap-2.5 text-sm">
-              <img src="/favicon.svg" alt="" className="size-7 rounded-md" />
-              Boussole
+            <SheetTitle className="flex items-center gap-2.5">
+              <BoussoleMark className="size-8 text-foreground" />
+              <BoussoleWordmark className="text-xl" />
             </SheetTitle>
           </SheetHeader>
           <nav
