@@ -36,6 +36,17 @@ vi.mock("./modelSelection", async (importOriginal) => {
   };
 });
 
+// These tests assert on the LLM scoring prompt, so the job must reach the LLM.
+// The pre-filter (a pre-LLM relevance gate) is orthogonal here and has its own
+// dedicated test file — force it to pass so prompt assertions stay valid.
+vi.mock("./scoring-prefilter", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./scoring-prefilter")>();
+  return {
+    ...actual,
+    prefilterJob: () => ({ pass: true, overlap: 99, reason: "" }),
+  };
+});
+
 import { parseJsonFromContent } from "./scorer";
 
 describe("parseJsonFromContent", () => {

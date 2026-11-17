@@ -659,10 +659,8 @@ export function useOnboardingFlow() {
         });
 
         queryClient.setQueryData(queryKeys.designResume.current(), document);
-        queryClient.setQueryData(queryKeys.designResume.status(), {
-          exists: true,
-          documentId: document.id,
-          updatedAt: document.updatedAt,
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.designResume.status(),
         });
 
         if (settings?.pdfRenderer?.value !== "latex") {

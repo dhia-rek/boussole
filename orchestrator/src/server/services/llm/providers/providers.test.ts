@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { geminiStrategy } from "./gemini";
-import { lmStudioStrategy } from "./lmstudio";
-import { ollamaStrategy } from "./ollama";
 import { openAiStrategy } from "./openai";
 import { openAiCompatibleStrategy } from "./openai-compatible";
 import { openRouterStrategy } from "./openrouter";
@@ -91,29 +89,6 @@ describe("provider adapters", () => {
         },
         expectedUrlContains: [":generateContent", "key=x"],
       },
-      {
-        name: "lmstudio-text",
-        strategy: lmStudioStrategy,
-        args: {
-          mode: "text" as const,
-          baseUrl: "http://localhost:1234",
-          apiKey: null,
-          model: "local",
-        },
-        expectedUrl: "http://localhost:1234/v1/chat/completions",
-        expectedResponseFormat: "text",
-      },
-      {
-        name: "ollama-none",
-        strategy: ollamaStrategy,
-        args: {
-          mode: "none" as const,
-          baseUrl: "http://localhost:11434",
-          apiKey: null,
-          model: "local",
-        },
-        expectedUrl: "http://localhost:11434/v1/chat/completions",
-      },
     ];
 
     for (const testCase of cases) {
@@ -147,8 +122,7 @@ describe("provider adapters", () => {
       choices: [{ message: { content: "ok" } }],
     };
     expect(openRouterStrategy.extractText(response)).toBe("ok");
-    expect(lmStudioStrategy.extractText(response)).toBe("ok");
-    expect(ollamaStrategy.extractText(response)).toBe("ok");
+    expect(openAiCompatibleStrategy.extractText(response)).toBe("ok");
   });
 
   it("builds validation URLs for OpenAI-compatible base URLs and endpoints", () => {

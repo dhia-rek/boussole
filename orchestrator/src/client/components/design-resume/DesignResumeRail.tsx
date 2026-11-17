@@ -1,5 +1,14 @@
-import type { DesignResumeDocument, DesignResumeJson } from "@shared/types";
+import type {
+  DesignResumeAiGuidance,
+  DesignResumeDocument,
+  DesignResumeJson,
+} from "@shared/types";
+import { AlertCircle, Check, Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { Accordion } from "@/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { DesignResumeAiGuidancePanel } from "./DesignResumeAiGuidancePanel";
 import {
   BasicsCustomFieldsSection,
   BasicsSection,
@@ -11,11 +20,19 @@ import { DesignResumeSection } from "./DesignResumeSection";
 import { ITEM_DEFINITIONS, type ItemDefinition } from "./definitions";
 import { asArray, asRecord, setByPath } from "./utils";
 
+export type DesignResumeSaveState = "idle" | "saving" | "saved" | "error";
+
 type DesignResumeRailProps = {
   draft: DesignResumeDocument;
   onUpdateResumeJson: (
     updater: (resumeJson: DesignResumeJson) => DesignResumeJson,
   ) => void;
+  onUpdateAiGuidance: (
+    updater: (guidance: DesignResumeAiGuidance) => DesignResumeAiGuidance,
+  ) => void;
+  saveState: DesignResumeSaveState;
+  isDirty: boolean;
+  className?: string;
   onOpenDialog: (definition: ItemDefinition, index: number | null) => void;
   onUploadPicture: () => void;
   onDeletePicture: () => void;
@@ -24,9 +41,60 @@ type DesignResumeRailProps = {
   pictureDisabledReason?: string | null;
 };
 
+function SaveIndicator({
+  saveState,
+  isDirty,
+}: {
+  saveState: DesignResumeSaveState;
+  isDirty: boolean;
+}) {
+  if (saveState === "error") {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-rose-400">
+        <AlertCircle className="h-3.5 w-3.5" />
+        Not saved
+      </span>
+    );
+  }
+  if (saveState === "saving" || isDirty) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Check className="h-3.5 w-3.5 text-emerald-400" />
+      Saved
+    </span>
+  );
+}
+
+/** Short per-item descriptions of AI guidance, shown as a sparkle on rows. */
+function buildItemAiHints(
+  guidance: DesignResumeAiGuidance,
+): Record<string, string> {
+  const hints: Record<string, string> = {};
+  for (const [id, item] of Object.entries(guidance.items)) {
+    const parts: string[] = [];
+    if (item.include === "always") parts.push("Always included");
+    if (item.include === "never") parts.push("Never included");
+    if (item.include === "auto") parts.push("AI decides");
+    if (item.notes?.trim()) parts.push("Has an AI note");
+    if (parts.length > 0) hints[id] = parts.join(" · ");
+  }
+  return hints;
+}
+
 export function DesignResumeRail({
   draft,
   onUpdateResumeJson,
+  onUpdateAiGuidance,
+  saveState,
+  isDirty,
+  className,
   onOpenDialog,
   onUploadPicture,
   onDeletePicture,
@@ -137,74 +205,113 @@ export function DesignResumeRail({
     });
   };
 
+  const [tab, setTab] = useState<"content" | "ai">("content");
+  const aiHints = buildItemAiHints(draft.aiGuidance);
+
   return (
-    <Accordion type="multiple" defaultValue={[]} className="space-y-3">
-      <DesignResumeSection
-        value="picture"
-        title="Picture"
-        subtitle="Manage your resume photo and how it appears."
+    <Tabs
+      value={tab}
+      onValueChange={(value) => setTab(value === "ai" ? "ai" : "content")}
+      className={cn("flex h-full min-h-0 flex-col", className)}
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+        <TabsList className="h-9">
+          <TabsTrigger value="content" className="px-3 text-xs">
+            Content
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5 px-3 text-xs">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI guidance
+          </TabsTrigger>
+        </TabsList>
+        <SaveIndicator saveState={saveState} isDirty={isDirty} />
+      </div>
+
+      <TabsContent
+        value="ai"
+        className="mt-0 min-h-0 flex-1 overflow-y-auto p-4 data-[state=inactive]:hidden"
       >
-        <PictureSection
-          picture={picture}
-          pictureUploading={pictureUploading}
-          pictureEnabled={pictureEnabled}
-          pictureDisabledReason={pictureDisabledReason}
-          onUploadPicture={onUploadPicture}
-          onDeletePicture={onDeletePicture}
-          onUpdatePicture={updatePicture}
+        <DesignResumeAiGuidancePanel
+          guidance={draft.aiGuidance}
+          resumeJson={draft.resumeJson}
+          onChange={onUpdateAiGuidance}
         />
-      </DesignResumeSection>
+      </TabsContent>
 
-      <DesignResumeSection
-        value="basics"
-        title="Basics"
-        subtitle="Edit your name, headline, and contact details."
+      <TabsContent
+        value="content"
+        className="mt-0 min-h-0 flex-1 overflow-y-auto p-4 data-[state=inactive]:hidden"
       >
-        <BasicsSection basics={basics} onUpdateBasics={updateBasics} />
-      </DesignResumeSection>
+        <Accordion type="multiple" defaultValue={[]} className="space-y-3">
+          <DesignResumeSection
+            value="picture"
+            title="Picture"
+            subtitle="Manage your resume photo and how it appears."
+          >
+            <PictureSection
+              picture={picture}
+              pictureUploading={pictureUploading}
+              pictureEnabled={pictureEnabled}
+              pictureDisabledReason={pictureDisabledReason}
+              onUploadPicture={onUploadPicture}
+              onDeletePicture={onDeletePicture}
+              onUpdatePicture={updatePicture}
+            />
+          </DesignResumeSection>
 
-      <DesignResumeSection
-        value="basics-custom-fields"
-        title="Basics Custom Fields"
-        subtitle="Add extra links or short details near your contact info."
-        badge={customFields.length === 0 ? "Empty" : `${customFields.length}`}
-      >
-        <BasicsCustomFieldsSection
-          customFields={customFields}
-          onChange={updateCustomFields}
-        />
-      </DesignResumeSection>
+          <DesignResumeSection
+            value="basics"
+            title="Basics"
+            subtitle="Edit your name, headline, and contact details."
+          >
+            <BasicsSection basics={basics} onUpdateBasics={updateBasics} />
+          </DesignResumeSection>
 
-      <DesignResumeSection
-        value="summary"
-        title="Summary"
-        subtitle="Write the short intro that appears near the top of your resume."
-      >
-        <SummarySection summary={summary} onUpdateSummary={updateSummary} />
-      </DesignResumeSection>
-
-      {ITEM_DEFINITIONS.map((definition) => {
-        const section = (asRecord(sections[definition.key]) ?? {}) as Record<
-          string,
-          unknown
-        >;
-        const items = asArray(section.items).map(
-          (item) => asRecord(item) ?? {},
-        ) as Record<string, unknown>[];
-
-        return (
-          <DesignResumeListSection
-            key={definition.key}
-            definition={definition}
-            items={items}
-            onAdd={() => onOpenDialog(definition, null)}
-            onEdit={(index) => onOpenDialog(definition, index)}
-            onUpdateItems={(nextItems) =>
-              updateSectionItems(definition.key, nextItems)
+          <DesignResumeSection
+            value="basics-custom-fields"
+            title="Basics Custom Fields"
+            subtitle="Add extra links or short details near your contact info."
+            badge={
+              customFields.length === 0 ? "Empty" : `${customFields.length}`
             }
-          />
-        );
-      })}
-    </Accordion>
+          >
+            <BasicsCustomFieldsSection
+              customFields={customFields}
+              onChange={updateCustomFields}
+            />
+          </DesignResumeSection>
+
+          <DesignResumeSection
+            value="summary"
+            title="Summary"
+            subtitle="Write the short intro that appears near the top of your resume."
+          >
+            <SummarySection summary={summary} onUpdateSummary={updateSummary} />
+          </DesignResumeSection>
+
+          {ITEM_DEFINITIONS.map((definition) => {
+            const section = (asRecord(sections[definition.key]) ??
+              {}) as Record<string, unknown>;
+            const items = asArray(section.items).map(
+              (item) => asRecord(item) ?? {},
+            ) as Record<string, unknown>[];
+
+            return (
+              <DesignResumeListSection
+                key={definition.key}
+                definition={definition}
+                items={items}
+                onAdd={() => onOpenDialog(definition, null)}
+                onEdit={(index) => onOpenDialog(definition, index)}
+                onUpdateItems={(nextItems) =>
+                  updateSectionItems(definition.key, nextItems)
+                }
+                aiHints={aiHints}
+              />
+            );
+          })}
+        </Accordion>
+      </TabsContent>
+    </Tabs>
   );
 }

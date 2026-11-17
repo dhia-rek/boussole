@@ -45,6 +45,20 @@ export async function resolveLlmModel(
   }
 
   if (purpose === "tailoring") {
+    // When tailoring is routed to its own provider, use the raw modelTailoring
+    // value. The effective-settings copy is normalized against the GLOBAL
+    // provider and would drop a model name not valid there (e.g. a Groq model).
+    const [tailoringProvider, rawTailoringModel] = await Promise.all([
+      settingsRepo.getSetting("providerTailoring"),
+      settingsRepo.getSetting("modelTailoring"),
+    ]);
+    if (tailoringProvider?.trim()) {
+      return (
+        rawTailoringModel?.trim() ||
+        readStringSettingValue(settings?.modelTailoring) ||
+        defaultModel
+      );
+    }
     return readStringSettingValue(settings?.modelTailoring) ?? defaultModel;
   }
 
@@ -85,6 +99,34 @@ export async function resolveLlmRuntimeSettings(
             defaultModel)
           : defaultModel;
 
+  // Per-task provider override (multi-LLM routing). When providerTailoring is
+  // set for the tailoring purpose, that task runs on its own provider + key,
+  // independent of the global provider — so e.g. scoring on free Gemini and
+  // tailoring on a separate free OpenRouter quota don't compete.
+  // Read the per-task provider override straight from raw DB overrides — the
+  // hand-built effective-settings object does not expose it.
+  const tailoringProviderOverride =
+    purpose === "tailoring"
+      ? overrides?.providerTailoring?.trim() || null
+      : null;
+
+  if (tailoringProviderOverride) {
+    // Use the raw modelTailoring value — `model` above is normalized against
+    // the GLOBAL provider and would discard a model name (e.g. a Groq model)
+    // that isn't valid for the global provider.
+    const rawTailoringModel = overrides?.modelTailoring?.trim() || model;
+    return {
+      model: rawTailoringModel,
+      provider: tailoringProviderOverride,
+      baseUrl: overrides?.baseUrlTailoring?.trim() || null,
+      apiKey:
+        overrides?.apiKeyTailoring ||
+        overrides?.llmApiKey ||
+        getOriginalEnvValue("LLM_API_KEY") ||
+        null,
+    };
+  }
+
   return {
     model,
     provider: readStringSettingValue(settings?.llmProvider),
@@ -93,8 +135,10 @@ export async function resolveLlmRuntimeSettings(
   };
 }
 
-export async function createConfiguredLlmService(): Promise<LlmService> {
-  const runtime = await resolveLlmRuntimeSettings();
+export async function createConfiguredLlmService(
+  purpose: LlmModelPurpose = "default",
+): Promise<LlmService> {
+  const runtime = await resolveLlmRuntimeSettings(purpose);
   return new LlmService({
     provider: runtime.provider,
     baseUrl: runtime.baseUrl,

@@ -918,7 +918,7 @@ export const JobPage: React.FC = () => {
                     Ghostwriter
                   </div>
                 </div>
-                <div className="h-[calc(100vh-140px)] px-4">
+                <div className="h-[calc(100vh-180px)] px-4">
                   <GhostwriterPanel
                     job={job}
                     initialPrompt={initialGhostwriterPrompt}

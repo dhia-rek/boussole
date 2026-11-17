@@ -152,6 +152,11 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: { jobspyResultsWanted: "1" },
   },
+  companyats: {
+    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
+    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
+    settings: {},
+  },
   manual: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
@@ -298,6 +303,18 @@ function createUnhealthyResult(args: {
   };
 }
 
+/**
+ * Employer values scrapers emit when they grabbed the wrong element (e.g. a
+ * "View company profile" link) or found none. A source returning only these is
+ * broken even though every field is non-empty.
+ */
+const PLACEHOLDER_EMPLOYER =
+  /^(?:view (?:company|profile|employer)\b.*|unknown(?: (?:company|employer))?|n\/?a|-+|company)$/i;
+
+export function isPlaceholderEmployer(employer: string): boolean {
+  return PLACEHOLDER_EMPLOYER.test(employer.trim());
+}
+
 function countValidJobs(
   source: ExtractorSourceId,
   result: ExtractorRunResult,
@@ -307,6 +324,7 @@ function countValidJobs(
       job.source === source &&
       hasNonEmptyString(job.title) &&
       hasNonEmptyString(job.employer) &&
+      !isPlaceholderEmployer(job.employer) &&
       hasNonEmptyString(job.jobUrl),
   ).length;
 }

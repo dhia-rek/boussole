@@ -50,6 +50,8 @@ function normalizeLlmProviderOrNull(raw: string | undefined): string | null {
 export const DEFAULT_GEMINI_MODEL = "google/gemini-3-flash-preview";
 export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
 export const DEFAULT_CODEX_MODEL = "";
+/** Claude Code CLI model alias; ":medium" sets the reasoning effort. */
+export const DEFAULT_CLAUDE_CLI_MODEL = "opus:medium";
 
 export function getDefaultModelForProvider(
   provider: string | null | undefined,
@@ -72,6 +74,10 @@ export function getDefaultModelForProvider(
 
   if (normalizedProvider === "codex") {
     return DEFAULT_CODEX_MODEL;
+  }
+
+  if (normalizedProvider === "claude_cli") {
+    return DEFAULT_CLAUDE_CLI_MODEL;
   }
   return DEFAULT_GEMINI_MODEL;
 }
@@ -181,12 +187,11 @@ export const settingsRegistry = {
       z
         .enum([
           "openrouter",
-          "lmstudio",
-          "ollama",
           "openai",
           "openai_compatible",
           "gemini",
           "gemini_cli",
+          "claude_cli",
           "codex",
         ])
         .nullable(),
@@ -650,6 +655,18 @@ export const settingsRegistry = {
     schema: z.string().trim().max(200),
   },
 
+  // Per-task provider override (multi-LLM routing). Empty = use the global
+  // llmProvider. Lets e.g. scoring run on free Gemini while tailoring runs on
+  // a separate free quota, so neither task starves the other.
+  providerTailoring: {
+    kind: "string" as const,
+    schema: z.string().trim().max(64),
+  },
+  baseUrlTailoring: {
+    kind: "string" as const,
+    schema: z.string().trim().max(300),
+  },
+
   // --- Simple Strings ---
   rxresumeBaseResumeId: {
     kind: "string" as const,
@@ -687,6 +704,11 @@ export const settingsRegistry = {
   llmApiKey: {
     kind: "secret" as const,
     envKey: "LLM_API_KEY",
+    schema: z.string().trim().max(2000),
+  },
+  // API key for the per-task tailoring provider override (see providerTailoring).
+  apiKeyTailoring: {
+    kind: "secret" as const,
     schema: z.string().trim().max(2000),
   },
   rxresumeApiKey: {

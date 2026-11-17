@@ -14,6 +14,7 @@ import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { queryKeys } from "@/client/lib/queryKeys";
+import { OverviewPipelineHealthSection } from "./overview/OverviewPipelineHealthSection";
 import { OverviewPipelineRunsSection } from "./overview/OverviewPipelineRunsSection";
 
 type JobWithEvents = {
@@ -32,17 +33,14 @@ export const HomePage: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Read initial duration from URL
-  const initialDuration: DurationValue = (() => {
+  const [duration, setDuration] = useState<DurationValue>(() => {
     const value = Number(searchParams.get("duration"));
     return (
       (DURATION_OPTIONS as readonly number[]).includes(value)
         ? value
         : DEFAULT_DURATION
     ) as DurationValue;
-  })();
-
-  const [duration, setDuration] = useState<DurationValue>(initialDuration);
+  });
 
   const overviewQuery = useQuery({
     queryKey: queryKeys.jobs.list({
@@ -156,6 +154,8 @@ export const HomePage: React.FC = () => {
         />
 
         <ResponseRateBySourceChart jobs={jobsWithEvents} error={error} />
+
+        <OverviewPipelineHealthSection />
 
         <OverviewPipelineRunsSection />
       </PageMain>

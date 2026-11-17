@@ -5,28 +5,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { OrchestratorHeader } from "./OrchestratorHeader";
 
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetTrigger: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SheetContent: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SheetHeader: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SheetTitle: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-}));
-
 const renderHeader = (
   overrides: Partial<React.ComponentProps<typeof OrchestratorHeader>> = {},
 ) => {
   const props: React.ComponentProps<typeof OrchestratorHeader> = {
-    navOpen: false,
-    onNavOpenChange: vi.fn(),
     isPipelineRunning: false,
     isCancelling: false,
     pipelineSources: ["gradcracker"],
@@ -46,6 +28,11 @@ const renderHeader = (
 };
 
 describe("OrchestratorHeader", () => {
+  it("titles the page Jobs", () => {
+    renderHeader();
+    expect(screen.getByRole("heading", { name: "Jobs" })).toBeInTheDocument();
+  });
+
   it("opens automatic run from the navbar button", () => {
     const { props } = renderHeader();
     fireEvent.click(screen.getByRole("button", { name: /run pipeline/i }));

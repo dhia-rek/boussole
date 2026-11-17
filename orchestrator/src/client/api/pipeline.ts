@@ -21,6 +21,21 @@ export async function getPipelineRuns(): Promise<PipelineRun[]> {
   return fetchApi<PipelineRun[]>("/pipeline/runs");
 }
 
+/** Mirrors the server `PipelineHealth` DTO (GET /api/pipeline/health). */
+export interface PipelineHealth {
+  totalJobs: number;
+  scoredJobs: number;
+  pendingJobs: number;
+  prefilteredJobs: number;
+  cachedAiResponses: number;
+  jobsBySource: Array<{ source: string; count: number }>;
+  lastRun: { status: string; startedAt: string | null } | null;
+}
+
+export async function getPipelineHealth(): Promise<PipelineHealth> {
+  return fetchApi<PipelineHealth>("/pipeline/health");
+}
+
 export async function prepareChallengeViewer(): Promise<{
   available: boolean;
   viewerUrl: string | null;
