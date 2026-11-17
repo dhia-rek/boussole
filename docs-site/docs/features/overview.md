@@ -7,7 +7,7 @@ sidebar_position: 1
 
 ## What it is
 
-The Analytics page (formerly called Overview, still at `/overview`) is the analytics dashboard for your pipeline outcomes. For a quick daily summary, use [Today](/docs/next/features/today) instead.
+The Analytics page (formerly called Overview, still at `/overview`) is the analytics dashboard for your pipeline outcomes. For a quick daily summary, use [Today](/docs/features/today) instead.
 
 ![Overview dashboard](/img/features/overview-dashboard.png)
 
@@ -95,6 +95,6 @@ Use this chart to identify which sources produce genuine engagement versus silen
 
 ## Related pages
 
-- [Orchestrator](/docs/next/features/orchestrator)
-- [Post-Application Tracking](/docs/next/features/post-application-tracking)
-- [Troubleshooting](/docs/next/troubleshooting/common-problems)
+- [Orchestrator](/docs/features/orchestrator)
+- [Post-Application Tracking](/docs/features/post-application-tracking)
+- [Troubleshooting](/docs/troubleshooting/common-problems)

@@ -7,25 +7,25 @@ sidebar_position: 1
 
 This page helps you choose the right extractor for your run, understand key constraints, and navigate to detailed technical guides.
 
-Extractor integrations are now registered through manifests and loaded automatically at orchestrator startup. Runtime discovery only scans `extractors/*/(manifest.ts|src/manifest.ts)` and does not read manifests from `orchestrator/**`. Extractor-specific run logic should also remain in `extractors/<name>/` so orchestrator stays source-agnostic. To add a new source, follow [Add an Extractor](/docs/next/workflows/add-an-extractor).
+Extractor integrations are now registered through manifests and loaded automatically at orchestrator startup. Runtime discovery only scans `extractors/*/(manifest.ts|src/manifest.ts)` and does not read manifests from `orchestrator/**`. Extractor-specific run logic should also remain in `extractors/<name>/` so orchestrator stays source-agnostic. To add a new source, follow [Add an Extractor](/docs/workflows/add-an-extractor).
 
 ## Extractor chooser
 
 | Extractor | Best use case | Core constraints/dependencies | Notable controls | Output/behavior notes |
 | --- | --- | --- | --- | --- |
-| [Gradcracker](/docs/next/extractors/gradcracker) | UK graduate roles from Gradcracker | Crawling stability depends on page structure and anti-bot behavior; tuned for low concurrency | `GRADCRACKER_SEARCH_TERMS`, `GRADCRACKER_MAX_JOBS_PER_TERM`, `FORSA_SKIP_APPLY_FOR_EXISTING` | Scrapes listing metadata, then detail pages and apply URL resolution |
-| [JobSpy](/docs/next/extractors/jobspy) | Multi-source discovery (Indeed, LinkedIn, Glassdoor) | Requires Python wrapper execution per term; source availability and quality vary by site/location | `JOBSPY_SITES`, `JOBSPY_SEARCH_TERMS`, `JOBSPY_RESULTS_WANTED`, `JOBSPY_HOURS_OLD`, `JOBSPY_LINKEDIN_FETCH_DESCRIPTION` | Produces JSON per term, emits structured location evidence, then orchestrator normalizes and de-duplicates by `jobUrl` |
-| [Adzuna](/docs/next/extractors/adzuna) | API-based multi-country discovery with low scraping overhead | Requires valid App ID/App Key; country must be in Adzuna-supported list | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `ADZUNA_MAX_JOBS_PER_TERM` | API pagination to dataset output, emits structured location evidence, and orchestrator maps progress and de-duplicates by `sourceJobId`/`jobUrl` |
-| [Hiring Cafe](/docs/next/extractors/hiring-cafe) | Browser-backed discovery using Hiring Cafe search APIs | Subject to upstream anti-bot checks; uses browser context and encoded search-state payloads | `HIRING_CAFE_SEARCH_TERMS`, `HIRING_CAFE_COUNTRY`, `HIRING_CAFE_MAX_JOBS_PER_TERM`, `HIRING_CAFE_DATE_FETCHED_PAST_N_DAYS` | Uses existing pipeline term/country/budget knobs, emits structured location evidence, and maps directly to normalized jobs |
-| [startup.jobs](/docs/next/extractors/startup-jobs) | Startup-focused discovery through the published `startup-jobs-scraper` package | No credentials required; detail enrichment depends on Playwright browser binaries being installed | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`; `npx playwright install` for fresh environments | Algolia-backed search plus detail-page enrichment via package import; orchestrator maps normalized records and de-duplicates by `jobUrl` |
-| [Welcome to the Jungle](/docs/next/extractors/welcome-to-the-jungle) | France-centred startup, scale-up and tech roles (CDI, CDD, internships) | No credentials; relies on WTTJ's published job sitemaps and public job endpoint staying available | existing pipeline `searchTerms` (matched against titles), selected country, `jobspyResultsWanted` | Reads the job sitemaps once per run, matches titles locally, fetches only matching offers (bounded and spaced), labels contracts (CDI/CDD/stage) and skips internships unless a term asks for them |
-| [Company Career Pages](/docs/next/extractors/company-career-pages) | AI / data employers hiring in France, read from their own career boards | No credentials; depends on each company's public ATS feed (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Teamtailor); boards that move are reported and skipped | existing pipeline `searchTerms` (matched against titles), selected country, `jobspyResultsWanted` (per company) | One feed request per company (plus SmartRecruiters paging and bounded detail calls); keeps title matches first, skips internships unless asked, reports unavailable boards |
-| [Working Nomads](/docs/next/extractors/working-nomads) | Remote-only discovery through the public Working Nomads jobs API | Public API is curated and remote-only; available fields are limited to API payload shape | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`, workplace type | Fetches a single public JSON feed, filters locally by terms/location, emits structured location evidence, infers job type when possible, and de-duplicates by source id / URL |
-| [Golang Jobs](/docs/next/extractors/golang-jobs) | Go-specific discovery through the public Golang Jobs feed | Depends on the site's public Supabase-backed schema staying stable; no credentials required | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`, workplace type | Paginates the public jobs feed, maps location through the linked city record, then filters locally and de-duplicates by source id / URL |
-| [Jobindex](/docs/next/extractors/jobindex) | Denmark job search through Jobindex result pages | Denmark-only; city filtering depends on resolving selected cities to Jobindex `geoareaid` values | existing pipeline `searchTerms`, selected country/cities, `JOBINDEX_MAX_JOBS_PER_TERM` / automatic run budget | Parses the embedded Stash payload, applies resolved `geoareaid` filters when available, paginates result pages, maps card metadata and direct apply links, and de-duplicates by source id / URL |
-| [Seek](/docs/next/extractors/seek) | Australia/NZ job search via Apify | Requires Apify API token; actor runs incur cost ($1.50/1,000 results; free tier ~3,000/month) | `APIFY_TOKEN`, `SEEK_MAX_JOBS_PER_TERM`, `SEEK_APIFY_ACTOR_ID` | Calls the `unfenced-group/seek-com-au-scraper` Apify actor per term, maps results, and de-duplicates by source id / URL |
-| [UKVisaJobs](/docs/next/extractors/ukvisajobs) | UK visa sponsorship-focused roles | Requires authenticated session and periodic token/cookie refresh | `UKVISAJOBS_EMAIL`, `UKVISAJOBS_PASSWORD`, `UKVISAJOBS_MAX_JOBS`, `UKVISAJOBS_SEARCH_KEYWORD` | API pagination + dataset output; orchestrator de-dupes and may fetch missing descriptions |
-| [Manual Import](/docs/next/extractors/manual) | One-off jobs not covered by scrapers | Inference quality depends on model/provider and input quality; some URLs cannot be fetched reliably | App/API endpoints (`/api/manual-jobs/infer`, `/api/manual-jobs/import`) | Accepts text/HTML/URL, runs inference, then saves and scores job after review |
+| [Gradcracker](/docs/extractors/gradcracker) | UK graduate roles from Gradcracker | Crawling stability depends on page structure and anti-bot behavior; tuned for low concurrency | `GRADCRACKER_SEARCH_TERMS`, `GRADCRACKER_MAX_JOBS_PER_TERM`, `FORSA_SKIP_APPLY_FOR_EXISTING` | Scrapes listing metadata, then detail pages and apply URL resolution |
+| [JobSpy](/docs/extractors/jobspy) | Multi-source discovery (Indeed, LinkedIn, Glassdoor) | Requires Python wrapper execution per term; source availability and quality vary by site/location | `JOBSPY_SITES`, `JOBSPY_SEARCH_TERMS`, `JOBSPY_RESULTS_WANTED`, `JOBSPY_HOURS_OLD`, `JOBSPY_LINKEDIN_FETCH_DESCRIPTION` | Produces JSON per term, emits structured location evidence, then orchestrator normalizes and de-duplicates by `jobUrl` |
+| [Adzuna](/docs/extractors/adzuna) | API-based multi-country discovery with low scraping overhead | Requires valid App ID/App Key; country must be in Adzuna-supported list | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY`, `ADZUNA_MAX_JOBS_PER_TERM` | API pagination to dataset output, emits structured location evidence, and orchestrator maps progress and de-duplicates by `sourceJobId`/`jobUrl` |
+| [Hiring Cafe](/docs/extractors/hiring-cafe) | Browser-backed discovery using Hiring Cafe search APIs | Subject to upstream anti-bot checks; uses browser context and encoded search-state payloads | `HIRING_CAFE_SEARCH_TERMS`, `HIRING_CAFE_COUNTRY`, `HIRING_CAFE_MAX_JOBS_PER_TERM`, `HIRING_CAFE_DATE_FETCHED_PAST_N_DAYS` | Uses existing pipeline term/country/budget knobs, emits structured location evidence, and maps directly to normalized jobs |
+| [startup.jobs](/docs/extractors/startup-jobs) | Startup-focused discovery through the published `startup-jobs-scraper` package | No credentials required; detail enrichment depends on Playwright browser binaries being installed | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`; `npx playwright install` for fresh environments | Algolia-backed search plus detail-page enrichment via package import; orchestrator maps normalized records and de-duplicates by `jobUrl` |
+| [Welcome to the Jungle](/docs/extractors/welcome-to-the-jungle) | France-centred startup, scale-up and tech roles (CDI, CDD, internships) | No credentials; relies on WTTJ's published job sitemaps and public job endpoint staying available | existing pipeline `searchTerms` (matched against titles), selected country, `jobspyResultsWanted` | Reads the job sitemaps once per run, matches titles locally, fetches only matching offers (bounded and spaced), labels contracts (CDI/CDD/stage) and skips internships unless a term asks for them |
+| [Company Career Pages](/docs/extractors/company-career-pages) | AI / data employers hiring in France, read from their own career boards | No credentials; depends on each company's public ATS feed (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Teamtailor); boards that move are reported and skipped | existing pipeline `searchTerms` (matched against titles), selected country, `jobspyResultsWanted` (per company) | One feed request per company (plus SmartRecruiters paging and bounded detail calls); keeps title matches first, skips internships unless asked, reports unavailable boards |
+| [Working Nomads](/docs/extractors/working-nomads) | Remote-only discovery through the public Working Nomads jobs API | Public API is curated and remote-only; available fields are limited to API payload shape | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`, workplace type | Fetches a single public JSON feed, filters locally by terms/location, emits structured location evidence, infers job type when possible, and de-duplicates by source id / URL |
+| [Golang Jobs](/docs/extractors/golang-jobs) | Go-specific discovery through the public Golang Jobs feed | Depends on the site's public Supabase-backed schema staying stable; no credentials required | existing pipeline `searchTerms`, selected country/cities, `jobspyResultsWanted`, workplace type | Paginates the public jobs feed, maps location through the linked city record, then filters locally and de-duplicates by source id / URL |
+| [Jobindex](/docs/extractors/jobindex) | Denmark job search through Jobindex result pages | Denmark-only; city filtering depends on resolving selected cities to Jobindex `geoareaid` values | existing pipeline `searchTerms`, selected country/cities, `JOBINDEX_MAX_JOBS_PER_TERM` / automatic run budget | Parses the embedded Stash payload, applies resolved `geoareaid` filters when available, paginates result pages, maps card metadata and direct apply links, and de-duplicates by source id / URL |
+| [Seek](/docs/extractors/seek) | Australia/NZ job search via Apify | Requires Apify API token; actor runs incur cost ($1.50/1,000 results; free tier ~3,000/month) | `APIFY_TOKEN`, `SEEK_MAX_JOBS_PER_TERM`, `SEEK_APIFY_ACTOR_ID` | Calls the `unfenced-group/seek-com-au-scraper` Apify actor per term, maps results, and de-duplicates by source id / URL |
+| [UKVisaJobs](/docs/extractors/ukvisajobs) | UK visa sponsorship-focused roles | Requires authenticated session and periodic token/cookie refresh | `UKVISAJOBS_EMAIL`, `UKVISAJOBS_PASSWORD`, `UKVISAJOBS_MAX_JOBS`, `UKVISAJOBS_SEARCH_KEYWORD` | API pagination + dataset output; orchestrator de-dupes and may fetch missing descriptions |
+| [Manual Import](/docs/extractors/manual) | One-off jobs not covered by scrapers | Inference quality depends on model/provider and input quality; some URLs cannot be fetched reliably | App/API endpoints (`/api/manual-jobs/infer`, `/api/manual-jobs/import`) | Accepts text/HTML/URL, runs inference, then saves and scores job after review |
 
 ## Which extractor should I use?
 
@@ -58,17 +58,17 @@ Many runs combine sources: broad discovery first, then manual import for high-pr
 
 ## Related extractor docs
 
-- [Gradcracker](/docs/next/extractors/gradcracker)
-- [JobSpy](/docs/next/extractors/jobspy)
-- [Adzuna](/docs/next/extractors/adzuna)
-- [Hiring Cafe](/docs/next/extractors/hiring-cafe)
-- [startup.jobs](/docs/next/extractors/startup-jobs)
-- [Welcome to the Jungle](/docs/next/extractors/welcome-to-the-jungle)
-- [Company Career Pages](/docs/next/extractors/company-career-pages)
-- [Working Nomads](/docs/next/extractors/working-nomads)
-- [Golang Jobs](/docs/next/extractors/golang-jobs)
-- [Jobindex](/docs/next/extractors/jobindex)
-- [Seek](/docs/next/extractors/seek)
-- [UKVisaJobs](/docs/next/extractors/ukvisajobs)
-- [Manual Import](/docs/next/extractors/manual)
-- [Add an Extractor](/docs/next/workflows/add-an-extractor)
+- [Gradcracker](/docs/extractors/gradcracker)
+- [JobSpy](/docs/extractors/jobspy)
+- [Adzuna](/docs/extractors/adzuna)
+- [Hiring Cafe](/docs/extractors/hiring-cafe)
+- [startup.jobs](/docs/extractors/startup-jobs)
+- [Welcome to the Jungle](/docs/extractors/welcome-to-the-jungle)
+- [Company Career Pages](/docs/extractors/company-career-pages)
+- [Working Nomads](/docs/extractors/working-nomads)
+- [Golang Jobs](/docs/extractors/golang-jobs)
+- [Jobindex](/docs/extractors/jobindex)
+- [Seek](/docs/extractors/seek)
+- [UKVisaJobs](/docs/extractors/ukvisajobs)
+- [Manual Import](/docs/extractors/manual)
+- [Add an Extractor](/docs/workflows/add-an-extractor)

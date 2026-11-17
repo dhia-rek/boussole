@@ -60,6 +60,6 @@ Defaults and constraints:
 
 ## Related pages
 
-- [Extractors Overview](/docs/next/extractors/overview)
-- [Pipeline Run](/docs/next/features/pipeline-run)
-- [Add an Extractor](/docs/next/workflows/add-an-extractor)
+- [Extractors Overview](/docs/extractors/overview)
+- [Pipeline Run](/docs/features/pipeline-run)
+- [Add an Extractor](/docs/workflows/add-an-extractor)
