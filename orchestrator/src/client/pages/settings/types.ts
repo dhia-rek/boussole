@@ -8,8 +8,6 @@ export type EffectiveDefault<T> = {
   default: T;
 };
 
-export type ModelValues = EffectiveDefault<string>;
-
 export type WebhookValues = EffectiveDefault<string>;
 export type DisplayValues = {
   renderMarkdownInJobDescriptions: EffectiveDefault<boolean>;

@@ -16,7 +16,7 @@ export function useWelcomeMessage(): string {
   const { personName } = useProfile();
 
   return useMemo(() => {
-    const firstName = personName?.split(" ")[0] || "User";
+    const firstName = personName?.trim().split(/\s+/)[0] || null;
     const today = new Date().toDateString();
 
     let isFirstDay = true;
@@ -32,24 +32,28 @@ export function useWelcomeMessage(): string {
       // Fallback to true so we just show the first message
     }
 
-    const lines = welcomeMessages.lines;
-    let selectedIndex = 0; // Always default to the first message
-
-    if (!isFirstDay) {
-      // If it's not their first day, randomize consistently for the day
-      const seed = Math.abs(hashCode(`${firstName}-${today}`));
-      selectedIndex = seed % lines.length;
+    // First visit: a welcome, not a "welcome back".
+    if (isFirstDay) {
+      return firstName
+        ? `Welcome, ${firstName}. Let’s find your next job.`
+        : "Welcome to Boussole. Let’s find your next job.";
     }
 
-    const line = lines[selectedIndex];
+    // Without a name (no CV yet), only lines that need no name.
+    const lines = firstName
+      ? welcomeMessages.lines
+      : welcomeMessages.lines.filter((entry) => entry.placement === "none");
+    const seed = Math.abs(hashCode(`${firstName ?? ""}-${today}`));
+    const line = lines[seed % lines.length] ?? welcomeMessages.lines[0];
 
+    const name = firstName ?? "";
     switch (line.placement) {
       case "inline":
-        return line.text.replace("{name}", firstName);
+        return line.text.replace("{name}", name);
       case "prefix":
-        return `${firstName}, ${line.text}`;
+        return `${name}, ${line.text}`;
       case "suffix":
-        return `${line.text}, ${firstName}.`;
+        return `${line.text}, ${name}.`;
       default:
         return line.text;
     }

@@ -365,7 +365,7 @@ function RunInsightsBody(props: {
                   hint={`${savedDetails.effectiveConfig.resumeProjects.lockedProjectCount} locked, ${savedDetails.effectiveConfig.resumeProjects.aiSelectableProjectCount} AI-selectable`}
                 />
                 <MetricCard
-                  label="Claude model"
+                  label="AI model"
                   value={
                     savedDetails.effectiveConfig.model ??
                     // Runs saved before the single-model setup.

@@ -6,7 +6,6 @@ export type ValidationState = ValidationResult & {
 };
 
 export type OnboardingFormData = {
-  model: string;
   searchTerms: string[];
   searchTermDraft: string;
   basicAuthUser: string;

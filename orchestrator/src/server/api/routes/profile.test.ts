@@ -94,6 +94,15 @@ describe.sequential("Profile API routes", () => {
       expect(body.error.message).toContain("Base resume not configured");
     });
 
+    it("answers with an empty catalog while the workspace has no CV", async () => {
+      vi.mocked(getProfile).mockRejectedValue(
+        Object.assign(new Error("No CV yet."), { name: "NoCvYetError" }),
+      );
+      const res = await fetch(`${baseUrl}/api/profile/projects`);
+      expect(res.status).toBe(200);
+      expect((await res.json()).data).toEqual([]);
+    });
+
     it("returns demo project catalog in demo mode", async () => {
       const demoServer = await startServer({
         env: {
@@ -125,6 +134,17 @@ describe.sequential("Profile API routes", () => {
   });
 
   describe("GET /api/profile", () => {
+    it("answers with no profile while the workspace has no CV", async () => {
+      vi.mocked(getProfile).mockRejectedValue(
+        Object.assign(new Error("No CV yet."), { name: "NoCvYetError" }),
+      );
+      const res = await fetch(`${baseUrl}/api/profile`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.ok).toBe(true);
+      expect(body.data).toBeNull();
+    });
+
     it("returns full profile when configured", async () => {
       const mockProfile = {
         basics: { name: "Test User", headline: "Developer" },

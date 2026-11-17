@@ -1,5 +1,5 @@
 /** All AI runs on Claude through the Claude Code CLI. */
-export type LlmProvider = "claude_cli";
+export type LlmProvider = "claude_cli" | "codex_cli";
 
 export interface JsonSchemaDefinition {
   name: string;

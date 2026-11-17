@@ -9,6 +9,11 @@ import { type Request, type Response, Router } from "express";
 
 export const profileRouter = Router();
 
+/** A workspace without a CV yet (services/profile NoCvYetError). */
+function isNoCvYet(error: unknown): boolean {
+  return error instanceof Error && error.name === "NoCvYetError";
+}
+
 /**
  * GET /api/profile/projects - Get all projects available in the base resume
  */
@@ -22,6 +27,10 @@ profileRouter.get("/projects", async (_req: Request, res: Response) => {
     const { catalog } = extractProjectsFromProfile(profile);
     ok(res, catalog);
   } catch (error) {
+    if (isNoCvYet(error)) {
+      ok(res, []);
+      return;
+    }
     fail(res, toAppError(error));
   }
 });
@@ -34,6 +43,11 @@ profileRouter.get("/", async (_req: Request, res: Response) => {
     const profile = await getProfile();
     ok(res, profile);
   } catch (error) {
+    // A new workspace has no CV yet: answer with no profile, not an error.
+    if (isNoCvYet(error)) {
+      ok(res, null);
+      return;
+    }
     fail(res, toAppError(error));
   }
 });
@@ -65,6 +79,10 @@ profileRouter.post("/refresh", async (_req: Request, res: Response) => {
     const profile = await getProfile(true);
     ok(res, profile);
   } catch (error) {
+    if (isNoCvYet(error)) {
+      ok(res, null);
+      return;
+    }
     fail(res, toAppError(error));
   }
 });

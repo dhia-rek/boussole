@@ -38,8 +38,8 @@ export const BaseResumeStep: React.FC<{
         <div className="space-y-2">
           <div className="text-sm font-medium">Upload a PDF or DOCX CV</div>
           <p className="text-sm text-muted-foreground">
-            Boussole reads the file with Claude and saves it as your CV in the
-            CV editor, where you can check and edit every section.
+            Boussole reads the file with your AI account and saves it as your CV
+            in the CV editor, where you can check and edit every section.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export const BaseResumeStep: React.FC<{
               <div className="h-full animate-[progress-indeterminate_1.4s_ease-in-out_infinite] rounded-full bg-primary" />
             </div>
             <p className="text-xs text-muted-foreground">
-              Reading with Claude. This takes 10 to 30 seconds.
+              Reading your CV. This takes 10 to 30 seconds.
             </p>
           </div>
         )}

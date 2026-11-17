@@ -60,6 +60,14 @@ function getTenantProfileCache(): TenantProfileCache {
  *
  * @throws Error when no CV has been created or imported yet.
  */
+/** The workspace has no CV yet: normal for a new person, not a failure. */
+export class NoCvYetError extends Error {
+  constructor() {
+    super("No CV yet. Create or import your CV in the CV editor first.");
+    this.name = "NoCvYetError";
+  }
+}
+
 export async function getProfile(forceRefresh = false): Promise<ResumeProfile> {
   const cache = getTenantProfileCache();
   if (cache.localProfile && !forceRefresh) {
@@ -77,9 +85,7 @@ export async function getProfile(forceRefresh = false): Promise<ResumeProfile> {
   }
 
   if (!localProfile) {
-    throw new Error(
-      "No CV yet. Create or import your CV in the CV editor first.",
-    );
+    throw new NoCvYetError();
   }
   cache.localProfile = localProfile;
   return localProfile;

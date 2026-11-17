@@ -160,7 +160,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   </div>
 );
 
-const getScoreTokens = (score: number) => {
+const _getScoreTokens = (score: number) => {
   if (score >= 90) return { bar: "bg-emerald-500/80" };
   if (score >= 70) return { bar: "bg-amber-500/80" };
   if (score >= 50) return { bar: "bg-orange-500/80" };
