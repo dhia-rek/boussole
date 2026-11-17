@@ -105,7 +105,8 @@ describe.sequential("demo seed baseline", () => {
       jobUrl: "https://demo.boussole.local/jobs/mutated",
       status: "discovered",
     });
-    await setSetting("llmProvider", "openai");
+    await setSetting("model", "sonnet");
+    await setSetting("searchCities", "Lyon");
 
     await resetDemoData();
 
@@ -118,7 +119,8 @@ describe.sequential("demo seed baseline", () => {
     expect(sortedPairs(allSettings)).toEqual(
       sortedPairs(DEMO_DEFAULT_SETTINGS as Record<string, string>),
     );
-    expect(allSettings.pdfRenderer).toBe("latex");
+    expect(allSettings.model).toBe("opus:medium");
+    expect(allSettings).not.toHaveProperty("llmProvider");
   });
 
   it("resetDemoData generates fresh PDF artifacts for seeded ready and applied jobs", async () => {

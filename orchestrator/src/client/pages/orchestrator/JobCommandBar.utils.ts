@@ -239,8 +239,6 @@ export const orderCommandGroups = (
   });
 };
 
-export const getCommandBarRowId = (row: CommandBarRow) => row.id;
-
 export const buildCommandBarRows = ({
   activeLock,
   groupedJobs,

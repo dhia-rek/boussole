@@ -6,10 +6,10 @@ import {
 import type { JobSource, JobStatus } from "@shared/types";
 
 export const DEFAULT_PIPELINE_SOURCES: JobSource[] = [
-  "gradcracker",
-  "indeed",
+  "wttj",
+  "companyats",
   "linkedin",
-  "ukvisajobs",
+  "indeed",
 ];
 export const PIPELINE_SOURCES_STORAGE_KEY = "boussole.pipeline.sources";
 
@@ -90,12 +90,6 @@ export type SortKey =
   | "title"
   | "employer";
 export type SortDirection = "asc" | "desc";
-export type SponsorFilter =
-  | "all"
-  | "confirmed"
-  | "potential"
-  | "not_found"
-  | "unknown";
 export type SalaryFilterMode = "at_least" | "at_most" | "between";
 
 export interface SalaryFilter {
@@ -118,22 +112,6 @@ export interface JobDateFilter {
 }
 
 export const DEFAULT_SORT: JobSort = { key: "score", direction: "desc" };
-export const DEFAULT_DATE_FILTER: JobDateFilter = {
-  dimensions: [],
-  startDate: null,
-  endDate: null,
-  preset: null,
-};
-
-export const sortLabels: Record<JobSort["key"], string> = {
-  date: "Date",
-  discoveredAt: "Discovered",
-  score: "Score",
-  salary: "Salary",
-  title: "Title",
-  employer: "Company",
-};
-
 export const defaultSortDirection: Record<JobSort["key"], SortDirection> = {
   date: "desc",
   discoveredAt: "desc",

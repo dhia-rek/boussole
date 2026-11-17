@@ -102,8 +102,8 @@ describe.sequential("product analytics repository", () => {
     const repo = await import("./product-analytics");
 
     await db.insert(schema.settings).values({
-      key: "llmProvider",
-      value: "openai",
+      key: "model",
+      value: "opus:medium",
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });

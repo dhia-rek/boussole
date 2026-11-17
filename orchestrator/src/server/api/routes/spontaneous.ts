@@ -1,12 +1,11 @@
 import { logger } from "@infra/logger";
+import { sanitizeUnknown } from "@infra/sanitize";
 import { badRequest, toAppError, upstreamError } from "@server/infra/errors";
 import { fail, ok } from "@server/infra/http";
 import { getSetting } from "@server/repositories/settings";
+import { LlmService } from "@server/services/llm/service";
 import type { JsonSchemaDefinition } from "@server/services/llm/types";
-import {
-  createConfiguredLlmService,
-  resolveLlmModel,
-} from "@server/services/modelSelection";
+import { resolveLlmModel } from "@server/services/modelSelection";
 import { getProfile } from "@server/services/profile";
 import { Router } from "express";
 import { z } from "zod";
@@ -137,15 +136,8 @@ spontaneousRouter.post("/generate-email", async (req, res) => {
     return;
   }
 
-  const [model, llm] = await Promise.all([
-    resolveLlmModel("default"),
-    createConfiguredLlmService(),
-  ]).catch(() => [null, null] as [null, null]);
-
-  if (!llm || !model) {
-    fail(res, badRequest("LLM not configured. Add your API key in Settings."));
-    return;
-  }
+  const model = await resolveLlmModel();
+  const llm = new LlmService();
 
   let profileSummary = "No resume profile available.";
   try {
@@ -229,7 +221,16 @@ Guidelines:
   });
 
   if (!result.success) {
-    fail(res, upstreamError(result.error ?? "LLM generation failed"));
+    // The CLI's own output can contain stderr; keep it in the logs only.
+    logger.warn("Spontaneous email generation failed", {
+      error: sanitizeUnknown(result.error),
+    });
+    fail(
+      res,
+      upstreamError(
+        "Claude could not write the email. Check that Claude is signed in on this computer, then try again.",
+      ),
+    );
     return;
   }
 

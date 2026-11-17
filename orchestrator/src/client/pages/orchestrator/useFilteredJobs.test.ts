@@ -35,7 +35,6 @@ describe("useFilteredJobs", () => {
         "ready",
         defaultDateFilter,
         "all",
-        "all",
         { mode: "at_least", min: null, max: null },
         { key: "score", direction: "desc" },
       ),
@@ -71,7 +70,6 @@ describe("useFilteredJobs", () => {
           preset: "custom",
         },
         "all",
-        "all",
         { mode: "at_least", min: null, max: null },
         { key: "score", direction: "desc" },
       ),
@@ -106,7 +104,6 @@ describe("useFilteredJobs", () => {
           endDate: "2026-04-06",
           preset: "custom",
         },
-        "all",
         "all",
         { mode: "at_least", min: null, max: null },
         { key: "score", direction: "desc" },
@@ -149,7 +146,6 @@ describe("useFilteredJobs", () => {
           preset: "custom",
         },
         "all",
-        "all",
         { mode: "at_least", min: null, max: null },
         { key: "score", direction: "desc" },
       ),
@@ -161,14 +157,13 @@ describe("useFilteredJobs", () => {
     ]);
   });
 
-  it("composes date filtering with source, sponsor, and salary filters", () => {
+  it("composes date filtering with source and salary filters", () => {
     const jobs: Job[] = [
       {
         ...baseJob,
         id: "match",
         source: "linkedin",
         appliedAt: "2026-04-05T14:00:00.000Z",
-        sponsorMatchScore: 99,
         salaryMinAmount: 80000,
       },
       {
@@ -176,15 +171,13 @@ describe("useFilteredJobs", () => {
         id: "wrong-source",
         source: "indeed",
         appliedAt: "2026-04-05T14:00:00.000Z",
-        sponsorMatchScore: 99,
         salaryMinAmount: 80000,
       },
       {
         ...baseJob,
-        id: "wrong-sponsor",
+        id: "wrong-date",
         source: "linkedin",
-        appliedAt: "2026-04-05T14:00:00.000Z",
-        sponsorMatchScore: 45,
+        appliedAt: "2026-03-20T14:00:00.000Z",
         salaryMinAmount: 80000,
       },
       {
@@ -192,7 +185,6 @@ describe("useFilteredJobs", () => {
         id: "wrong-salary",
         source: "linkedin",
         appliedAt: "2026-04-05T14:00:00.000Z",
-        sponsorMatchScore: 99,
         salaryMinAmount: 50000,
       },
     ];
@@ -208,7 +200,6 @@ describe("useFilteredJobs", () => {
           preset: "custom",
         },
         "linkedin",
-        "confirmed",
         { mode: "at_least", min: 70000, max: null },
         { key: "score", direction: "desc" },
       ),
@@ -241,7 +232,6 @@ describe("useFilteredJobs", () => {
           endDate: null,
           preset: null,
         },
-        "all",
         "all",
         { mode: "at_least", min: null, max: null },
         { key: "date", direction: "desc" },
@@ -277,7 +267,6 @@ describe("useFilteredJobs", () => {
           endDate: null,
           preset: null,
         },
-        "all",
         "all",
         { mode: "at_least", min: null, max: null },
         { key: "date", direction: "desc" },

@@ -1,5 +1,5 @@
 import * as api from "@client/api";
-import type { DesignResumeDocument, PdfRenderer } from "@shared/types";
+import type { DesignResumeDocument } from "@shared/types";
 import { FileText, Loader2 } from "lucide-react";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -36,8 +36,6 @@ type DesignResumePdfPreviewProps = {
   draft: DesignResumeDocument;
   /** CV variant to render (e.g. "en"); null → the primary CV. */
   language?: string | null;
-  pdfRenderer: PdfRenderer;
-  isUpdatingRenderer: boolean;
   isDirty: boolean;
   saveState: "idle" | "saving" | "saved" | "error";
 };
@@ -47,8 +45,6 @@ type PreviewState = "idle" | "waiting-for-save" | "loading" | "ready" | "error";
 export function DesignResumePdfPreview({
   draft,
   language = null,
-  pdfRenderer,
-  isUpdatingRenderer,
   isDirty,
   saveState,
 }: DesignResumePdfPreviewProps) {
@@ -70,8 +66,8 @@ export function DesignResumePdfPreview({
   const renderTaskRef = useRef<RenderTask | null>(null);
 
   const revisionKey = useMemo(
-    () => `${draft.id}:${draft.revision}:${pdfRenderer}:${language ?? ""}`,
-    [draft.id, draft.revision, pdfRenderer, language],
+    () => `${draft.id}:${draft.revision}:${language ?? ""}`,
+    [draft.id, draft.revision, language],
   );
 
   // Draw the cached first page into the canvas, scaled to "contain" within the
@@ -129,7 +125,7 @@ export function DesignResumePdfPreview({
       return;
     }
 
-    if (isUpdatingRenderer || isDirty || saveState === "saving") {
+    if (isDirty || saveState === "saving") {
       setPreviewState("waiting-for-save");
       setIsRendering(false);
       return;
@@ -180,15 +176,7 @@ export function DesignResumePdfPreview({
         setPreviewState("error");
         setIsRendering(false);
       });
-  }, [
-    draft.id,
-    isDirty,
-    isUpdatingRenderer,
-    language,
-    revisionKey,
-    saveState,
-    drawPage,
-  ]);
+  }, [draft.id, isDirty, language, revisionKey, saveState, drawPage]);
 
   // Re-fit the already-loaded page when the preview pane resizes.
   useEffect(() => {
@@ -213,9 +201,8 @@ export function DesignResumePdfPreview({
     previewState === "waiting-for-save" ||
     isRendering;
   const hasPage = drawnDocumentId === draft.id;
-  const loaderLabel = isUpdatingRenderer
-    ? "Switching template…"
-    : previewState === "waiting-for-save"
+  const loaderLabel =
+    previewState === "waiting-for-save"
       ? "Saving changes…"
       : "Rendering preview…";
 

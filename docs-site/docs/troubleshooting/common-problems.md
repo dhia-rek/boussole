@@ -27,8 +27,9 @@ npm --workspace docs-site run build
 
 ## No job scoring or AI inference
 
-- Validate `LLM_API_KEY` and provider settings.
-- Check settings page and API connectivity.
+- Check that Claude is signed in on the host: run `claude` once in a terminal, then retry.
+- On a server or in Docker, refresh the token with `claude setup-token` and update `CLAUDE_CODE_OAUTH_TOKEN`.
+- Check **Settings → AI model**: an unknown model alias fails every call. Clear the field to use the default (`opus:medium`).
 
 ## Older jobs look expired or stale
 
@@ -36,29 +37,8 @@ npm --workspace docs-site run build
 - Existing discovered jobs are not automatically refreshed in the background.
 - A new run fetches current listings so you can work from fresher results.
 
-## Codex sign-in shows device-code authorization error
-
-- Symptom: UI shows:
-  - `Enable device code authorization for Codex in ChatGPT Security Settings, then run "codex login --device-auth" again`
-- Fix:
-  - Enable device-code authorization in ChatGPT Security Settings and retry sign-in
-- Full guide:
-  - [Codex Authentication](/docs/getting-started/codex-auth)
-
-## Resume tailoring or scoring says the model does not exist
-
-- Root cause: the selected provider and model do not match.
-- Open **Settings -> Model** and check both the provider and the current model preview.
-- If you recently switched providers, leave the model fields blank to use the provider default, or select a provider-compatible model and save again.
-- For `openai`, Boussole defaults to `gpt-5.4-mini` when the model field is blank.
-- For `gemini`, Boussole defaults to `google/gemini-3-flash-preview` when the model field is blank.
-
 ## PDF generation fails
 
-- Verify RxResume credentials.
-- Confirm selected base resume exists and is accessible.
-
-## UKVisaJobs runs fail
-
-- Re-authenticate by removing cached auth file or forcing refresh.
-- Verify extractor credentials and API response behavior.
+- Make sure the CV editor holds a CV (open **CV**). Without one, Boussole cannot build a PDF.
+- Check that `tectonic` is installed (the Docker image includes it) or that `TECTONIC_BIN` points to it.
+- The first render downloads LaTeX packages and needs internet access once.

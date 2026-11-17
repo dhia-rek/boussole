@@ -1,12 +1,10 @@
 // src/server/services/modelSelection.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as settingsRepo from "../repositories/settings";
-import { pickProjectIdsForJob } from "./projectSelection";
-import { scoreJobSuitability } from "./scorer";
-import { getEffectiveSettings } from "./settings";
-import { generateTailoring } from "./summary";
 
-// Mock the settings repository
+const { callJsonMock } = vi.hoisted(() => ({
+  callJsonMock: vi.fn(),
+}));
+
 vi.mock("../repositories/settings", () => ({
   getAllSettings: vi.fn(),
   getSetting: vi.fn(),
@@ -16,238 +14,91 @@ vi.mock("./settings", () => ({
   getEffectiveSettings: vi.fn(),
 }));
 
-describe("Model Selection Logic", () => {
-  const originalEnv = process.env;
+// Never spawn the real Claude CLI from unit tests.
+vi.mock("./llm/service", () => ({
+  LlmService: class {
+    callJson = callJsonMock;
+    getProvider = () => "claude_cli";
+  },
+}));
 
+import * as settingsRepo from "../repositories/settings";
+import { resolveLlmModel } from "./modelSelection";
+import { pickProjectIdsForJob } from "./projectSelection";
+import { scoreJobSuitability } from "./scorer";
+import { getEffectiveSettings } from "./settings";
+import { generateTailoring } from "./summary";
+
+function mockEffectiveSettings(model: unknown): void {
+  vi.mocked(getEffectiveSettings).mockResolvedValue({
+    model: { value: model, default: "opus:medium", override: null },
+    scoringInstructions: { value: "", default: "", override: null },
+    penalizeMissingSalary: { value: false, default: false, override: null },
+    missingSalaryPenalty: { value: 10, default: 10, override: null },
+  } as any);
+}
+
+describe("Model Selection Logic", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    // Set environment variables to ensure we don't hit early exits
-    process.env = {
-      ...originalEnv,
-      OPENROUTER_API_KEY: "test-key",
-      MODEL: "env-model",
-    };
-
-    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({
-      llmApiKey: "test-key",
-    });
+    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({});
     vi.mocked(settingsRepo.getSetting).mockResolvedValue(null);
-    vi.mocked(getEffectiveSettings).mockResolvedValue({
-      model: { value: "env-model", default: "env-model", override: null },
-      modelScorer: { value: "env-model", override: null },
-      modelTailoring: { value: "env-model", override: null },
-      modelProjectSelection: { value: "env-model", override: null },
-      llmProvider: {
-        value: "openrouter",
-        default: "openrouter",
-        override: null,
+    mockEffectiveSettings("sonnet");
+    callJsonMock.mockResolvedValue({
+      success: true,
+      data: {
+        score: 50,
+        reason: "ok",
+        summary: "sum",
+        headline: "head",
+        skills: [],
+        selectedProjectIds: ["1"],
       },
-      llmBaseUrl: {
-        value: "https://openrouter.ai/api/v1",
-        default: "https://openrouter.ai/api/v1",
-        override: null,
-      },
-      scoringInstructions: { value: "", default: "", override: null },
-      penalizeMissingSalary: { value: false, default: false, override: null },
-      missingSalaryPenalty: { value: 10, default: 10, override: null },
-    } as any);
-
-    // Mock global fetch to capture the request and return a dummy success response
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                score: 50,
-                explanation: "ok",
-                summary: "sum",
-                headline: "head",
-                skills: [],
-                selectedProjectIds: ["1"],
-              }),
-            },
-          },
-        ],
-      }),
     });
   });
 
   afterEach(() => {
-    process.env = originalEnv;
     vi.restoreAllMocks();
   });
 
-  describe("Scoring Service", () => {
-    it("should use scoring specific model when set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: null,
-        },
-        modelScorer: {
-          value: "specific-scorer-model",
-          override: "specific-scorer-model",
-        },
-        modelTailoring: { value: "global-model", override: null },
-        modelProjectSelection: { value: "global-model", override: null },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-        scoringInstructions: { value: "", default: "", override: null },
-        penalizeMissingSalary: { value: false, default: false, override: null },
-        missingSalaryPenalty: { value: 10, default: 10, override: null },
-      } as any);
+  describe("resolveLlmModel", () => {
+    it("uses the model configured in settings", async () => {
+      mockEffectiveSettings("  claude-opus-5-5:high  ");
 
+      await expect(resolveLlmModel()).resolves.toBe("claude-opus-5-5:high");
+    });
+
+    it("falls back to opus with medium effort when no model is configured", async () => {
+      mockEffectiveSettings("   ");
+      await expect(resolveLlmModel()).resolves.toBe("opus:medium");
+
+      mockEffectiveSettings(null);
+      await expect(resolveLlmModel()).resolves.toBe("opus:medium");
+
+      vi.mocked(getEffectiveSettings).mockResolvedValue({} as any);
+      await expect(resolveLlmModel()).resolves.toBe("opus:medium");
+    });
+  });
+
+  describe("every AI task uses the one configured Claude model", () => {
+    it("scores jobs with the configured model", async () => {
       await scoreJobSuitability(
         { title: "Test Job", jobDescription: "desc" } as any,
         {},
       );
 
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("specific-scorer-model");
+      expect(callJsonMock).toHaveBeenCalledTimes(1);
+      expect(callJsonMock.mock.calls[0]?.[0]?.model).toBe("sonnet");
     });
 
-    it("should fall back to global model for scoring when specific not set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: "global-model",
-        },
-        modelScorer: { value: "global-model", override: null },
-        modelTailoring: { value: "global-model", override: null },
-        modelProjectSelection: { value: "global-model", override: null },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-        scoringInstructions: { value: "", default: "", override: null },
-        penalizeMissingSalary: { value: false, default: false, override: null },
-        missingSalaryPenalty: { value: 10, default: 10, override: null },
-      } as any);
-
-      await scoreJobSuitability({ title: "Test Job" } as any, {});
-
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("global-model");
-    });
-
-    it("should fall back to env model for scoring when no settings set", async () => {
-      await scoreJobSuitability({ title: "Test Job" } as any, {});
-
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("env-model");
-    });
-  });
-
-  describe("Tailoring Service", () => {
-    it("should use tailoring specific model when set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: null,
-        },
-        modelScorer: { value: "global-model", override: null },
-        modelTailoring: {
-          value: "specific-tailoring-model",
-          override: "specific-tailoring-model",
-        },
-        modelProjectSelection: { value: "global-model", override: null },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-      } as any);
-
+    it("tailors CVs with the configured model", async () => {
       await generateTailoring("job desc", {});
 
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("specific-tailoring-model");
+      expect(callJsonMock).toHaveBeenCalledTimes(1);
+      expect(callJsonMock.mock.calls[0]?.[0]?.model).toBe("sonnet");
     });
 
-    it("should fall back to global model when specific not set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: "global-model",
-        },
-        modelScorer: { value: "global-model", override: null },
-        modelTailoring: { value: "global-model", override: null },
-        modelProjectSelection: { value: "global-model", override: null },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-      } as any);
-
-      await generateTailoring("job desc", {});
-
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("global-model");
-    });
-  });
-
-  describe("Project Selection Service", () => {
-    it("should use project selection specific model when set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: null,
-        },
-        modelScorer: { value: "global-model", override: null },
-        modelTailoring: { value: "global-model", override: null },
-        modelProjectSelection: {
-          value: "specific-project-model",
-          override: "specific-project-model",
-        },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-      } as any);
-
+    it("selects projects with the configured model", async () => {
       await pickProjectIdsForJob({
         jobDescription: "desc",
         eligibleProjects: [
@@ -261,49 +112,16 @@ describe("Model Selection Logic", () => {
         desiredCount: 1,
       });
 
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("specific-project-model");
+      expect(callJsonMock).toHaveBeenCalledTimes(1);
+      expect(callJsonMock.mock.calls[0]?.[0]?.model).toBe("sonnet");
     });
 
-    it("should fall back to global model when specific not set", async () => {
-      vi.mocked(getEffectiveSettings).mockResolvedValue({
-        model: {
-          value: "global-model",
-          default: "global-model",
-          override: "global-model",
-        },
-        modelScorer: { value: "global-model", override: null },
-        modelTailoring: { value: "global-model", override: null },
-        modelProjectSelection: { value: "global-model", override: null },
-        llmProvider: {
-          value: "openrouter",
-          default: "openrouter",
-          override: null,
-        },
-        llmBaseUrl: {
-          value: "https://openrouter.ai/api/v1",
-          default: "https://openrouter.ai/api/v1",
-          override: null,
-        },
-      } as any);
+    it("uses the default model for scoring when none is configured", async () => {
+      mockEffectiveSettings("");
 
-      await pickProjectIdsForJob({
-        jobDescription: "desc",
-        eligibleProjects: [
-          {
-            id: "1",
-            name: "p1",
-            description: "d1",
-            summaryText: "summary",
-          } as any,
-        ],
-        desiredCount: 1,
-      });
+      await scoreJobSuitability({ title: "Test Job" } as any, {});
 
-      const fetchCall = vi.mocked(fetch).mock.calls[0];
-      const body = JSON.parse(fetchCall[1]?.body as string);
-      expect(body.model).toBe("global-model");
+      expect(callJsonMock.mock.calls[0]?.[0]?.model).toBe("opus:medium");
     });
   });
 });

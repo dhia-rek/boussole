@@ -339,40 +339,6 @@ export async function upsertPostApplicationMessage(
   };
 }
 
-export async function updatePostApplicationMessageSuggestion(
-  input: UpdatePostApplicationMessageSuggestionInput,
-): Promise<PostApplicationMessage | null> {
-  const nowIso = new Date().toISOString();
-  const tenantId = getActiveTenantId();
-  await db
-    .update(postApplicationMessages)
-    .set({
-      matchedJobId: input.matchedJobId,
-      ...(input.matchConfidence !== undefined
-        ? { matchConfidence: input.matchConfidence }
-        : {}),
-      processingStatus: input.processingStatus,
-      updatedAt: nowIso,
-    })
-    .where(
-      and(
-        eq(postApplicationMessages.tenantId, tenantId),
-        eq(postApplicationMessages.id, input.id),
-      ),
-    );
-
-  const [row] = await db
-    .select()
-    .from(postApplicationMessages)
-    .where(
-      and(
-        eq(postApplicationMessages.tenantId, tenantId),
-        eq(postApplicationMessages.id, input.id),
-      ),
-    );
-  return row ? mapRowToPostApplicationMessage(row) : null;
-}
-
 export async function listPostApplicationMessagesByProcessingStatus(
   provider: PostApplicationProvider,
   accountKey: string,
@@ -525,39 +491,4 @@ export async function listPostApplicationMessagesForJobByIds(
         accountDisplayName: integration?.displayName ?? null,
       };
     });
-}
-
-export async function updatePostApplicationMessageDecision(
-  input: UpdatePostApplicationMessageDecisionInput,
-): Promise<PostApplicationMessage | null> {
-  const decidedAt = input.decidedAt ?? Date.now();
-  const nowIso = new Date(decidedAt).toISOString();
-  const tenantId = getActiveTenantId();
-
-  await db
-    .update(postApplicationMessages)
-    .set({
-      processingStatus: input.processingStatus,
-      matchedJobId: input.matchedJobId,
-      decidedAt,
-      decidedBy: input.decidedBy ?? null,
-      updatedAt: nowIso,
-    })
-    .where(
-      and(
-        eq(postApplicationMessages.tenantId, tenantId),
-        eq(postApplicationMessages.id, input.id),
-      ),
-    );
-
-  const [row] = await db
-    .select()
-    .from(postApplicationMessages)
-    .where(
-      and(
-        eq(postApplicationMessages.tenantId, tenantId),
-        eq(postApplicationMessages.id, input.id),
-      ),
-    );
-  return row ? mapRowToPostApplicationMessage(row) : null;
 }

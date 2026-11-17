@@ -1,80 +1,93 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as settingsRepo from "../repositories/settings";
-import { inferManualJobDetails } from "./manualJob";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../repositories/settings", () => ({
-  getSetting: vi.fn(),
-  getAllSettings: vi.fn().mockResolvedValue({}),
+const { callJsonMock, resolveLlmModelMock } = vi.hoisted(() => ({
+  callJsonMock: vi.fn(),
+  resolveLlmModelMock: vi.fn(),
 }));
 
-const originalEnv = process.env;
-const originalFetch = global.fetch;
+vi.mock("./modelSelection", () => ({
+  resolveLlmModel: resolveLlmModelMock,
+}));
+
+// Never spawn the real Claude CLI from unit tests.
+vi.mock("@server/services/llm/service", () => ({
+  LlmService: class {
+    callJson = callJsonMock;
+  },
+}));
+
+import { inferManualJobDetails } from "./manualJob";
 
 describe("manual job inference", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    process.env = { ...originalEnv, OPENROUTER_API_KEY: "test-key" };
-    global.fetch = vi.fn();
-    vi.mocked(settingsRepo.getSetting).mockResolvedValue(null);
-    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({
-      llmProvider: "openrouter",
-      llmApiKey: "test-key",
+    resolveLlmModelMock.mockResolvedValue("opus:medium");
+  });
+
+  it("asks Claude with the configured model and keeps only non-empty, trimmed fields", async () => {
+    callJsonMock.mockResolvedValue({
+      success: true,
+      data: {
+        title: "Backend Engineer",
+        employer: "Acme",
+        location: "",
+        salary: " 100k ",
+        deadline: "   ",
+        jobUrl: "",
+        applicationLink: "",
+        jobType: "",
+        jobLevel: "",
+        jobFunction: "",
+        disciplines: "",
+        degreeRequired: "",
+        starting: "",
+        jobDescription: "",
+      },
     });
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
-    global.fetch = originalFetch;
-    vi.restoreAllMocks();
-  });
-
-  it("returns a warning when the API key is missing", async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    vi.mocked(settingsRepo.getAllSettings).mockResolvedValue({});
-
-    const result = await inferManualJobDetails("JD text");
-
-    expect(result.job).toEqual({});
-    expect(result.warning).toContain("LLM API key not set");
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it("parses JSON even when wrapped in markdown fences", async () => {
-    vi.mocked(global.fetch).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content:
-                'Here is the data: ```json\n{ "title": "Backend Engineer", "employer": "Acme", "salary": " 100k " }\n```',
-            },
-          },
-        ],
-      }),
-    } as any);
 
     const result = await inferManualJobDetails("JD text");
 
     expect(result.warning).toBeUndefined();
-    expect(result.job).toMatchObject({
+    expect(result.job).toEqual({
       title: "Backend Engineer",
       employer: "Acme",
       salary: "100k",
     });
+    expect(callJsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "opus:medium",
+        jsonSchema: expect.objectContaining({ name: "manual_job_details" }),
+        messages: [
+          expect.objectContaining({
+            role: "user",
+            content: expect.stringContaining("JD text"),
+          }),
+        ],
+      }),
+    );
   });
 
-  it("returns a warning when the API response fails", async () => {
-    vi.mocked(global.fetch).mockResolvedValue({
-      ok: false,
-      status: 500,
-    } as any);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("returns a warning when Claude reports an authentication problem", async () => {
+    callJsonMock.mockResolvedValue({
+      success: false,
+      error: "Invalid API key · Please run /login",
+    });
+
+    const result = await inferManualJobDetails("JD text");
+
+    expect(result.job).toEqual({});
+    expect(result.warning).toContain("AI account is not signed in");
+  });
+
+  it("returns a warning when the Claude call fails", async () => {
+    callJsonMock.mockResolvedValue({
+      success: false,
+      error: "Claude CLI exited with code 1.",
+    });
 
     const result = await inferManualJobDetails("JD text");
 
     expect(result.job).toEqual({});
     expect(result.warning).toContain("AI inference failed");
-    warnSpy.mockRestore();
   });
 });

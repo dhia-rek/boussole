@@ -62,14 +62,14 @@ Welcome to Boussole documentation. This site contains guides for setup, configur
   - Keyboard support for select, clear, and fast bulk move-to-ready
 
 - **[Settings](/docs/features/settings)**
-  - LLM provider/model and task-specific overrides
+  - The Claude model every AI step runs on
   - Webhooks, service accounts, and basic auth controls
   - Backup scheduling, scoring thresholds, and danger-zone cleanup tools
 
-- **[Reactive Resume](/docs/features/reactive-resume)**
-  - Base resume selection and RxResume integration
-  - Project inclusion controls (must-include, AI-selectable, max)
-  - PDF renderer options and troubleshooting
+- **[CV Editor](/docs/features/design-resume)**
+  - Edit your CV in the browser with a live PDF preview, one CV per language
+  - AI guidance per section: tailor it, keep it word for word, or keep it private
+  - One Boussole PDF layout with your photo, auto-fit to one page
 
 - **[Applications Overview](/docs/features/overview)**
   - Applications-per-day trend
@@ -94,17 +94,16 @@ Welcome to Boussole documentation. This site contains guides for setup, configur
   - Privacy and security details
   - API reference
 
-- **[Visa Sponsors](/docs/features/visa-sponsors)**
-  - Search licensed UK sponsor organizations
-  - Review company routes and sponsor ratings
-  - Trigger manual data refresh
+- **[AI Agents](/docs/features/ai-agents)**
+  - A LangChain Deep Agents team prepares an application pack: job analyst, CV tailor, cover-letter writer, critic
+  - A preference learner remembers what you apply to and skip
 
 ## Extractors
 
-- **[Extractors Overview](/docs/extractors/overview)**
-- **[Gradcracker](/docs/extractors/gradcracker)**
-- **[UKVisaJobs](/docs/extractors/ukvisajobs)**
-- **[JobSpy](/docs/extractors/jobspy)**
+- **[Job Sources](/docs/extractors/overview)**
+- **[Welcome to the Jungle](/docs/extractors/welcome-to-the-jungle)**
+- **[Company Career Pages](/docs/extractors/company-career-pages)**
+- **[JobSpy](/docs/extractors/jobspy)** (LinkedIn, Indeed, Glassdoor)
 - **[Manual Import](/docs/extractors/manual)**
 
 ## Quick Reference
@@ -120,7 +119,7 @@ Welcome to Boussole documentation. This site contains guides for setup, configur
 1. **Job Discovery**: Automatically find jobs from multiple sources.
 2. **AI Scoring**: Rank jobs by suitability for your profile.
 3. **Resume Tailoring**: Generate custom resumes for each job.
-4. **PDF Export**: Create tailored PDFs from RxResume-backed resume data using either RxResume export or the local LaTeX renderer.
+4. **PDF Export**: Create tailored one-page PDFs from the CV editor's CV, in the Boussole LaTeX layout.
 5. **Application Tracking**: Monitor your applied jobs.
 6. **Email Tracking**: Auto-track post-application responses.
 

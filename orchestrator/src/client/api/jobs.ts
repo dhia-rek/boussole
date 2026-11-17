@@ -280,12 +280,6 @@ export async function generateJobPdf(id: string): Promise<Job> {
   });
 }
 
-export async function checkSponsor(id: string): Promise<Job> {
-  return fetchApi<Job>(`/jobs/${id}/check-sponsor`, {
-    method: "POST",
-  });
-}
-
 export async function markAsApplied(id: string): Promise<Job> {
   return fetchApi<Job>(`/jobs/${id}/apply`, {
     method: "POST",
@@ -387,15 +381,5 @@ export async function deleteJobStageEvent(
 ): Promise<void> {
   return fetchApi<void>(`/jobs/${id}/events/${eventId}`, {
     method: "DELETE",
-  });
-}
-
-export async function updateJobOutcome(
-  id: string,
-  input: { outcome: JobOutcome | null; closedAt?: number | null },
-): Promise<Job> {
-  return fetchApi<Job>(`/jobs/${id}/outcome`, {
-    method: "PATCH",
-    body: JSON.stringify(input),
   });
 }

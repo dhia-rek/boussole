@@ -1,4 +1,4 @@
-import { badRequest, conflict, notFound, toAppError } from "@infra/errors";
+import { badRequest, notFound, toAppError } from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
 import { enqueueAutoPdfRegenerationForReadyJobs } from "@server/services/auto-pdf-regeneration";
@@ -9,7 +9,6 @@ import {
   exportDesignResume,
   getCurrentDesignResume,
   getDesignResumeStatus,
-  importDesignResumeFromReactiveResume,
   listDesignResumeVariants,
   readDesignResumeAssetContent,
   updateCurrentDesignResume,
@@ -20,7 +19,6 @@ import { importDesignResumeFromFile } from "@server/services/design-resume/impor
 import { generateDesignResumePdf } from "@server/services/pdf";
 import { getTenantDesignResumePdfPath } from "@server/services/pdf-storage";
 import { clearProfileCache } from "@server/services/profile";
-import { getBoussolePublicAvailability } from "@server/services/tracer-links";
 import { DESIGN_RESUME_LANGUAGES } from "@shared/design-resume-variants";
 import type { DesignResumeJson, DesignResumePatchRequest } from "@shared/types";
 import { type Request, type Response, Router } from "express";
@@ -62,19 +60,6 @@ function resolveRequestOrigin(req: Request): string | null {
 
   if (!host || !protocol) return null;
   return `${protocol}://${host}`;
-}
-
-async function assertPictureSupportEnabled(req: Request): Promise<void> {
-  const availability = await getBoussolePublicAvailability({
-    requestOrigin: resolveRequestOrigin(req),
-    force: false,
-  });
-  if (availability.isPubliclyAvailable) return;
-
-  throw conflict(
-    availability.reason ??
-      "Design Resume pictures require Boussole to be reachable at a public URL.",
-  );
 }
 
 const addOperationSchema = z
@@ -291,18 +276,6 @@ designResumeRouter.get(
 );
 
 designResumeRouter.post(
-  "/import/rxresume",
-  asyncRoute(async (_req: Request, res: Response) => {
-    const document = await importDesignResumeFromReactiveResume();
-    clearProfileCache();
-    ok(res, document, 201);
-    queueDesignResumeAutoPdfRegeneration(
-      "POST /api/design-resume/import/rxresume",
-    );
-  }),
-);
-
-designResumeRouter.post(
   "/import/file",
   asyncRoute(async (req: Request, res: Response) => {
     const input = importFileSchema.parse(req.body);
@@ -332,8 +305,6 @@ designResumeRouter.patch(
 designResumeRouter.post(
   "/assets",
   asyncRoute(async (req: Request, res: Response) => {
-    await assertPictureSupportEnabled(req);
-
     if (Buffer.isBuffer(req.body)) {
       const input = rawUploadHeadersSchema.parse({
         fileName: req.header("x-file-name"),

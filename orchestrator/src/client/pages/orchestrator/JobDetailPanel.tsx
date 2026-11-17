@@ -580,10 +580,6 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
       </TooltipProvider>
       <JobHeader
         job={selectedJob}
-        onCheckSponsor={async () => {
-          await api.checkSponsor(selectedJob.id);
-          await onJobUpdated();
-        }}
         jobCTA={
           <div className="flex shrink-0 gap-2">
             <GhostwriterDrawer

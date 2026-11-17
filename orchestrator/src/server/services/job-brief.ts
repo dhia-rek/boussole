@@ -1,7 +1,8 @@
 import { logger } from "@infra/logger";
+import { LlmService } from "@server/services/llm/service";
 import type { JobBrief } from "@shared/types";
 import type { JsonSchemaDefinition } from "./llm/types";
-import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
+import { resolveLlmModel } from "./modelSelection";
 
 const SYSTEM_PROMPT = `
 You are extracting a concise job brief from a job description for a job search app.
@@ -79,8 +80,8 @@ export async function generateJobBrief(
   if (!description) return null;
 
   try {
-    const model = await resolveLlmModel("scoring");
-    const llm = await createConfiguredLlmService();
+    const model = await resolveLlmModel();
+    const llm = new LlmService();
     const result = await llm.callJson<JobBrief>({
       model,
       messages: [

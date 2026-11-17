@@ -8,18 +8,10 @@ export type EffectiveDefault<T> = {
   default: T;
 };
 
-export type ModelValues = EffectiveDefault<string> & {
-  scorer: string;
-  tailoring: string;
-  projectSelection: string;
-  llmProvider: string;
-  llmBaseUrl: string;
-  llmApiKeyHint: string | null;
-};
+export type ModelValues = EffectiveDefault<string>;
 
 export type WebhookValues = EffectiveDefault<string>;
 export type DisplayValues = {
-  showSponsorInfo: EffectiveDefault<boolean>;
   renderMarkdownInJobDescriptions: EffectiveDefault<boolean>;
 };
 export type ChatValues = {
@@ -36,13 +28,11 @@ export type ChatValues = {
 
 export type EnvSettingsValues = {
   readable: {
-    ukvisajobsEmail: string;
     adzunaAppId: string;
     basicAuthUser: string;
     basicAuthPassword: string;
   };
   private: {
-    ukvisajobsPasswordHint: string | null;
     adzunaAppKeyHint: string | null;
     basicAuthPasswordHint: string | null;
     webhookSecretHint: string | null;

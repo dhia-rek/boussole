@@ -8,16 +8,12 @@ import { sanitizeUnknown } from "@infra/sanitize";
 import { createId } from "@paralleldrive/cuid2";
 import { getDataDir } from "@server/config/dataDir";
 import * as designResumeRepo from "@server/repositories/design-resume";
-import { getSetting } from "@server/repositories/settings";
-import { getOriginalEnvValue } from "@server/services/envSettings";
 import { detectLanguageFromText } from "@server/services/output-language";
-import { getResume } from "@server/services/rxresume";
-import { getConfiguredRxResumeBaseResumeId } from "@server/services/rxresume/baseResumeId";
-import { getResumeSchemaValidationMessage } from "@server/services/rxresume/schema";
+import { getResumeSchemaValidationMessage } from "@server/services/resume-data/schema";
 import {
   parseV5ResumeData,
   safeParseV5ResumeData,
-} from "@server/services/rxresume/schema/v5";
+} from "@server/services/resume-data/schema/v5";
 import { getActiveTenantId } from "@server/tenancy/context";
 import {
   designResumeAiGuidanceInputSchema,
@@ -45,9 +41,8 @@ const DESIGN_RESUME_ASSET_DIR = join(DESIGN_RESUME_DIR, "assets");
 const DESIGN_RESUME_DEFAULT_ID = "primary";
 const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_PICTURE_FETCH_REDIRECTS = 3;
 const LEGACY_REIMPORT_MESSAGE =
-  "Stored Design Resume is no longer compatible. Re-import from Reactive Resume v5 to continue.";
+  "Your saved CV uses an old format. Import your CV again (PDF, DOCX or JSON) to continue.";
 const INVALID_V5_PREFIX =
   "Design Resume must be a valid Reactive Resume v5 document.";
 
@@ -174,46 +169,6 @@ function contentUrlForAsset(assetId: string): string {
   return `/api/design-resume/assets/${encodeURIComponent(assetId)}/content`;
 }
 
-function absolutizeUrl(value: string, baseUrl: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  try {
-    return new URL(trimmed).toString();
-  } catch {
-    try {
-      return new URL(trimmed, baseUrl).toString();
-    } catch {
-      return trimmed;
-    }
-  }
-}
-
-async function resolveReactiveResumePublicBaseUrl(): Promise<string> {
-  return (
-    (await getSetting("rxresumeUrl"))?.trim() ||
-    getOriginalEnvValue("RXRESUME_URL")?.trim() ||
-    "https://rxresu.me"
-  );
-}
-
-function withReactiveResumePictureUrl(
-  document: DesignResumeJson,
-  baseUrl: string,
-): DesignResumeJson {
-  const picture = asRecord(document.picture);
-  const pictureUrl = toText(picture?.url);
-  if (!pictureUrl) return document;
-
-  return {
-    ...document,
-    picture: {
-      ...document.picture,
-      url: absolutizeUrl(pictureUrl, baseUrl),
-    } as DesignResumeJson["picture"],
-  };
-}
-
 function normalizeImageMimeType(input: {
   mimeType?: string | null;
   fileName?: string | null;
@@ -238,89 +193,6 @@ function assertImageByteSize(byteLength: number): void {
   if (byteLength > MAX_IMAGE_BYTES) {
     throw badRequest("Images must be 10 MB or smaller.");
   }
-}
-
-function isLocalOrPrivateHostname(hostnameRaw: string): boolean {
-  const hostname = hostnameRaw.trim().toLowerCase();
-  if (!hostname) return true;
-
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local")
-  ) {
-    return true;
-  }
-
-  const ipv4Match = hostname.match(
-    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
-  );
-  if (ipv4Match) {
-    const octets = ipv4Match.slice(1).map((part) => Number(part));
-    if (octets.some((octet) => Number.isNaN(octet) || octet > 255)) return true;
-    const [first, second] = octets;
-    if (
-      first === 10 ||
-      first === 127 ||
-      first === 0 ||
-      (first === 169 && second === 254) ||
-      (first === 172 && second >= 16 && second <= 31) ||
-      (first === 192 && second === 168)
-    ) {
-      return true;
-    }
-  }
-
-  if (hostname.includes(":")) {
-    if (
-      hostname === "::1" ||
-      hostname.startsWith("fe80:") ||
-      hostname.startsWith("fc") ||
-      hostname.startsWith("fd")
-    ) {
-      return true;
-    }
-  }
-
-  if (!hostname.includes(".") && !hostname.includes(":")) {
-    return true;
-  }
-
-  return false;
-}
-
-function parsePublicPictureUrl(value: string): URL {
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw badRequest("Design Resume pictures must use a valid absolute URL.");
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw badRequest("Design Resume pictures must use HTTP or HTTPS URLs.");
-  }
-  if (parsed.username || parsed.password) {
-    throw badRequest("Design Resume picture URLs cannot include credentials.");
-  }
-  if (isLocalOrPrivateHostname(parsed.hostname)) {
-    throw badRequest(
-      "Design Resume picture URLs must point to a publicly reachable host.",
-    );
-  }
-
-  return parsed;
-}
-
-function originalNameFromUrl(url: string, mimeType: string): string {
-  try {
-    const pathname = new URL(url).pathname;
-    const name = basename(decodeURIComponent(pathname));
-    if (name) return name;
-  } catch {
-    // Fall back to a deterministic generated name below.
-  }
-  return `picture${extensionForMimeType(mimeType)}`;
 }
 
 async function storeDesignResumePictureAsset(input: {
@@ -359,58 +231,6 @@ async function storeDesignResumePictureAsset(input: {
   }
 
   return { assetId, storagePath };
-}
-
-async function fetchPictureFromUrl(
-  url: string,
-  redirectCount = 0,
-): Promise<{
-  data: Buffer;
-  fileName: string;
-  mimeType: string;
-}> {
-  const parsedUrl = parsePublicPictureUrl(url);
-  const response = await fetch(parsedUrl.toString(), {
-    signal: AbortSignal.timeout(15_000),
-    redirect: "manual",
-  });
-  if (
-    response.status >= 300 &&
-    response.status < 400 &&
-    response.headers.get("location")
-  ) {
-    if (redirectCount >= MAX_PICTURE_FETCH_REDIRECTS) {
-      throw new Error(
-        "Reactive Resume picture download redirected too many times.",
-      );
-    }
-    const nextUrl = new URL(response.headers.get("location") ?? "", parsedUrl);
-    return fetchPictureFromUrl(nextUrl.toString(), redirectCount + 1);
-  }
-  if (!response.ok) {
-    throw new Error(
-      `Reactive Resume picture download failed with HTTP ${response.status}.`,
-    );
-  }
-
-  const mimeType = normalizeImageMimeType({
-    mimeType: response.headers.get("content-type"),
-    fileName: url,
-  });
-  const contentLength = Number(response.headers.get("content-length") ?? 0);
-  if (contentLength > 0) assertImageByteSize(contentLength);
-
-  const data = Buffer.from(await response.arrayBuffer());
-  if (data.byteLength === 0) {
-    throw new Error("Reactive Resume picture download returned an empty file.");
-  }
-  assertImageByteSize(data.byteLength);
-
-  return {
-    data,
-    fileName: originalNameFromUrl(url, mimeType),
-    mimeType,
-  };
 }
 
 function toDesignResumeAsset(
@@ -926,85 +746,6 @@ export async function deleteDesignResumeVariant(
   }
   await clearDesignResumeAssetsForDocument(row.id);
   await designResumeRepo.deleteDesignResumeDocument(row.id);
-}
-
-export async function importDesignResumeFromReactiveResume(): Promise<DesignResumeDocument> {
-  const { resumeId } = await getConfiguredRxResumeBaseResumeId();
-  if (!resumeId) {
-    throw badRequest(
-      "No base resume selected. Configure Reactive Resume and choose a template resume first.",
-    );
-  }
-
-  const upstreamResume = await getResume(resumeId);
-  if (!upstreamResume.data || typeof upstreamResume.data !== "object") {
-    throw badRequest("Reactive Resume base resume is empty or invalid.");
-  }
-
-  const validated = withReactiveResumePictureUrl(
-    validateIncomingDesignResumeDocument(upstreamResume.data),
-    await resolveReactiveResumePublicBaseUrl(),
-  );
-  const imported = await replaceCurrentDesignResumeDocument({
-    resumeJson: validated,
-    sourceResumeId: resumeId,
-    sourceMode: "v5",
-    importedAt: new Date().toISOString(),
-  });
-
-  return localizeImportedDesignResumePicture(imported);
-}
-
-async function localizeImportedDesignResumePicture(
-  document: DesignResumeDocument,
-): Promise<DesignResumeDocument> {
-  const picture = asRecord(document.resumeJson.picture);
-  const pictureUrl = toText(picture?.url).trim();
-  if (!pictureUrl || pictureUrl.startsWith("/api/design-resume/assets/")) {
-    return document;
-  }
-
-  let downloaded: Awaited<ReturnType<typeof fetchPictureFromUrl>>;
-  try {
-    downloaded = await fetchPictureFromUrl(pictureUrl);
-  } catch (error) {
-    logger.warn("Failed to localize Reactive Resume picture", {
-      documentId: document.id,
-      sourceResumeId: document.sourceResumeId,
-      pictureUrl,
-      error: sanitizeUnknown(error),
-    });
-    return document;
-  }
-
-  const now = new Date().toISOString();
-  const { assetId, storagePath } = await storeDesignResumePictureAsset({
-    documentId: document.id,
-    fileName: downloaded.fileName,
-    mimeType: downloaded.mimeType,
-    data: downloaded.data,
-    updatedAt: now,
-  });
-
-  const nextDocument = structuredClone(document.resumeJson) as DesignResumeJson;
-  nextDocument.picture = {
-    ...(asRecord(nextDocument.picture) ?? {}),
-    url: contentUrlForAsset(assetId),
-  } as DesignResumeJson["picture"];
-
-  try {
-    return await updateCurrentDesignResume(
-      {
-        baseRevision: document.revision,
-        document: nextDocument,
-      },
-      { language: document.language },
-    );
-  } catch (error) {
-    await designResumeRepo.deleteDesignResumeAsset(assetId);
-    await deleteAssetFile(storagePath);
-    throw error;
-  }
 }
 
 export async function updateCurrentDesignResume(

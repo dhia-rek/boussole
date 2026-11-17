@@ -43,9 +43,9 @@ describe("API client demo toasts", () => {
         }),
     } as Response);
 
-    await expect(
-      api.updateSettings({ llmProvider: "openrouter" }),
-    ).rejects.toThrow("Blocked");
+    await expect(api.updateSettings({ model: "opus:medium" })).rejects.toThrow(
+      "Blocked",
+    );
     expect(customToast).toHaveBeenCalledTimes(1);
   });
 });

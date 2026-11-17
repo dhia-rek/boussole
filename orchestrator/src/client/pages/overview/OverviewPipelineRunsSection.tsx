@@ -355,13 +355,9 @@ function RunInsightsBody(props: {
                   }
                 />
                 <MetricCard
-                  label="PDF renderer"
-                  value={savedDetails.effectiveConfig.pdfRenderer}
-                />
-                <MetricCard
                   label="Source limits"
-                  value={`Indeed ${savedDetails.effectiveConfig.sourceLimits.jobspyResultsWanted}; UK Visa Jobs ${savedDetails.effectiveConfig.sourceLimits.ukvisajobsMaxJobs}`}
-                  hint={`Adzuna ${savedDetails.effectiveConfig.sourceLimits.adzunaMaxJobsPerTerm}; Gradcracker ${savedDetails.effectiveConfig.sourceLimits.gradcrackerMaxJobsPerTerm}; startup.jobs ${savedDetails.effectiveConfig.sourceLimits.startupjobsMaxJobsPerTerm}; Jobindex ${savedDetails.effectiveConfig.sourceLimits.jobindexMaxJobsPerTerm}`}
+                  value={`LinkedIn/Indeed ${savedDetails.effectiveConfig.sourceLimits.jobspyResultsWanted} per term`}
+                  hint={`Adzuna ${savedDetails.effectiveConfig.sourceLimits.adzunaMaxJobsPerTerm}; startup.jobs ${savedDetails.effectiveConfig.sourceLimits.startupjobsMaxJobsPerTerm}`}
                 />
                 <MetricCard
                   label="Resume projects"
@@ -369,9 +365,17 @@ function RunInsightsBody(props: {
                   hint={`${savedDetails.effectiveConfig.resumeProjects.lockedProjectCount} locked, ${savedDetails.effectiveConfig.resumeProjects.aiSelectableProjectCount} AI-selectable`}
                 />
                 <MetricCard
-                  label="Models"
-                  value={savedDetails.effectiveConfig.models.scorer}
-                  hint={`Tailoring ${savedDetails.effectiveConfig.models.tailoring}; project selection ${savedDetails.effectiveConfig.models.projectSelection}`}
+                  label="Claude model"
+                  value={
+                    savedDetails.effectiveConfig.model ??
+                    // Runs saved before the single-model setup.
+                    (
+                      savedDetails.effectiveConfig as {
+                        models?: { scorer?: string };
+                      }
+                    ).models?.scorer ??
+                    "—"
+                  }
                 />
               </div>
             </div>

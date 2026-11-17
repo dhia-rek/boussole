@@ -1,12 +1,11 @@
 import * as api from "@client/api";
 import { useDemoInfo } from "@client/hooks/useDemoInfo";
 import { useOnboardingRequirement } from "@client/hooks/useOnboardingRequirement";
-import { useRxResumeConfigState } from "@client/hooks/useRxResumeConfigState";
 import { useSettings } from "@client/hooks/useSettings";
-import { validateAndMaybePersistRxResumeMode } from "@client/lib/rxresume-config";
 import { createDesignResumeDocument } from "@shared/testing/factories";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithQueryClient } from "../test/renderWithQueryClient";
 import { OnboardingPage } from "./OnboardingPage";
@@ -14,12 +13,7 @@ import { OnboardingPage } from "./OnboardingPage";
 vi.mock("@client/api", () => ({
   importDesignResumeFromFile: vi.fn(),
   suggestOnboardingSearchTerms: vi.fn(),
-  getCodexAuthStatus: vi.fn(),
-  startCodexAuth: vi.fn(),
-  disconnectCodexAuth: vi.fn(),
-  getLlmModels: vi.fn(),
   validateLlm: vi.fn(),
-  validateRxresume: vi.fn(),
   validateResumeConfig: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -32,29 +26,8 @@ vi.mock("@client/hooks/useSettings", () => ({
   useSettings: vi.fn(),
 }));
 
-vi.mock("@client/hooks/useRxResumeConfigState", () => ({
-  useRxResumeConfigState: vi.fn(),
-}));
-
 vi.mock("@client/hooks/useOnboardingRequirement", () => ({
   useOnboardingRequirement: vi.fn(),
-}));
-
-vi.mock("@client/lib/rxresume-config", () => ({
-  getRxResumeCredentialDrafts: vi.fn((values) => ({
-    baseUrl: values.rxresumeUrl?.trim() ?? "",
-    apiKey: values.rxresumeApiKey?.trim() ?? "",
-  })),
-  getRxResumeMissingCredentialLabels: vi.fn(() => []),
-  validateAndMaybePersistRxResumeMode: vi.fn(),
-}));
-
-vi.mock("@client/components/ReactiveResumeConfigPanel", () => ({
-  ReactiveResumeConfigPanel: () => <div>Reactive resume panel</div>,
-}));
-
-vi.mock("@client/pages/settings/components/BaseResumeSelection", () => ({
-  BaseResumeSelection: () => <div>Base resume selection</div>,
 }));
 
 vi.mock("sonner", () => ({
@@ -65,19 +38,12 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const NO_CV_MESSAGE =
+  "No CV yet. Upload a PDF or DOCX CV, or create one in the CV editor.";
+
 const baseSettings = {
-  llmProvider: { value: "openrouter", default: "openrouter", override: null },
-  llmBaseUrl: { value: "", default: "", override: null },
-  llmApiKeyHint: "sk-t",
-  model: { value: "gpt-4o", default: "gpt-4o", override: null },
-  modelScorer: { value: "gpt-4o", override: null },
-  modelTailoring: { value: "gpt-4o", override: null },
-  modelProjectSelection: { value: "gpt-4o", override: null },
-  pdfRenderer: { value: "rxresume", default: "rxresume", override: null },
+  model: { value: "opus:medium", default: "opus:medium", override: null },
   onboardingBasicAuthDecision: null,
-  rxresumeUrl: "https://resume.example.com",
-  rxresumeApiKeyHint: "rx-k",
-  rxresumeBaseResumeId: "resume-1",
   searchTerms: {
     value: ["Platform Engineer"],
     default: ["web developer"],
@@ -98,6 +64,20 @@ function getStepButton(label: RegExp) {
     throw new Error(`Expected ${label.toString()} to be inside a step button`);
   }
   return button;
+}
+
+async function waitForClaudeStep() {
+  return await screen.findByLabelText("Claude model");
+}
+
+function getResumeUploadInput(container: HTMLElement) {
+  const input = container.querySelector(
+    'input[type="file"][accept*=".pdf"]',
+  ) as HTMLInputElement | null;
+  if (!input) {
+    throw new Error("Expected resume upload input");
+  }
+  return input;
 }
 
 function renderPage() {
@@ -131,20 +111,9 @@ describe("OnboardingPage", () => {
       isLoading: false,
       refreshSettings: vi.fn(),
       error: null,
-      showSponsorInfo: true,
       renderMarkdownInJobDescriptions: true,
     }));
 
-    vi.mocked(useRxResumeConfigState).mockReturnValue({
-      storedRxResume: {
-        hasV5ApiKey: true,
-        hasBaseUrl: true,
-      },
-      baseResumeId: "resume-1",
-      syncBaseResumeId: () => "resume-1",
-      getBaseResumeId: () => "resume-1",
-      setBaseResumeId: vi.fn(),
-    } as any);
     vi.mocked(useOnboardingRequirement).mockImplementation(() => ({
       checking: false,
       complete: Boolean(
@@ -154,54 +123,16 @@ describe("OnboardingPage", () => {
           currentSettings.searchTerms.override.length > 0,
       ),
     }));
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockResolvedValue({
-      validation: {
-        valid: true,
-        message: null,
-      },
-    } as any);
     vi.mocked(api.suggestOnboardingSearchTerms).mockResolvedValue({
       terms: ["Platform Engineer", "Backend Engineer"],
       source: "ai",
     });
-    vi.mocked(api.getLlmModels).mockResolvedValue([]);
-    vi.mocked(api.getCodexAuthStatus).mockResolvedValue({
-      authenticated: false,
-      username: null,
-      validationMessage:
-        "Codex is not authenticated in this container. Run `codex login` and try again.",
-      flowStatus: "idle",
-      loginInProgress: false,
-      verificationUrl: null,
-      userCode: null,
-      startedAt: null,
-      expiresAt: null,
-      flowMessage: null,
-    });
-    vi.mocked(api.startCodexAuth).mockResolvedValue({
-      authenticated: false,
-      username: null,
-      validationMessage:
-        "Codex is not authenticated in this container. Run `codex login` and try again.",
-      flowStatus: "running",
-      loginInProgress: true,
-      verificationUrl: "https://auth.openai.com/codex/device",
-      userCode: "ABCD-EFGH",
-      startedAt: "2026-04-14T16:00:00.000Z",
-      expiresAt: "2026-04-14T16:15:00.000Z",
-      flowMessage:
-        "Open the verification URL and enter the one-time code to finish login.",
-    });
   });
 
-  it("keeps the LLM step visible even when a key hint already exists", async () => {
+  it("shows the Claude model field on the Claude step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "Connection failed",
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
+      message: "Claude is not signed in",
     });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
@@ -210,26 +141,20 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => expect(api.validateLlm).toHaveBeenCalled());
-    expect(
-      screen.getByText("Choose the LLM connection Boussole should use."),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("API key")).toBeInTheDocument();
-    expect(screen.getByLabelText("Default model")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Task-Specific Overrides"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/leave blank to keep the saved key/i),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(api.validateLlm).toHaveBeenCalledWith());
+
+    const modelInput = await waitForClaudeStep();
+    expect(modelInput).toHaveValue("");
+    expect(modelInput).toHaveAttribute("placeholder", "opus:medium");
+    expect(screen.getByText("In use: opus:medium")).toBeInTheDocument();
+    expect(getStepButton(/^Claude$/)).toHaveTextContent(
+      "Check that Claude is connected",
+    );
+    expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
   });
 
-  it("saves the selected default model from onboarding", async () => {
+  it("saves the chosen Claude model from onboarding", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -241,153 +166,57 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
+    const modelInput = await waitForClaudeStep();
+    const revalidateButton = await screen.findByRole("button", {
+      name: /revalidate connection/i,
+    });
+
+    fireEvent.change(modelInput, {
+      target: { value: "sonnet" },
+    });
+    fireEvent.click(revalidateButton);
+
+    await waitFor(() => {
+      expect(api.updateSettings).toHaveBeenCalledWith({ model: "sonnet" });
+    });
+  });
+
+  it("does not treat Claude as connected before the connection check passes", async () => {
+    vi.mocked(api.validateLlm).mockResolvedValue({
+      valid: false,
+      message: "Claude is not signed in",
+    });
+    vi.mocked(api.validateResumeConfig).mockResolvedValue({
+      valid: true,
+      message: null,
+    });
+
+    renderPage();
+
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
+        screen.getByRole("button", { name: /save connection/i }),
+      ).toBeEnabled();
     });
-
-    fireEvent.change(screen.getByLabelText("Default model"), {
-      target: { value: "google/gemini-3-flash-preview" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: /revalidate connection/i }),
-    );
-
-    await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: "google/gemini-3-flash-preview",
-          modelScorer: null,
-          modelTailoring: null,
-          modelProjectSelection: null,
-        }),
-      );
-    });
-  });
-
-  it("uses a saved API key hint when loading onboarding model suggestions", async () => {
-    currentSettings = {
-      ...baseSettings,
-      llmProvider: { value: "openai", default: "openai", override: null },
-      llmApiKeyHint: "sk-t",
-      model: { value: "gpt-4o", default: "gpt-4o", override: null },
-    };
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.getLlmModels).mockResolvedValue(["gpt-4.1"]);
-
-    renderPage();
-
-    await waitFor(() => {
-      expect(api.getLlmModels).toHaveBeenCalledWith({
-        provider: "openai",
-        baseUrl: undefined,
-        apiKey: undefined,
-      });
-    });
-  });
-
-  it("shows Codex sign-in controls in onboarding when provider is codex", async () => {
-    currentSettings = {
-      ...baseSettings,
-      llmProvider: { value: "codex", default: "codex", override: null },
-      llmApiKeyHint: null,
-    };
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: false,
-      message: "Codex is not authenticated in this container.",
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-
-    renderPage();
-
-    await waitFor(() => expect(api.getCodexAuthStatus).toHaveBeenCalled());
-    expect(screen.getByText("Codex Sign-In")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /start sign-in/i }));
-
-    await waitFor(() => expect(api.startCodexAuth).toHaveBeenCalled());
-    expect(await screen.findByText(/ABCD-EFGH/)).toBeInTheDocument();
-    const openVerificationLink = await screen.findByRole("link", {
-      name: /open verification page/i,
-    });
-    expect(openVerificationLink).toHaveAttribute(
-      "href",
-      "https://auth.openai.com/codex/device",
-    );
-  });
-
-  it("does not treat local providers as validated before the connection check passes", async () => {
-    currentSettings = {
-      ...baseSettings,
-      llmProvider: {
-        value: "openai_compatible",
-        default: "openai_compatible",
-        override: null,
-      },
-      llmBaseUrl: {
-        value: "http://localhost:1234",
-        default: "",
-        override: null,
-      },
-      llmApiKeyHint: null,
-    };
-
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: false,
-      message: "The AI endpoint is unreachable",
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-
-    renderPage();
-
-    await waitFor(() => {
-      expect(api.validateLlm).toHaveBeenCalledWith({
-        provider: "openai_compatible",
-        baseUrl: "http://localhost:1234",
-        apiKey: undefined,
-      });
-    });
-
-    expect(
-      screen.getByRole("button", { name: /save connection/i }),
-    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /revalidate connection/i }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Claude is not signed in"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save connection/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Claude is not signed in")).toBeInTheDocument();
+    });
+    expect(api.validateLlm).toHaveBeenCalledTimes(2);
+    expect(toast.error).toHaveBeenCalledWith("Claude is not signed in");
+    expect(api.updateSettings).not.toHaveBeenCalled();
   });
 
-  it("shows the saved LLM connection success state in the detail panel", async () => {
+  it("shows the Claude connection success state in the detail panel", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -399,9 +228,7 @@ describe("OnboardingPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(
-        screen.getByText("OpenRouter connection verified."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Claude is connected.")).toBeInTheDocument();
     });
   });
 
@@ -410,10 +237,6 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -421,11 +244,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -441,10 +260,6 @@ describe("OnboardingPage", () => {
 
   it("renders the new search terms step in the onboarding rail", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -464,10 +279,6 @@ describe("OnboardingPage", () => {
 
   it("does not auto-generate search terms when explicit saved terms already exist", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -501,10 +312,6 @@ describe("OnboardingPage", () => {
     };
 
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -551,10 +358,6 @@ describe("OnboardingPage", () => {
     };
 
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -617,10 +420,6 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -641,11 +440,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -673,10 +468,6 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -698,11 +489,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -750,10 +537,6 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -776,11 +559,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(screen.getByRole("button", { name: /search terms/i }));
 
@@ -803,10 +582,6 @@ describe("OnboardingPage", () => {
       valid: false,
       message: "Connection failed",
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -818,11 +593,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -858,10 +629,6 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
       message: null,
@@ -869,24 +636,14 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     expect(screen.queryByText("ready page")).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Choose the LLM connection Boussole should use."),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Claude model")).toBeInTheDocument();
   });
 
-  it("does not auto-advance after saving the LLM step", async () => {
+  it("does not auto-advance after saving the Claude step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -898,39 +655,54 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Choose the LLM connection Boussole should use."),
-      ).toBeInTheDocument();
-    });
+    await waitForClaudeStep();
 
     fireEvent.click(
-      screen.getByRole("button", { name: /revalidate connection/i }),
+      await screen.findByRole("button", { name: /revalidate connection/i }),
     );
 
     await waitFor(() => {
       expect(api.updateSettings).toHaveBeenCalled();
     });
-    expect(api.updateSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: null,
-      }),
-    );
+    expect(api.updateSettings).toHaveBeenCalledWith({ model: null });
 
+    expect(screen.getByLabelText("Claude model")).toBeInTheDocument();
     expect(
-      screen.getByText("Choose the LLM connection Boussole should use."),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Import your current resume."),
+      screen.queryByRole("button", { name: /upload cv file/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the RxResume URL hidden unless self-hosted mode is enabled", async () => {
+  it("does not show CV errors before the user checks the step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
     });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
+    vi.mocked(api.validateResumeConfig).mockResolvedValue({
+      valid: false,
+      message: NO_CV_MESSAGE,
+    });
+
+    renderPage();
+
+    fireEvent.click(getStepButton(/^CV$/i));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^check cv/i })).toBeEnabled();
+    });
+    expect(api.validateResumeConfig).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(NO_CV_MESSAGE)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^check cv/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(NO_CV_MESSAGE)).toBeInTheDocument();
+    });
+    expect(api.validateResumeConfig).toHaveBeenCalledTimes(2);
+    expect(toast.error).toHaveBeenCalledWith(NO_CV_MESSAGE);
+  });
+
+  it("shows the loaded CV success state in the detail panel", async () => {
+    vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -939,157 +711,26 @@ describe("OnboardingPage", () => {
       message: null,
     });
 
-    currentSettings = {
-      ...baseSettings,
-      rxresumeUrl: "",
-    };
-
-    vi.mocked(useSettings).mockImplementation(() => ({
-      settings: currentSettings,
-      isLoading: false,
-      refreshSettings: vi.fn(),
-      error: null,
-      showSponsorInfo: true,
-      renderMarkdownInJobDescriptions: true,
-    }));
-
     renderPage();
 
-    fireEvent.click(getStepButton(/^Resume$/i));
-    fireEvent.click(screen.getByText("Use Reactive Resume"));
+    fireEvent.click(getStepButton(/^CV$/i));
 
     await waitFor(() => {
       expect(
-        screen.getByText("Import your current resume."),
-      ).toBeInTheDocument();
-    });
-
-    expect(screen.queryByLabelText(/custom url/i)).not.toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: /self-hosted reactive resume/i }),
-    );
-
-    expect(screen.getByLabelText(/custom url/i)).toBeInTheDocument();
-  });
-
-  it("does not show resume errors before the user tries to validate the step", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockResolvedValue({
-      validation: {
-        valid: false,
-        message: "Reactive Resume is not configured",
-      },
-    } as any);
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: false,
-      message: "Reactive Resume is not configured",
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: false,
-      message:
-        "No local resume is ready yet. Upload a PDF or DOCX resume, or connect Reactive Resume and select a template resume.",
-    });
-
-    renderPage();
-
-    fireEvent.click(getStepButton(/^Resume$/i));
-
-    await waitFor(() => {
-      expect(api.validateResumeConfig).toHaveBeenCalled();
-    });
-
-    expect(
-      screen.queryByText(
-        /no local resume is ready yet\. upload a pdf or docx resume, or connect reactive resume and select a template resume\./i,
-      ),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(
-        /upload a resume here, or switch to the reactive resume option if you want to import from an existing template resume instead\./i,
-      ),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the Reactive Resume success state in the detail panel after validation passes", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockResolvedValue({
-      validation: {
-        valid: true,
-        message: null,
-      },
-    } as any);
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: false,
-      message: "Choose a template resume to finish this step.",
-    });
-
-    renderPage();
-
-    fireEvent.click(getStepButton(/^Resume$/i));
-    fireEvent.click(screen.getByText("Use Reactive Resume"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Reactive Resume connection verified."),
+        screen.getByText("Your CV is loaded and ready."),
       ).toBeInTheDocument();
     });
   });
 
-  it("shows the loaded resume success state in the detail panel", async () => {
+  it("uploads a PDF CV and validates it from the upload-only CV step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-
-    renderPage();
-
-    fireEvent.click(getStepButton(/^Resume$/i));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Your base resume is loaded and ready."),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("lets upload-only onboarding switch PDF rendering to LaTeX when RxResume is unavailable", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockResolvedValue({
-      validation: {
-        valid: false,
-        message: "Reactive Resume is not configured",
-      },
-    } as any);
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: false,
-      message: "Reactive Resume is not configured",
     });
     vi.mocked(api.validateResumeConfig)
       .mockResolvedValueOnce({
         valid: false,
-        message: "No resume yet",
+        message: NO_CV_MESSAGE,
       })
       .mockResolvedValueOnce({
         valid: true,
@@ -1098,38 +739,18 @@ describe("OnboardingPage", () => {
     vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
       createDesignResumeDocument(),
     );
-    vi.mocked(api.updateSettings).mockImplementation(async (update) => {
-      currentSettings = {
-        ...currentSettings,
-        ...("pdfRenderer" in update
-          ? {
-              pdfRenderer: {
-                value: update.pdfRenderer,
-                default: "rxresume",
-                override: null,
-              },
-            }
-          : {}),
-      };
-      return currentSettings;
-    });
 
     const { container } = renderPage();
 
-    fireEvent.click(getStepButton(/^Resume$/i));
+    fireEvent.click(getStepButton(/^CV$/i));
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Import your current resume."),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByRole("button", { name: /upload cv file/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Use Reactive Resume")).not.toBeInTheDocument();
 
-    const input = container.querySelector(
-      'input[type="file"][accept*=".pdf"]',
-    ) as HTMLInputElement | null;
-    if (!input) {
-      throw new Error("Expected resume upload input");
-    }
+    const input = getResumeUploadInput(container);
+    expect(input.accept).toContain(".docx");
 
     fireEvent.change(input, {
       target: {
@@ -1150,18 +771,19 @@ describe("OnboardingPage", () => {
     });
 
     await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalledWith({
-        pdfRenderer: "latex",
-      });
+      expect(
+        screen.getByText("Your CV is loaded and ready."),
+      ).toBeInTheDocument();
     });
+    expect(api.validateResumeConfig).toHaveBeenCalledTimes(2);
+    expect(toast.success).toHaveBeenCalledWith("CV uploaded", {
+      description: "Your CV is ready in the CV editor.",
+    });
+    expect(api.updateSettings).not.toHaveBeenCalled();
   });
 
   it("marks the search terms step stale after the resume changes", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });
@@ -1177,32 +799,12 @@ describe("OnboardingPage", () => {
     vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
       createDesignResumeDocument(),
     );
-    vi.mocked(api.updateSettings).mockImplementation(async (update) => {
-      currentSettings = {
-        ...currentSettings,
-        ...("pdfRenderer" in update
-          ? {
-              pdfRenderer: {
-                value: update.pdfRenderer,
-                default: "rxresume",
-                override: null,
-              },
-            }
-          : {}),
-      };
-      return currentSettings;
-    });
 
     const { container } = renderPage();
 
-    fireEvent.click(getStepButton(/^Resume$/i));
+    fireEvent.click(getStepButton(/^CV$/i));
 
-    const input = container.querySelector(
-      'input[type="file"][accept*=".pdf"]',
-    ) as HTMLInputElement | null;
-    if (!input) {
-      throw new Error("Expected resume upload input");
-    }
+    const input = getResumeUploadInput(container);
 
     fireEvent.change(input, {
       target: {
@@ -1225,163 +827,8 @@ describe("OnboardingPage", () => {
     });
   });
 
-  it("uses LaTeX for uploaded resumes even when Reactive Resume is available", async () => {
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockResolvedValue({
-      validation: {
-        valid: true,
-        message: null,
-      },
-    } as any);
-    vi.mocked(api.validateRxresume).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateResumeConfig)
-      .mockResolvedValueOnce({
-        valid: false,
-        message: "No resume yet",
-      })
-      .mockResolvedValueOnce({
-        valid: true,
-        message: null,
-      });
-    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
-      createDesignResumeDocument(),
-    );
-    vi.mocked(api.updateSettings).mockImplementation(async (update) => {
-      currentSettings = {
-        ...currentSettings,
-        ...("pdfRenderer" in update
-          ? {
-              pdfRenderer: {
-                value: update.pdfRenderer,
-                default: "rxresume",
-                override: null,
-              },
-            }
-          : {}),
-      };
-      return currentSettings;
-    });
-
-    const { container } = renderPage();
-
-    fireEvent.click(getStepButton(/^Resume$/i));
-
-    const input = container.querySelector(
-      'input[type="file"][accept*=".pdf"]',
-    ) as HTMLInputElement | null;
-    if (!input) {
-      throw new Error("Expected resume upload input");
-    }
-
-    fireEvent.change(input, {
-      target: {
-        files: [
-          new File(["resume"], "resume.pdf", {
-            type: "application/pdf",
-          }),
-        ],
-      },
-    });
-
-    await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalledWith({
-        pdfRenderer: "latex",
-      });
-    });
-  });
-
-  it("only shows the template resume picker after Reactive Resume validates", async () => {
-    currentSettings = {
-      ...baseSettings,
-      rxresumeApiKeyHint: null,
-      rxresumeBaseResumeId: null,
-      pdfRenderer: { value: "latex", default: "rxresume", override: null },
-    };
-
-    vi.mocked(useRxResumeConfigState).mockReturnValue({
-      storedRxResume: {
-        hasV5ApiKey: false,
-        hasBaseUrl: true,
-      },
-      baseResumeId: null,
-      syncBaseResumeId: () => null,
-      getBaseResumeId: () => null,
-      setBaseResumeId: vi.fn(),
-    } as any);
-
-    vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(validateAndMaybePersistRxResumeMode).mockImplementation(
-      async ({ draft }) =>
-        ({
-          validation: {
-            valid: Boolean(draft.apiKey),
-            message: draft.apiKey ? null : "v5 API key required",
-          },
-        }) as any,
-    );
-    vi.mocked(api.updateSettings).mockImplementation(async (update) => {
-      currentSettings = {
-        ...currentSettings,
-        ...update,
-      };
-      return currentSettings;
-    });
-    vi.mocked(api.validateResumeConfig).mockResolvedValue({
-      valid: false,
-      message: "Choose a template resume to finish this step.",
-    });
-
-    renderPage();
-
-    fireEvent.click(getStepButton(/^Resume$/i));
-    fireEvent.click(screen.getByText("Use Reactive Resume"));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Import your current resume."),
-      ).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText("Template resume")).not.toBeInTheDocument();
-    expect(screen.queryByText("Base resume selection")).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText("Enter v5 API key"), {
-      target: { value: "rx-api-key" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: /connect reactive resume/i }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Template resume")).toBeInTheDocument();
-      expect(
-        screen.getByPlaceholderText("Enter v5 API key"),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByText("Upload a PDF or DOCX resume"),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /confirm resume template/i }),
-      ).toBeInTheDocument();
-    });
-    expect(screen.getByText("Base resume selection")).toBeInTheDocument();
-  });
-
   it("lets the full authentication option card change the selection", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
-      valid: true,
-      message: null,
-    });
-    vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
       message: null,
     });

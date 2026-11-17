@@ -53,7 +53,7 @@ async function buildResume(args: {
   projectIds?: string[];
 }): Promise<DesignResumeJson> {
   const { buildDefaultReactiveResumeDocument } = await import(
-    "@server/services/rxresume/document"
+    "@server/services/resume-data/document"
   );
   const resume = buildDefaultReactiveResumeDocument() as DesignResumeJson;
   resume.basics.name = args.name;

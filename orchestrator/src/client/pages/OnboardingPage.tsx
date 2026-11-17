@@ -104,7 +104,6 @@ export const OnboardingPage: React.FC = () => {
                 <CardContent className="flex flex-1 flex-col gap-6 pt-6">
                   <OnboardingStepContent
                     baseResumeValidation={flow.baseResumeValidation}
-                    baseResumeValue={flow.baseResumeValue}
                     basicAuthChoice={flow.basicAuthChoice}
                     basicAuthPassword={flow.watch("basicAuthPassword")}
                     basicAuthUser={flow.watch("basicAuthUser")}
@@ -117,38 +116,14 @@ export const OnboardingPage: React.FC = () => {
                     isBusy={flow.isBusy}
                     isGeneratingSearchTerms={flow.isGeneratingSearchTerms}
                     isImportingResume={flow.isImportingResume}
-                    isResumeReady={flow.baseResumeValidation.valid}
-                    isRxResumeSelfHosted={flow.isRxResumeSelfHosted}
-                    llmApiKey={flow.watch("llmApiKey")}
-                    llmBaseUrl={flow.watch("llmBaseUrl")}
-                    llmKeyHint={flow.llmKeyHint}
                     llmValidation={flow.llmValidation}
                     model={flow.watch("model")}
-                    resumeSetupMode={flow.resumeSetupMode}
-                    rxresumeApiKey={flow.watch("rxresumeApiKey")}
-                    rxresumeApiKeyHint={flow.settings?.rxresumeApiKeyHint}
-                    rxresumeUrl={flow.watch("rxresumeUrl")}
-                    rxresumeValidation={flow.rxresumeValidation}
                     searchTermDraft={flow.watch("searchTermDraft")}
                     searchTerms={flow.watch("searchTerms")}
                     searchTermsSource={flow.searchTermsSource}
                     searchTermsStale={flow.searchTermsStale}
-                    savedBaseUrl={flow.settings?.llmBaseUrl?.value}
-                    savedProvider={flow.settings?.llmProvider?.value}
-                    selectedProvider={flow.selectedProvider}
-                    onLlmApiKeyChange={(value) =>
-                      flow.setValue("llmApiKey", value, { shouldDirty: true })
-                    }
-                    onLlmBaseUrlChange={(value) =>
-                      flow.setValue("llmBaseUrl", value, { shouldDirty: true })
-                    }
                     onLlmModelChange={(value) =>
                       flow.setValue("model", value, { shouldDirty: true })
-                    }
-                    onLlmProviderChange={(value) =>
-                      flow.setValue("llmProvider", value, {
-                        shouldDirty: true,
-                      })
                     }
                     onBasicAuthChoiceChange={flow.setBasicAuthChoice}
                     onBasicAuthPasswordChange={(value) =>
@@ -159,16 +134,6 @@ export const OnboardingPage: React.FC = () => {
                     }
                     onImportResumeFile={flow.handleImportResumeFile}
                     onRegenerateSearchTerms={flow.handleRegenerateSearchTerms}
-                    onResumeSetupModeChange={flow.setResumeSetupMode}
-                    onRxresumeApiKeyChange={(value) =>
-                      flow.setValue("rxresumeApiKey", value)
-                    }
-                    onRxresumeSelfHostedChange={
-                      flow.handleRxresumeSelfHostedChange
-                    }
-                    onRxresumeUrlChange={(value) =>
-                      flow.setValue("rxresumeUrl", value)
-                    }
                     onSearchTermDraftChange={(value) =>
                       flow.setValue("searchTermDraft", value)
                     }
@@ -177,7 +142,6 @@ export const OnboardingPage: React.FC = () => {
                         shouldDirty: true,
                       })
                     }
-                    onTemplateResumeChange={flow.handleTemplateResumeChange}
                   />
                 </CardContent>
 
