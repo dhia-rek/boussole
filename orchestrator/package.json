@@ -53,8 +53,8 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-virtual": "^3.13.23",
-    "@tiptap/react": "^3.22.2",
-    "@tiptap/starter-kit": "^3.22.2",
+    "@tiptap/react": "^3.34.0",
+    "@tiptap/starter-kit": "^3.34.0",
     "better-sqlite3": "^11.6.0",
     "browser-utils": "^0.0.1",
     "canvas-confetti": "^1.9.4",
@@ -64,7 +64,7 @@
     "cors": "^2.8.5",
     "deepagents": "1.16.2",
     "dotenv": "^17.2.3",
-    "drizzle-orm": "^0.38.2",
+    "drizzle-orm": "^0.45.4",
     "express": "^4.18.2",
     "framer-motion": "^12.34.3",
     "html-to-text": "^9.0.5",
@@ -87,6 +87,7 @@
     "tailwind-merge": "^3.4.0",
     "tinykeys": "^3.0.0",
     "tsx": "^4.19.2",
+    "undici": "^7.30.2",
     "vaul": "^1.1.2",
     "zod": "^3.23.8"
   },
@@ -117,7 +118,7 @@
     "react-router-dom": "^7.0.2",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3",
+    "vite": "^6.4.6",
     "vitest": "^4.0.16"
   },
   "optionalDependencies": {
