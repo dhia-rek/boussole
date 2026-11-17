@@ -2,6 +2,7 @@ import type {
   LocationMatchStrictness,
   LocationSearchScope,
 } from "../location-preferences";
+import type { DesignResumeAiGuidance } from "./design-resume";
 
 export interface ResumeProjectCatalogItem {
   id: string;
@@ -126,6 +127,10 @@ export interface ResumeProfile {
     };
     [key: string]: unknown;
   };
+  /** Candidate-authored AI guidance (Design Resume only). */
+  aiGuidance?: DesignResumeAiGuidance;
+  /** Language tag of the CV variant this profile was built from. */
+  language?: string;
   [key: string]: unknown;
 }
 
@@ -207,6 +212,9 @@ export interface AppSettings {
   modelScorer: ModelResolved;
   modelTailoring: ModelResolved;
   modelProjectSelection: ModelResolved;
+
+  // Per-task provider override for multi-LLM routing (empty = global provider):
+  providerTailoring: Resolved<string>;
 
   // Simple strings:
   rxresumeBaseResumeId: string | null;

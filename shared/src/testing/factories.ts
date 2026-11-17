@@ -1,7 +1,10 @@
+import { createDefaultDesignResumeAiGuidance } from "../design-resume-ai-guidance";
 import { getDefaultPromptTemplate } from "../prompt-template-definitions";
 import type {
   ApplicationTask,
   AppSettings,
+  DesignResumeDocument,
+  DesignResumeJson,
   Job,
   PipelineRun,
   ResumeProjectCatalogItem,
@@ -122,6 +125,25 @@ export const createPipelineRun = (
   ...overrides,
 });
 
+export const createDesignResumeDocument = (
+  overrides: Partial<DesignResumeDocument> = {},
+): DesignResumeDocument => ({
+  id: "primary",
+  title: "Taylor Resume",
+  resumeJson: {} as DesignResumeJson,
+  revision: 1,
+  sourceResumeId: null,
+  sourceMode: null,
+  language: null,
+  isPrimary: true,
+  aiGuidance: createDefaultDesignResumeAiGuidance(),
+  importedAt: "2026-04-11T00:00:00.000Z",
+  createdAt: "2026-04-11T00:00:00.000Z",
+  updatedAt: "2026-04-11T00:00:00.000Z",
+  assets: [],
+  ...overrides,
+});
+
 export const createResumeProjectCatalogItem = (
   overrides: Partial<ResumeProjectCatalogItem> = {},
 ): ResumeProjectCatalogItem => ({
@@ -140,6 +162,7 @@ export const createAppSettings = (
   modelScorer: { value: "gpt-4o", override: null },
   modelTailoring: { value: "gpt-4o", override: null },
   modelProjectSelection: { value: "gpt-4o", override: null },
+  providerTailoring: { value: "", default: "", override: null },
   llmProvider: { value: "openai", default: "openai", override: null },
   llmBaseUrl: {
     value: "https://api.openai.com/v1",

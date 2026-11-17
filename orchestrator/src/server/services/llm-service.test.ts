@@ -233,7 +233,7 @@ describe("LlmService", () => {
   });
 
   it("falls back to a looser mode when schema is rejected", async () => {
-    process.env.LLM_PROVIDER = "lmstudio";
+    process.env.LLM_PROVIDER = "openai_compatible";
     delete process.env.OPENROUTER_API_KEY;
 
     vi.mocked(global.fetch).mockImplementation(async (_input, init) => {
@@ -248,7 +248,7 @@ describe("LlmService", () => {
             }),
         } as Response;
       }
-      if (body.response_format?.type === "text") {
+      if (body.response_format?.type === "json_object") {
         return {
           ok: true,
           json: async () => ({
@@ -272,7 +272,11 @@ describe("LlmService", () => {
       } as Response;
     });
 
-    const llm = new LlmService({ provider: "lmstudio" });
+    const llm = new LlmService({
+      provider: "openai_compatible",
+      baseUrl: "http://localhost:1234",
+      apiKey: "test-key",
+    });
     const result = await llm.callJson<{ value: string; count: number }>({
       model: "test-model",
       messages: [{ role: "user", content: "test" }],
@@ -340,5 +344,26 @@ describe("parseJsonContent", () => {
   it("throws on completely invalid content", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => parseJsonContent("not json at all")).toThrow();
+  });
+});
+
+describe("computeLlmCacheKey", () => {
+  it("never shares a cache entry between workspaces", async () => {
+    const { computeLlmCacheKey } = await import("./llm/cache");
+    const base = {
+      provider: "openrouter",
+      model: "m",
+      messages: [{ role: "user" as const, content: "same prompt" }],
+      jsonSchema: {
+        name: "s",
+        schema: { type: "object" as const, properties: {} },
+      } as JsonSchemaDefinition,
+    };
+    expect(computeLlmCacheKey({ ...base, tenantId: "tenant-a" })).not.toBe(
+      computeLlmCacheKey({ ...base, tenantId: "tenant-b" }),
+    );
+    expect(computeLlmCacheKey({ ...base, tenantId: "tenant-a" })).toBe(
+      computeLlmCacheKey({ ...base, tenantId: "tenant-a" }),
+    );
   });
 });

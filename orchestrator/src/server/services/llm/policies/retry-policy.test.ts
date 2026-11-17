@@ -40,3 +40,31 @@ describe("retry-policy", () => {
     expect(getRetryDelayMs(500, 2)).toBe(1000);
   });
 });
+
+describe("parseRateLimitDelayMs", () => {
+  it("reads Retry-After seconds and dates", async () => {
+    const { parseRateLimitDelayMs } = await import("./retry-policy");
+    expect(parseRateLimitDelayMs({ retryAfterHeader: "7" })).toBe(7000);
+    expect(
+      parseRateLimitDelayMs({
+        retryAfterHeader: new Date(10_000).toUTCString(),
+        now: 4_000,
+      }),
+    ).toBe(6000);
+  });
+
+  it("reads provider hints from the error body", async () => {
+    const { parseRateLimitDelayMs } = await import("./retry-policy");
+    expect(
+      parseRateLimitDelayMs({
+        body: "Rate limit reached ... Please try again in 9.855s. Need more tokens?",
+      }),
+    ).toBe(9855);
+    expect(parseRateLimitDelayMs({ body: "Please try again in 1m2.5s." })).toBe(
+      62_500,
+    );
+    expect(parseRateLimitDelayMs({ body: "Please retry in 20ms" })).toBe(20);
+    expect(parseRateLimitDelayMs({ body: "quota exceeded" })).toBeNull();
+    expect(parseRateLimitDelayMs({})).toBeNull();
+  });
+});

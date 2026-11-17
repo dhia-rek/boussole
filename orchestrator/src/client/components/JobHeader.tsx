@@ -198,9 +198,10 @@ export const JobHeader: React.FC<JobHeaderProps> = ({
         className,
       )}
     >
-      {/* Detail header: lighter weight than list items */}
-      <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="min-w-0 w-full sm:w-auto sm:flex-1">
+      {/* Detail header: title + score on top, actions on their own row so
+          long titles never get squeezed into a narrow column. */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <Link
             to={`/job/${job.id}`}
             state={jobPageLinkState}
@@ -234,11 +235,14 @@ export const JobHeader: React.FC<JobHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex w-full flex-row-reverse sm:flex-col justify-between items-end gap-4 sm:w-auto sm:justify-end h-full">
-          <ScoreRing score={job.suitabilityScore} size="sm" />
-          {jobCTA && <>{jobCTA}</>}
-        </div>
+        <ScoreRing score={job.suitabilityScore} size="sm" />
       </div>
+
+      {jobCTA ? (
+        <div className="flex flex-wrap items-center justify-end gap-2 [&>div]:flex-wrap">
+          {jobCTA}
+        </div>
+      ) : null}
 
       {/* Status and score: single line, subdued */}
       <div className="flex items-center justify-between gap-2 py-1 border-y border-border/30 flex-wrap">

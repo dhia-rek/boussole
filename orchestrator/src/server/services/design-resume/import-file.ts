@@ -7,6 +7,7 @@ import {
 import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
 import { getRequestId } from "@server/infra/request-context";
+import { ClaudeCliClient } from "@server/services/llm/claude-cli/client";
 import { GeminiCliClient } from "@server/services/llm/gemini-cli/client";
 import type { JsonSchemaDefinition } from "@server/services/llm/types";
 import { resolveLlmRuntimeSettings } from "@server/services/modelSelection";
@@ -30,7 +31,17 @@ type SupportedRuntimeProvider =
   | "openai"
   | "openrouter"
   | "gemini"
-  | "gemini_cli";
+  | "gemini_cli"
+  | "claude_cli";
+
+/** CLI providers read the resume as extracted text instead of a file part. */
+type CliRuntimeProvider = "gemini_cli" | "claude_cli";
+
+function isCliRuntimeProvider(
+  provider: SupportedRuntimeProvider,
+): provider is CliRuntimeProvider {
+  return provider === "gemini_cli" || provider === "claude_cli";
+}
 
 const DESIGN_RESUME_IMPORT_CLI_JSON_SCHEMA: JsonSchemaDefinition = {
   name: "design_resume_import",
@@ -60,6 +71,9 @@ type ResumeImportFileInput = {
   fileName: string;
   mediaType?: string | null;
   dataBase64: string;
+  /** Optional language slot ("en") — stores a secondary résumé used when a
+   *  job is posted in that language. Omit for the primary résumé. */
+  language?: string | null;
 };
 
 const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
@@ -121,6 +135,7 @@ function normalizeRuntimeProvider(
   }
   if (normalized === "gemini") return "gemini";
   if (normalized === "gemini_cli") return "gemini_cli";
+  if (normalized === "claude_cli") return "claude_cli";
   return null;
 }
 
@@ -1132,13 +1147,15 @@ async function extractWithGemini(args: {
   return text;
 }
 
-async function extractWithGeminiCli(args: {
+async function extractWithCliProvider(args: {
+  provider: CliRuntimeProvider;
   model: string;
   mediaType: SupportedImportMediaType;
   fileName: string;
   documentText: string;
   requestId: string | undefined;
 }): Promise<string> {
+  const label = args.provider === "claude_cli" ? "Claude CLI" : "Gemini CLI";
   const source: "DOCX" | "PDF" =
     args.mediaType === "application/pdf" ? "PDF" : "DOCX";
   const userContent = buildTextExtractPrompt(
@@ -1146,7 +1163,10 @@ async function extractWithGeminiCli(args: {
     args.fileName,
     source,
   );
-  const client = new GeminiCliClient();
+  const client =
+    args.provider === "claude_cli"
+      ? new ClaudeCliClient()
+      : new GeminiCliClient();
   try {
     const { text } = await client.callJson({
       model: args.model,
@@ -1158,7 +1178,7 @@ async function extractWithGeminiCli(args: {
     });
     if (!text?.trim()) {
       throw upstreamError(
-        "Gemini CLI returned an empty response for resume import.",
+        `${label} returned an empty response for resume import.`,
       );
     }
     return text;
@@ -1171,11 +1191,11 @@ async function extractWithGeminiCli(args: {
       truncate(message, 500),
       args.requestId
         ? {
-            provider: "gemini_cli",
+            provider: args.provider,
             model: args.model,
             requestId: args.requestId,
           }
-        : { provider: "gemini_cli", model: args.model },
+        : { provider: args.provider, model: args.model },
     );
   }
 }
@@ -1191,14 +1211,15 @@ async function extractResumeFromProvider(args: {
   documentText?: string | null;
   requestId: string | undefined;
 }): Promise<string> {
-  if (args.provider === "gemini_cli") {
+  if (isCliRuntimeProvider(args.provider)) {
     const text = args.documentText?.trim();
     if (!text) {
       throw badRequest(
-        "Gemini CLI resume import requires plain-text resume content (DOCX or extracted PDF text).",
+        "This AI provider imports resumes from text: use a DOCX or a PDF with selectable text.",
       );
     }
-    return extractWithGeminiCli({
+    return extractWithCliProvider({
+      provider: args.provider,
       model: args.model,
       mediaType: args.mediaType,
       fileName: args.fileName,
@@ -1244,8 +1265,8 @@ export async function importDesignResumeFromFile(
     );
   }
 
-  const isGeminiCli = provider === "gemini_cli";
-  if (!isGeminiCli && !runtime.apiKey) {
+  const isCliProvider = isCliRuntimeProvider(provider);
+  if (!isCliProvider && !runtime.apiKey) {
     throw serviceUnavailable(
       "Connect your AI provider in Settings before importing a resume file.",
     );
@@ -1254,7 +1275,7 @@ export async function importDesignResumeFromFile(
   try {
     let documentText: string | null =
       mediaType === DOCX_MIME ? await extractDocxText(decoded) : null;
-    if (isGeminiCli && mediaType === "application/pdf") {
+    if (isCliProvider && mediaType === "application/pdf") {
       documentText = await extractPdfText(decoded);
     }
     const rawText = await extractResumeFromProvider({
@@ -1275,6 +1296,7 @@ export async function importDesignResumeFromFile(
       resumeJson: normalized,
       sourceMode: null,
       sourceResumeId: null,
+      language: input.language ?? null,
     });
 
     logger.info("Design resume file import completed", {

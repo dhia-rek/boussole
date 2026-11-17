@@ -25,8 +25,6 @@ import { resolveRxResumeBaseResumeId } from "./rxresume/baseResumeId";
 
 function resolveDefaultLlmBaseUrl(provider: string): string {
   const normalized = provider.trim().toLowerCase().replace(/-/g, "_");
-  if (normalized === "ollama") return "http://localhost:11434";
-  if (normalized === "lmstudio") return "http://localhost:1234";
   if (normalized === "openai") {
     return "https://api.openai.com";
   }
@@ -36,10 +34,11 @@ function resolveDefaultLlmBaseUrl(provider: string): string {
   if (normalized === "gemini") {
     return "https://generativelanguage.googleapis.com";
   }
-  if (normalized === "gemini_cli") {
-    return "";
-  }
-  if (normalized === "codex") {
+  if (
+    normalized === "gemini_cli" ||
+    normalized === "claude_cli" ||
+    normalized === "codex"
+  ) {
     return "";
   }
   return "https://openrouter.ai";
@@ -109,7 +108,7 @@ export async function getEffectiveSettings(): Promise<AppSettings> {
 
   const localDesignResume = await getCurrentDesignResumeOrNullOnLegacy();
   if (localDesignResume?.resumeJson) {
-    localProfile = await designResumeToProfile(localDesignResume.resumeJson);
+    localProfile = await designResumeToProfile(localDesignResume);
     profile = (localProfile as Record<string, unknown> | null) ?? {};
   }
 

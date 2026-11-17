@@ -24,13 +24,6 @@ export async function downloadJobPdf(
   openBlob(await api.getJobPdfBlob(jobId), filename);
 }
 
-export async function createDesignResumePdfObjectUrl(
-  pdfUrl?: string,
-): Promise<string> {
-  const blob = await api.getDesignResumePdfBlob(pdfUrl);
-  return URL.createObjectURL(blob);
-}
-
 export async function downloadDesignResumePdf(
   filename: string,
   pdfUrl?: string,

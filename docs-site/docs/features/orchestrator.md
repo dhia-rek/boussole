@@ -153,8 +153,8 @@ Open the **search links** row in the Ready summary to reveal the generated links
 
 ### Opening documentation from the sidebar
 
-1. Open the sidebar menu.
-2. In the footer section under `Version vX.Y.Z`, click **Documentation**, which opens the locally hosted docs in a new tab.
+1. Click **Account** at the bottom of the sidebar (on phones: **More** → **Account**).
+2. Click **Documentation**, which opens the locally hosted docs in a new tab. The same menu shows the running version (`Version vX.Y.Z`).
 
 ### Generating PDFs
 

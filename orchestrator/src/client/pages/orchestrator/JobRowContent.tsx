@@ -1,6 +1,7 @@
 import type { JobListItem } from "@shared/types.js";
 import { Loader2 } from "lucide-react";
 import { isPdfRegenerating, isPdfStale } from "@/client/lib/pdf-freshness";
+import { getSuitabilityScoreTokens } from "@/client/pages/job-page/JobPageLeftSidebar";
 import { cn } from "@/lib/utils";
 import { defaultStatusToken, statusTokens } from "./constants";
 
@@ -12,12 +13,6 @@ interface JobRowContentProps {
   className?: string;
 }
 
-function getSuitabilityScoreTone(score: number): string {
-  if (score >= 70) return "text-emerald-400/90";
-  if (score >= 50) return "text-foreground/60";
-  return "text-muted-foreground/60";
-}
-
 export const JobRowContent = ({
   job,
   isSelected = false,
@@ -27,7 +22,6 @@ export const JobRowContent = ({
 }: JobRowContentProps) => {
   const hasScore = job.suitabilityScore != null;
   const statusToken = statusTokens[job.status] ?? defaultStatusToken;
-  const suitabilityTone = getSuitabilityScoreTone(job.suitabilityScore ?? 0);
   const showStalePdf = isPdfStale(job);
   const showRegeneratingPdf = isPdfRegenerating(job);
 
@@ -81,13 +75,23 @@ export const JobRowContent = ({
         )}
       </div>
 
-      {hasScore && (
-        <div className="shrink-0 text-right">
-          <span className={cn("text-sm tabular-nums", suitabilityTone)}>
-            {job.suitabilityScore}
-          </span>
-        </div>
-      )}
+      {hasScore &&
+        (() => {
+          const tokens = getSuitabilityScoreTokens(
+            job.suitabilityScore ?? null,
+          );
+          return (
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center justify-center rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums min-w-[2.25rem]",
+                tokens.shell,
+              )}
+              title={tokens.label}
+            >
+              {tokens.value}
+            </span>
+          );
+        })()}
     </div>
   );
 };

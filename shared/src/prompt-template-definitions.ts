@@ -39,6 +39,7 @@ Writing style formality: {{formality}}.
       "maxKeywordsPerSkillLine",
       "constraintsBullet",
       "avoidTermsBullet",
+      "candidateInstructions",
     ] as const,
     defaultTemplate: `
 You are an expert resume writer tailoring a profile for a specific job application.
@@ -81,6 +82,9 @@ WRITING STYLE PREFERENCES:
 ATS SAFETY:
 - Keep "headline" in the exact original job-title wording from the JD.
 - Do not translate the headline, even when summary and skills are written in {{outputLanguage}}.
+- Fields named "aiNotes" / "candidateNotes" in the profile are private guidance from the candidate: use them to decide emphasis, never quote them.
+
+{{candidateInstructions}}
 
 OUTPUT FORMAT (JSON):
 {

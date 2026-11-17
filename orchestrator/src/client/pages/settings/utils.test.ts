@@ -27,7 +27,7 @@ describe("settings utils", () => {
     expect(getLlmProviderConfig("gemini").keyHelperHref).toBe(
       "https://aistudio.google.com/app/apikey",
     );
-    expect(getLlmProviderConfig("ollama").keyHelperHref).toBeNull();
+    expect(getLlmProviderConfig("claude_cli").keyHelperHref).toBeNull();
     expect(getLlmProviderConfig("gemini_cli").keyHelperHref).toBeNull();
     expect(getLlmProviderConfig("codex").keyHelperHref).toBeNull();
   });
@@ -56,7 +56,7 @@ describe("settings utils", () => {
     expect(supportsLlmModelSuggestions("openai")).toBe(true);
     expect(supportsLlmModelSuggestions("gemini")).toBe(true);
     expect(supportsLlmModelSuggestions("gemini_cli")).toBe(true);
-    expect(supportsLlmModelSuggestions("ollama")).toBe(true);
+    expect(supportsLlmModelSuggestions("claude_cli")).toBe(true);
     expect(supportsLlmModelSuggestions("openrouter")).toBe(false);
   });
 });

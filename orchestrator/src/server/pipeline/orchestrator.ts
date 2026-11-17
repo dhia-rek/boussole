@@ -29,11 +29,11 @@ import {
   createJobPdfFingerprint,
   resolvePdfFingerprintContext,
 } from "../services/pdf-fingerprint";
-import { getProfile } from "../services/profile";
-import { pickProjectIdsForJob } from "../services/projectSelection";
+import { getProfileForJob } from "../services/profile";
+import { selectProjectIdsForJob } from "../services/projectSelection";
 import {
   extractProjectsFromProfile,
-  resolveResumeProjectsSettings,
+  resolveStoredProjectSelection,
 } from "../services/resumeProjects";
 import { generateTailoring } from "../services/summary";
 import {
@@ -131,6 +131,39 @@ async function resolveLocationIntent(
 }
 
 // ---------- Challenge pause/resume state ----------
+
+const DEFAULT_CHALLENGE_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * How long a paused pipeline waits for a human to solve anti-bot challenges
+ * before skipping the challenged sources (BOUSSOLE_CHALLENGE_TIMEOUT_MS). Without
+ * a bound, an unattended run (cron, auto-pipeline.sh) would wait forever.
+ */
+export function resolveChallengeWaitTimeoutMs(
+  raw = process.env.BOUSSOLE_CHALLENGE_TIMEOUT_MS,
+): number {
+  const parsed = Number.parseInt(raw?.trim() ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_CHALLENGE_WAIT_TIMEOUT_MS;
+}
+
+/**
+ * Waits until every challenge is solved (or the run is cancelled); returns
+ * false when the wait timed out instead.
+ */
+export function waitForChallengesSolved(args: {
+  register: (resolve: () => void) => void;
+  timeoutMs: number;
+}): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), args.timeoutMs);
+    args.register(() => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
+}
 
 // The pipeline async function stays alive in memory while paused — there's no
 // state serialization. A server restart kills a paused pipeline, same as it
@@ -289,54 +322,76 @@ export async function runPipeline(
 
         progressHelpers.challengeRequired(pendingChallenges);
 
-        // Block until all challenges are resolved by the solve-challenge API.
-        // The Promise is resolved by `resolvePipelineChallenge()`, which is
-        // called from the POST /api/pipeline/solve-challenge endpoint (4d).
-        // Cancellation still works: the cancel endpoint sets cancelRequestedAt,
-        // and ensureNotCancelled() fires after the Promise resolves.
+        // Block until all challenges are resolved by the solve-challenge API
+        // (`resolvePipelineChallenge()`), the run is cancelled (the cancel
+        // endpoint resolves the wait, then ensureNotCancelled() throws), or
+        // the wait times out, in which case the challenged sources are skipped.
         const challengedSources = pendingChallenges.flatMap((c) => c.sources);
+        const challengeTimeoutMs = resolveChallengeWaitTimeoutMs();
 
-        await new Promise<void>((resolve) => {
-          tenantState.activeChallengeState = {
-            challenges: new Map(
-              pendingChallenges.map((c) => [c.extractorId, c]),
-            ),
-            resolve,
-          };
+        const solved = await waitForChallengesSolved({
+          timeoutMs: challengeTimeoutMs,
+          register: (resolve) => {
+            tenantState.activeChallengeState = {
+              challenges: new Map(
+                pendingChallenges.map((c) => [c.extractorId, c]),
+              ),
+              resolve,
+            };
+          },
         });
         tenantState.activeChallengeState = null;
 
         ensureNotCancelled(tenantId);
 
-        // Re-run only the extractors that had challenges
-        pipelineLogger.info("Challenges resolved, re-running extractors", {
-          sources: challengedSources,
-        });
+        if (solved) {
+          // Re-run only the extractors that had challenges
+          pipelineLogger.info("Challenges resolved, re-running extractors", {
+            sources: challengedSources,
+          });
 
-        const retryConfig = { ...mergedConfig, sources: challengedSources };
-        const retryResult = await discoverJobsStep({
-          mergedConfig: retryConfig,
-          shouldCancel: () =>
-            getPipelineState(tenantId).cancelRequestedAt !== null,
-        });
+          const retryConfig = { ...mergedConfig, sources: challengedSources };
+          const retryResult = await discoverJobsStep({
+            mergedConfig: retryConfig,
+            shouldCancel: () =>
+              getPipelineState(tenantId).cancelRequestedAt !== null,
+          });
 
-        discoveredJobs = [...discoveredJobs, ...retryResult.discoveredJobs];
-        sourceErrors = [...sourceErrors, ...retryResult.sourceErrors];
-        pendingChallenges = retryResult.pendingChallenges;
+          discoveredJobs = [...discoveredJobs, ...retryResult.discoveredJobs];
+          sourceErrors = [...sourceErrors, ...retryResult.sourceErrors];
+          pendingChallenges = retryResult.pendingChallenges;
 
-        // If the retry itself hits challenges again (e.g. cookie expired
-        // between solve and retry), we don't loop — just continue with whatever
-        // the first run discovered.  The user will see partial results and can
-        // re-run the pipeline.
-        if (retryResult.pendingChallenges.length > 0) {
+          // If the retry itself hits challenges again (e.g. cookie expired
+          // between solve and retry), we don't loop — just continue with
+          // whatever the first run discovered. The user will see partial
+          // results and can re-run the pipeline.
+          if (retryResult.pendingChallenges.length > 0) {
+            pipelineLogger.warn(
+              "Retry after challenge still has challenges — continuing with partial results",
+              {
+                retryPendingChallenges: retryResult.pendingChallenges.map(
+                  (c) => c.extractorId,
+                ),
+              },
+            );
+          }
+        } else {
+          // Nobody solved the challenge in time (e.g. an unattended run):
+          // skip those sources instead of blocking the pipeline forever.
+          const minutes = Math.round(challengeTimeoutMs / 60_000);
           pipelineLogger.warn(
-            "Retry after challenge still has challenges — continuing with partial results",
-            {
-              retryPendingChallenges: retryResult.pendingChallenges.map(
-                (c) => c.extractorId,
-              ),
-            },
+            "Challenges were not solved in time, skipping challenged sources",
+            { sources: challengedSources, timeoutMs: challengeTimeoutMs },
           );
+          sourceErrors = [
+            ...sourceErrors,
+            ...pendingChallenges.map(
+              (challenge) =>
+                `${challenge.extractorName}: anti-bot challenge not solved within ${minutes} min; skipped for this run`,
+            ),
+          ];
+          pendingChallenges = [];
+          progressHelpers.challengeResolved([]);
         }
 
         progressHelpers.crawlingComplete(discoveredJobs.length);
@@ -550,7 +605,10 @@ export async function summarizeJob(
       const job = await jobsRepo.getJobById(jobId);
       if (!job) return { success: false, error: "Job not found" };
 
-      const profile = await getProfile();
+      // The CV variant this job will be rendered with (matched on the JD's
+      // language), so tailored skills and selected project ids line up with
+      // the document they are applied to.
+      const profile = await getProfileForJob(job.jobDescription);
 
       // 1. Generate Summary & Tailoring
       let tailoredSummary = job.tailoredSummary;
@@ -575,6 +633,7 @@ export async function summarizeJob(
         const tailoringResult = await generateTailoring(
           job.jobDescription || "",
           profile,
+          { fresh: options?.force === true, jobTitle: job.title },
         );
         if (tailoringResult.success && tailoringResult.data) {
           if (shouldUpdateSummary) {
@@ -600,35 +659,23 @@ export async function summarizeJob(
 
       // 2. Suggest Projects
       let selectedProjectIds = job.selectedProjectIds;
-      if (shouldUpdateAllTailoring && (!selectedProjectIds || options?.force)) {
+      const { selectionItems } = extractProjectsFromProfile(profile);
+      // A stored selection made against another CV variant (or an older CV)
+      // matches none of these projects: pick again instead of keeping it.
+      const hasUsableSelection =
+        Boolean(selectedProjectIds) &&
+        resolveStoredProjectSelection(selectedProjectIds, selectionItems) !==
+          null;
+      if (shouldUpdateAllTailoring && (!hasUsableSelection || options?.force)) {
         jobLogger.info("Selecting projects");
         try {
-          const { catalog, selectionItems } =
-            extractProjectsFromProfile(profile);
-          const overrideResumeProjectsRaw =
-            await settingsRepo.getSetting("resumeProjects");
-          const { resumeProjects } = resolveResumeProjectsSettings({
-            catalog,
-            overrideRaw: overrideResumeProjectsRaw,
-          });
-
-          const locked = resumeProjects.lockedProjectIds;
-          const desiredCount = Math.max(
-            0,
-            resumeProjects.maxProjects - locked.length,
-          );
-          const eligibleSet = new Set(resumeProjects.aiSelectableProjectIds);
-          const eligibleProjects = selectionItems.filter((p) =>
-            eligibleSet.has(p.id),
-          );
-
-          const picked = await pickProjectIdsForJob({
+          const picked = await selectProjectIdsForJob({
             jobDescription: job.jobDescription || "",
-            eligibleProjects,
-            desiredCount,
+            selectionItems,
+            overrideRaw: await settingsRepo.getSetting("resumeProjects"),
+            guidance: profile.aiGuidance,
           });
-
-          selectedProjectIds = [...locked, ...picked].join(",");
+          selectedProjectIds = picked.join(",");
         } catch (error) {
           jobLogger.warn("Failed to suggest projects", error);
         }

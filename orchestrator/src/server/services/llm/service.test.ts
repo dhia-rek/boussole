@@ -8,14 +8,19 @@ describe("LlmService provider normalization", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps legacy localhost openai_compatible configs on LM Studio", () => {
-    const llm = new LlmService({
-      provider: "openai_compatible",
-      baseUrl: "http://localhost:1234",
-    });
+  it("treats removed local providers as the default provider", () => {
+    expect(new LlmService({ provider: "ollama" }).getProvider()).toBe(
+      "openrouter",
+    );
+    expect(new LlmService({ provider: "lmstudio" }).getProvider()).toBe(
+      "openrouter",
+    );
+  });
 
-    expect(llm.getProvider()).toBe("lmstudio");
-    expect(llm.getBaseUrl()).toBe("http://localhost:1234");
+  it("recognizes the Claude CLI provider", () => {
+    expect(new LlmService({ provider: "claude-cli" }).getProvider()).toBe(
+      "claude_cli",
+    );
   });
 
   it("uses the dedicated provider for non-local OpenAI-compatible endpoints", () => {
