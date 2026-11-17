@@ -54,7 +54,7 @@ Then connect in UI via **Tracking Inbox → Connect Gmail**.
 
 Detailed setup guide:
 
-- [Gmail OAuth Setup](/docs/next/getting-started/gmail-oauth-setup)
+- [Gmail OAuth Setup](/docs/getting-started/gmail-oauth-setup)
 
 ## Using the inbox
 

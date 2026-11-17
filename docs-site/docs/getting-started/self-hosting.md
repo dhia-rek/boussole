@@ -60,7 +60,7 @@ System admins can create more users from **Settings → Environment & Workspaces
 
 For full Codex auth troubleshooting (including device-code authorization errors), see:
 
-- [Codex Authentication](/docs/next/getting-started/codex-auth)
+- [Codex Authentication](/docs/getting-started/codex-auth)
 
 ## Gmail OAuth (Tracking Inbox)
 
@@ -90,7 +90,7 @@ In Google Cloud:
 
 For a full step-by-step setup, exact scope requirements, and troubleshooting, see:
 
-- [Gmail OAuth Setup](/docs/next/getting-started/gmail-oauth-setup)
+- [Gmail OAuth Setup](/docs/getting-started/gmail-oauth-setup)
 
 ## Email-to-job matching overview
 

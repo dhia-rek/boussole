@@ -92,11 +92,11 @@ curl -X POST http://localhost:3001/api/visa-sponsors/update/uk
 - Check startup logs for registry warnings about that provider id, including skipped invalid manifests.
 - Ensure the provider id is registered in `shared/src/visa-sponsor-providers/index.ts`.
 - Ensure the manifest exists at `visa-sponsor-providers/<id>/manifest.ts` or `visa-sponsor-providers/<id>/src/manifest.ts`.
-- See [Add a Visa Sponsor Provider](/docs/next/workflows/add-a-visa-sponsor-provider) for the full workflow.
+- See [Add a Visa Sponsor Provider](/docs/workflows/add-a-visa-sponsor-provider) for the full workflow.
 
 ## Related pages
 
-- [Add a Visa Sponsor Provider](/docs/next/workflows/add-a-visa-sponsor-provider)
-- [Orchestrator](/docs/next/features/orchestrator)
-- [Post-Application Tracking](/docs/next/features/post-application-tracking)
-- [Self-Hosting](/docs/next/getting-started/self-hosting)
+- [Add a Visa Sponsor Provider](/docs/workflows/add-a-visa-sponsor-provider)
+- [Orchestrator](/docs/features/orchestrator)
+- [Post-Application Tracking](/docs/features/post-application-tracking)
+- [Self-Hosting](/docs/getting-started/self-hosting)

@@ -90,7 +90,7 @@ Not required for Boussole Gmail ingestion:
 
 ## Related pages
 
-- [Self-Hosting (Docker Compose)](/docs/next/getting-started/self-hosting)
-- [Post-Application Tracking](/docs/next/features/post-application-tracking)
-- [Post-Application Workflow](/docs/next/workflows/post-application-workflow)
-- [Common Problems](/docs/next/troubleshooting/common-problems)
+- [Self-Hosting (Docker Compose)](/docs/getting-started/self-hosting)
+- [Post-Application Tracking](/docs/features/post-application-tracking)
+- [Post-Application Workflow](/docs/workflows/post-application-workflow)
+- [Common Problems](/docs/troubleshooting/common-problems)

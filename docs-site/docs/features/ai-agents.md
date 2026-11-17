@@ -93,7 +93,7 @@ Runs live in the server process. A restart marks unfinished runs as failed. Star
 
 ## Related pages
 
-- [Design Resume](/docs/next/features/design-resume)
-- [Ghostwriter](/docs/next/features/ghostwriter)
-- [Pipeline run](/docs/next/features/pipeline-run)
-- [Settings](/docs/next/features/settings)
+- [Design Resume](/docs/features/design-resume)
+- [Ghostwriter](/docs/features/ghostwriter)
+- [Pipeline run](/docs/features/pipeline-run)
+- [Settings](/docs/features/settings)

@@ -28,7 +28,7 @@ Every doc should include:
 - Provide copy-pasteable examples.
 - State defaults and constraints explicitly.
 - Use absolute `/docs/...` URLs and include the version segment when needed.
-- For current docs, use `/docs/next/...` links.
+- For current docs, use `/docs/...` links.
 - For versioned docs, link within that version (for example `/docs/...` in `version-0.1.20`).
 
 ## PR expectations

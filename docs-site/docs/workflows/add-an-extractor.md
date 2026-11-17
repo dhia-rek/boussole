@@ -92,7 +92,7 @@ Subprocess extractors are supported. Keep subprocess spawning inside `run(contex
 
 ## Related pages
 
-- [Extractors Overview](/docs/next/extractors/overview)
-- [Adzuna Extractor](/docs/next/extractors/adzuna)
-- [Hiring Cafe Extractor](/docs/next/extractors/hiring-cafe)
-- [UKVisaJobs Extractor](/docs/next/extractors/ukvisajobs)
+- [Extractors Overview](/docs/extractors/overview)
+- [Adzuna Extractor](/docs/extractors/adzuna)
+- [Hiring Cafe Extractor](/docs/extractors/hiring-cafe)
+- [UKVisaJobs Extractor](/docs/extractors/ukvisajobs)
