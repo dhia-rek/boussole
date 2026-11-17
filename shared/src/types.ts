@@ -5,6 +5,7 @@
  * This file re-exports everything for backward compatibility.
  */
 
+export * from "./types/agents";
 export * from "./types/api";
 export * from "./types/chat";
 export * from "./types/design-resume";

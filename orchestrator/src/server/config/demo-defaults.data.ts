@@ -267,6 +267,7 @@ export const DEMO_SOURCE_BASE_URLS: Record<JobSource, string> = {
   remoteco: "https://remote.co",
   weworkremotely: "https://weworkremotely.com",
   bravesearch: "https://search.brave.com",
+  companyats: "https://boards.greenhouse.io",
   manual: "https://example.com",
 };
 

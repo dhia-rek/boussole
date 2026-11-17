@@ -2,7 +2,7 @@
   "name": "wttj-extractor",
   "version": "0.0.1",
   "type": "module",
-  "description": "Welcome to the Jungle extractor using the public search API",
+  "description": "Welcome to the Jungle extractor (job-listings sitemap + public job endpoint)",
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "~5.9.0"

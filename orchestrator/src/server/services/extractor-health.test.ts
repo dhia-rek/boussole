@@ -142,3 +142,26 @@ describe("extractor health service", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("isPlaceholderEmployer", () => {
+  it.each([
+    "View company profile",
+    "view company",
+    "Unknown",
+    "Unknown company",
+    "N/A",
+    "-",
+  ])("flags %s", async (employer) => {
+    const { isPlaceholderEmployer } = await import("./extractor-health");
+    expect(isPlaceholderEmployer(employer)).toBe(true);
+  });
+
+  it.each([
+    "Withings",
+    "Unknown Worlds Entertainment",
+    "Viewpoint Labs",
+  ])("accepts %s", async (employer) => {
+    const { isPlaceholderEmployer } = await import("./extractor-health");
+    expect(isPlaceholderEmployer(employer)).toBe(false);
+  });
+});

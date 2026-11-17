@@ -14,6 +14,10 @@ import {
   toNumberOrNull,
   toStringOrNull,
 } from "@shared/utils/type-conversion.js";
+import {
+  describeHiringCafeExit,
+  parseHiringCafeFailureLine,
+} from "./errors.js";
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
 const EXTRACTOR_DIR = join(srcDir, "..");
@@ -203,6 +207,7 @@ export async function runHiringCafe(
   }
 
   let challengeRequired: string | undefined;
+  let childFailureReason: string | null = null;
 
   try {
     const jobs: CreateJobInput[] = [];
@@ -282,6 +287,11 @@ export async function runHiringCafe(
             return;
           }
 
+          // Remember why the child failed so the pipeline error says more
+          // than "exited with code 1".
+          const failureReason = parseHiringCafeFailureLine(line);
+          if (failureReason) childFailureReason = failureReason;
+
           stream.write(`${line}\n`);
         };
 
@@ -300,7 +310,14 @@ export async function runHiringCafe(
           stderrRl?.close();
           if (code === 0) resolve();
           else
-            reject(new Error(`Hiring Cafe extractor exited with code ${code}`));
+            reject(
+              new Error(
+                describeHiringCafeExit({
+                  code,
+                  failureReason: childFailureReason,
+                }),
+              ),
+            );
         });
         child.on("error", reject);
       });
@@ -318,7 +335,11 @@ export async function runHiringCafe(
 
     return { success: true, jobs };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = challengeRequired
+      ? describeHiringCafeExit({ code: null, challengeUrl: challengeRequired })
+      : error instanceof Error
+        ? error.message
+        : "Unknown error";
     return { success: false, jobs: [], error: message, challengeRequired };
   }
 }

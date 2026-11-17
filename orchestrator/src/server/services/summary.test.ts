@@ -26,8 +26,13 @@ vi.mock("./writing-style", async (importOriginal) => {
   };
 });
 
+import { normalizeDesignResumeAiGuidance } from "@shared/design-resume-ai-guidance";
 import { getSetting } from "../repositories/settings";
-import { generateTailoring } from "./summary";
+import {
+  enforceTailoringRules,
+  generateTailoring,
+  getOriginalTailoringValues,
+} from "./summary";
 import { getWritingStyle } from "./writing-style";
 
 describe("generateTailoring", () => {
@@ -264,5 +269,214 @@ describe("generateTailoring", () => {
     expect(prompt).toContain("Maximum 8 keywords per category");
     // "keep under 90 words" is stripped from constraints because summaryMaxWords (35) takes precedence
     expect(prompt).not.toContain("keep under 90 words");
+  });
+
+  describe("candidate AI guidance", () => {
+    const guidedProfile = (guidance: unknown): ResumeProfile => ({
+      basics: {
+        name: "Nora",
+        label: "Stagiaire IA",
+        headline: "Stagiaire IA",
+        summary: "<p>Étudiant en <strong>Master 2</strong></p>",
+      },
+      sections: {
+        summary: { content: "<p>Étudiant en <strong>Master 2</strong></p>" },
+        skills: {
+          items: [
+            {
+              id: "s1",
+              name: "LLM",
+              description: "",
+              level: 0,
+              keywords: ["RAG", "LangChain"],
+              visible: true,
+            },
+            {
+              id: "s2",
+              name: "Hidden",
+              description: "",
+              level: 0,
+              keywords: ["x"],
+              visible: false,
+            },
+          ],
+        },
+        experience: {
+          items: [
+            {
+              id: "e1",
+              company: "KPIT",
+              position: "QA",
+              location: "",
+              date: "",
+              summary: "Validation",
+              visible: true,
+            },
+          ],
+        },
+      },
+      aiGuidance: normalizeDesignResumeAiGuidance(guidance),
+    });
+
+    it("skips the LLM entirely when every tailorable section is locked", async () => {
+      const result = await generateTailoring(
+        "Data Scientist (H/F)",
+        guidedProfile({
+          sections: {
+            headline: { mode: "keep" },
+            summary: { mode: "keep" },
+            skills: { mode: "keep" },
+          },
+        }),
+      );
+
+      expect(callJsonMock).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: true,
+        data: {
+          headline: "Stagiaire IA",
+          summary: "Étudiant en Master 2",
+          skills: [{ name: "LLM", keywords: ["RAG", "LangChain"] }],
+        },
+      });
+    });
+
+    it("restores locked sections and prefixes the tailored headline", async () => {
+      callJsonMock.mockResolvedValueOnce({
+        success: true,
+        data: {
+          headline: "Stage - Data Scientist (H/F)",
+          summary: "Rewritten summary",
+          skills: [{ name: "AI", keywords: ["PyTorch"] }],
+        },
+      });
+
+      const result = await generateTailoring(
+        "Stage - Data Scientist (H/F)",
+        guidedProfile({
+          sections: {
+            headline: { prefix: "Stagiaire" },
+            summary: { mode: "keep" },
+          },
+        }),
+      );
+
+      expect(result.data).toEqual({
+        headline: "Stagiaire Data Scientist",
+        summary: "Étudiant en Master 2",
+        skills: [{ name: "AI", keywords: ["PyTorch"] }],
+      });
+    });
+
+    it("sends rules and notes but never private sections to the model", async () => {
+      await generateTailoring(
+        "Build APIs",
+        guidedProfile({
+          sections: {
+            headline: { prefix: "Stagiaire" },
+            skills: { notes: "Python first" },
+            experience: { share: false, notes: "secret employer details" },
+          },
+        }),
+      );
+
+      const prompt = callJsonMock.mock.calls.at(-1)?.[0]?.messages?.[0]
+        ?.content as string;
+      expect(prompt).toContain('must start with "Stagiaire"');
+      expect(prompt).toContain("Skills notes from the candidate: Python first");
+      expect(prompt).not.toContain("KPIT");
+      expect(prompt).not.toContain("secret employer details");
+      expect(prompt).not.toContain("{{candidateInstructions}}");
+    });
+  });
+});
+
+describe("enforceTailoringRules", () => {
+  const originals = {
+    headline: "Stagiaire IA",
+    summary: "Original summary",
+    skills: [{ name: "LLM", keywords: ["RAG"] }],
+  };
+  const tailored = {
+    headline: "ML Engineer (m/w/d)",
+    summary: "Tailored",
+    skills: [{ name: "ML", keywords: ["PyTorch"] }],
+  };
+  const rule = (mode: "tailor" | "keep", prefix = "") => ({
+    mode,
+    prefix,
+    notes: "",
+  });
+
+  it("strips job-ad gender markers from tailored headlines", () => {
+    expect(
+      enforceTailoringRules(
+        tailored,
+        {
+          headline: rule("tailor"),
+          summary: rule("tailor"),
+          skills: rule("tailor"),
+          projects: rule("tailor"),
+        },
+        originals,
+      ).headline,
+    ).toBe("ML Engineer");
+  });
+
+  it("falls back to the original headline when the AI returns none", () => {
+    expect(
+      enforceTailoringRules(
+        { ...tailored, headline: "" },
+        {
+          headline: rule("tailor", "Stagiaire"),
+          summary: rule("tailor"),
+          skills: rule("tailor"),
+          projects: rule("tailor"),
+        },
+        originals,
+      ).headline,
+    ).toBe("Stagiaire IA");
+  });
+
+  it("keeps locked sections verbatim", () => {
+    expect(
+      enforceTailoringRules(
+        tailored,
+        {
+          headline: rule("keep", "Ignored"),
+          summary: rule("keep"),
+          skills: rule("keep"),
+          projects: rule("tailor"),
+        },
+        originals,
+      ),
+    ).toEqual(originals);
+  });
+
+  it("reads original values from a Design Resume profile", () => {
+    expect(
+      getOriginalTailoringValues({
+        basics: { label: "Fallback label" },
+        sections: { summary: { content: "<p>A &amp; B</p>" } },
+      }),
+    ).toEqual({ headline: "Fallback label", summary: "A & B", skills: [] });
+  });
+});
+
+describe("job title context", () => {
+  it("falls back to the cleaned job title, with the prefix, when the AI returns no headline", () => {
+    expect(
+      enforceTailoringRules(
+        { headline: "", summary: "s", skills: [] },
+        {
+          headline: { mode: "tailor", prefix: "Stagiaire", notes: "" },
+          summary: { mode: "tailor", prefix: "", notes: "" },
+          skills: { mode: "tailor", prefix: "", notes: "" },
+          projects: { mode: "tailor", prefix: "", notes: "" },
+        },
+        { headline: "Original", summary: "o", skills: [] },
+        "Stage - Data Scientist (H/F)",
+      ).headline,
+    ).toBe("Stagiaire Data Scientist");
   });
 });

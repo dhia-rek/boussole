@@ -1,6 +1,12 @@
 import { logger } from "@infra/logger";
 import { getOriginalEnvValue } from "@server/services/envSettings";
 import { toStringOrNull } from "@shared/utils/type-conversion";
+import {
+  computeLlmCacheKey,
+  getCachedLlmResponse,
+  setCachedLlmResponse,
+} from "./cache";
+import { ClaudeCliClient } from "./claude-cli/client";
 import { CodexClient } from "./codex/client";
 import { GeminiCliClient } from "./gemini-cli/client";
 import {
@@ -8,7 +14,13 @@ import {
   getOrderedModes,
   rememberSuccessfulMode,
 } from "./policies/mode-selection";
-import { getRetryDelayMs, shouldRetryAttempt } from "./policies/retry-policy";
+import {
+  getRetryDelayMs,
+  MAX_RATE_LIMIT_RETRIES,
+  MAX_RATE_LIMIT_WAIT_MS,
+  parseRateLimitDelayMs,
+  shouldRetryAttempt,
+} from "./policies/retry-policy";
 import { strategies } from "./providers";
 import type {
   JsonSchemaDefinition,
@@ -36,6 +48,7 @@ export class LlmService {
   private readonly strategy: (typeof strategies)[LlmProvider];
   private readonly codexClient: CodexClient;
   private readonly geminiCliClient: GeminiCliClient;
+  private readonly claudeCliClient: ClaudeCliClient;
 
   constructor(options: LlmServiceOptions = {}) {
     const normalizedBaseUrl =
@@ -44,7 +57,6 @@ export class LlmService {
       null;
     const resolvedProvider = normalizeProvider(
       options.provider ?? getOriginalEnvValue("LLM_PROVIDER") ?? null,
-      normalizedBaseUrl,
     );
 
     const strategy = strategies[resolvedProvider];
@@ -79,15 +91,46 @@ export class LlmService {
     this.strategy = strategy;
     this.codexClient = new CodexClient();
     this.geminiCliClient = new GeminiCliClient();
+    this.claudeCliClient = new ClaudeCliClient();
   }
 
   async callJson<T>(options: LlmRequestOptions<T>): Promise<LlmResponse<T>> {
+    const cacheKey = computeLlmCacheKey({
+      provider: this.provider,
+      model: options.model,
+      messages: options.messages,
+      jsonSchema: options.jsonSchema,
+    });
+
+    const cached = options.bypassCache ? null : getCachedLlmResponse(cacheKey);
+    if (cached !== null) {
+      try {
+        return { success: true, data: JSON.parse(cached) as T };
+      } catch {
+        // Corrupt cache entry — fall through and recompute.
+      }
+    }
+
+    const result = await this.callJsonUncached(options);
+    if (result.success) {
+      setCachedLlmResponse(cacheKey, JSON.stringify(result.data));
+    }
+    return result;
+  }
+
+  private async callJsonUncached<T>(
+    options: LlmRequestOptions<T>,
+  ): Promise<LlmResponse<T>> {
     if (this.provider === "codex") {
       return this.callCodexJson(options);
     }
 
     if (this.provider === "gemini_cli") {
       return this.callGeminiCliJson(options);
+    }
+
+    if (this.provider === "claude_cli") {
+      return this.callClaudeCliJson(options);
     }
 
     if (this.strategy.requiresApiKey && !this.apiKey) {
@@ -149,6 +192,10 @@ export class LlmService {
 
     if (this.provider === "gemini_cli") {
       return this.geminiCliClient.validateCredentials();
+    }
+
+    if (this.provider === "claude_cli") {
+      return this.claudeCliClient.validateCredentials();
     }
 
     if (this.strategy.requiresApiKey && !this.apiKey) {
@@ -217,27 +264,23 @@ export class LlmService {
       return sortModels(models, getPreferredModel(this.provider));
     }
 
+    if (this.provider === "claude_cli") {
+      const models = await this.claudeCliClient.listModels();
+      return sortModels(models, getPreferredModel(this.provider));
+    }
+
     if (this.strategy.requiresApiKey && !this.apiKey) {
       throw new Error("LLM API key is missing.");
     }
 
-    if (
-      this.provider !== "openai" &&
-      this.provider !== "gemini" &&
-      this.provider !== "ollama"
-    ) {
+    if (this.provider !== "openai" && this.provider !== "gemini") {
       return [];
     }
 
-    const models = await (async () => {
-      if (this.provider === "openai") {
-        return this.listOpenAiModels();
-      }
-      if (this.provider === "gemini") {
-        return this.listGeminiModels();
-      }
-      return this.listOllamaModels();
-    })();
+    const models =
+      this.provider === "openai"
+        ? await this.listOpenAiModels()
+        : await this.listGeminiModels();
 
     return sortModels(models, getPreferredModel(this.provider));
   }
@@ -326,6 +369,48 @@ export class LlmService {
     return { success: false, error: "All retry attempts failed" };
   }
 
+  private async callClaudeCliJson<T>(
+    options: LlmRequestOptions<T>,
+  ): Promise<LlmResponse<T>> {
+    const { maxRetries = 0, retryDelayMs = 500, signal, jobId } = options;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          logger.info("LLM retry attempt", {
+            jobId: jobId ?? "unknown",
+            attempt,
+            maxRetries,
+          });
+          await sleep(getRetryDelayMs(retryDelayMs, attempt));
+        }
+
+        const result = await this.claudeCliClient.callJson({
+          ...options,
+          signal,
+        });
+        const parsed = parseJsonContent<T>(result.text, jobId);
+        return { success: true, data: parsed };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        if (attempt < maxRetries && shouldRetryAttempt({ message })) {
+          logger.warn("Claude CLI attempt failed, retrying", {
+            jobId: jobId ?? "unknown",
+            attempt: attempt + 1,
+            maxRetries,
+            message,
+          });
+          continue;
+        }
+
+        return { success: false, error: message };
+      }
+    }
+
+    return { success: false, error: "All retry attempts failed" };
+  }
+
   private async tryMode<T>(args: {
     mode: ResponseMode;
     model: string;
@@ -368,11 +453,15 @@ export class LlmService {
           jsonSchema,
         });
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body),
-          signal,
+        const response = await fetchWithRateLimitRetries({
+          url,
+          init: {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal,
+          },
+          jobId,
         });
 
         if (!response.ok) {
@@ -488,49 +577,15 @@ export class LlmService {
       .filter(isGeminiTextGenerationModel)
       .filter(Boolean);
   }
-
-  private async listOllamaModels(): Promise<string[]> {
-    const response = await fetch(joinUrl(this.baseUrl, "/api/tags"), {
-      method: "GET",
-      headers: buildHeaders({
-        apiKey: null,
-        provider: this.provider,
-      }),
-    });
-
-    if (!response.ok) {
-      const detail = await getResponseDetail(response);
-      throw new Error(detail || `Ollama returned ${response.status}.`);
-    }
-
-    const payload = (await response.json()) as {
-      models?: Array<{ name?: string | null; model?: string | null }>;
-    };
-    return (payload.models ?? [])
-      .map((entry) => entry.name?.trim() || entry.model?.trim() || "")
-      .filter(Boolean);
-  }
 }
 
-function normalizeProvider(
-  raw: string | null,
-  baseUrl: string | null,
-): LlmProvider {
+function normalizeProvider(raw: string | null): LlmProvider {
   const normalized = raw?.trim().toLowerCase().replace(/-/g, "_");
-  if (normalized === "openai_compatible") {
-    if (
-      baseUrl?.includes("localhost:1234") ||
-      baseUrl?.includes("127.0.0.1:1234")
-    ) {
-      return "lmstudio";
-    }
-    return "openai_compatible";
-  }
+  if (normalized === "openai_compatible") return "openai_compatible";
   if (normalized === "openai") return "openai";
   if (normalized === "gemini") return "gemini";
   if (normalized === "gemini_cli") return "gemini_cli";
-  if (normalized === "lmstudio") return "lmstudio";
-  if (normalized === "ollama") return "ollama";
+  if (normalized === "claude_cli") return "claude_cli";
   if (normalized === "codex") return "codex";
   if (normalized && normalized !== "openrouter") {
     logger.warn("Unknown LLM provider, defaulting to openrouter", {
@@ -542,6 +597,47 @@ function normalizeProvider(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * POSTs to the provider and, when it answers 429 with a short "retry after"
+ * delay (free tiers often allow a few thousand tokens per minute), waits that
+ * long and tries again instead of failing the whole job. Other responses are
+ * returned untouched.
+ */
+async function fetchWithRateLimitRetries(args: {
+  url: string;
+  init: RequestInit;
+  jobId?: string;
+}): Promise<Response> {
+  for (let retry = 0; ; retry++) {
+    const response = await fetch(args.url, args.init);
+    if (response.status !== 429 || retry >= MAX_RATE_LIMIT_RETRIES) {
+      return response;
+    }
+
+    const body = await response.text().catch(() => "");
+    const delayMs = parseRateLimitDelayMs({
+      retryAfterHeader: response.headers?.get?.("retry-after") ?? null,
+      body,
+    });
+    const waitMs = (delayMs ?? 2000 * (retry + 1)) + 250;
+    if (waitMs > MAX_RATE_LIMIT_WAIT_MS || args.init.signal?.aborted) {
+      // Hand the already-read body back to the caller's error handling.
+      return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
+    }
+
+    logger.info("LLM provider rate limited, waiting before retry", {
+      jobId: args.jobId ?? "unknown",
+      waitMs,
+      retry: retry + 1,
+    });
+    await sleep(waitMs);
+  }
 }
 
 function normalizeModelForProvider(

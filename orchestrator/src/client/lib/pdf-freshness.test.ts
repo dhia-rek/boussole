@@ -11,7 +11,7 @@ import {
 describe("getPdfFreshness", () => {
   it("returns 'regenerating' when pdfRegenerating is true, regardless of pdfFreshness", () => {
     expect(
-      getPdfFreshness({ pdfRegenerating: true, pdfFreshness: "fresh" }),
+      getPdfFreshness({ pdfRegenerating: true, pdfFreshness: "current" }),
     ).toBe("regenerating");
   });
 
@@ -20,13 +20,13 @@ describe("getPdfFreshness", () => {
       getPdfFreshness({ pdfRegenerating: false, pdfFreshness: "stale" }),
     ).toBe("stale");
     expect(
-      getPdfFreshness({ pdfRegenerating: false, pdfFreshness: "fresh" }),
-    ).toBe("fresh");
+      getPdfFreshness({ pdfRegenerating: false, pdfFreshness: "current" }),
+    ).toBe("current");
   });
 
-  it("returns 'missing' when pdfFreshness is null and not regenerating", () => {
+  it("returns 'missing' when pdfFreshness is 'missing' and not regenerating", () => {
     expect(
-      getPdfFreshness({ pdfRegenerating: false, pdfFreshness: null }),
+      getPdfFreshness({ pdfRegenerating: false, pdfFreshness: "missing" }),
     ).toBe("missing");
   });
 
@@ -53,9 +53,9 @@ describe("isPdfStale", () => {
   });
 
   it("returns false when fresh", () => {
-    expect(isPdfStale({ pdfRegenerating: false, pdfFreshness: "fresh" })).toBe(
-      false,
-    );
+    expect(
+      isPdfStale({ pdfRegenerating: false, pdfFreshness: "current" }),
+    ).toBe(false);
   });
 
   it("returns false for null input", () => {
@@ -66,13 +66,13 @@ describe("isPdfStale", () => {
 describe("isPdfRegenerating", () => {
   it("returns true when pdfRegenerating is true", () => {
     expect(
-      isPdfRegenerating({ pdfRegenerating: true, pdfFreshness: null }),
+      isPdfRegenerating({ pdfRegenerating: true, pdfFreshness: "missing" }),
     ).toBe(true);
   });
 
   it("returns false when not regenerating", () => {
     expect(
-      isPdfRegenerating({ pdfRegenerating: false, pdfFreshness: "fresh" }),
+      isPdfRegenerating({ pdfRegenerating: false, pdfFreshness: "current" }),
     ).toBe(false);
   });
 
@@ -91,10 +91,10 @@ describe("getPdfActionLabels", () => {
     expect(labels.download).toBe("Download old PDF");
   });
 
-  it("returns normal labels when fresh", () => {
+  it("returns normal labels when current", () => {
     const labels = getPdfActionLabels({
       pdfRegenerating: false,
-      pdfFreshness: "fresh",
+      pdfFreshness: "current",
     });
     expect(labels.view).toBe("View PDF");
     expect(labels.download).toBe("Download PDF");

@@ -1,0 +1,8 @@
+
+> hiringcafe-extractor@0.0.1 start
+> tsx src/main.ts
+
+BOUSSOLE_PROGRESS {"event":"term_start","termIndex":1,"termTotal":1,"searchTerm":"machine learning intern"}
+Hiring Cafe extractor failed: Hiring Cafe API /api/search-jobs failed (500 Internal Server Error): upstream unavailable
+npm error Lifecycle script `start` failed with error:
+npm error code 1

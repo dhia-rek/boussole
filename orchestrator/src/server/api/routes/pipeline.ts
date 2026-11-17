@@ -34,6 +34,7 @@ import {
   ensureChallengeViewer,
 } from "@server/services/challenge-viewer";
 import { simulatePipelineRun } from "@server/services/demo-simulator";
+import { getPipelineHealth } from "@server/services/pipeline-health";
 import { PIPELINE_EXTRACTOR_SOURCE_IDS } from "@shared/extractors";
 import {
   createLocationIntent,
@@ -153,6 +154,24 @@ pipelineRouter.get("/progress", (req: Request, res: Response) => {
     stopHeartbeat();
     unsubscribe();
   });
+});
+
+/**
+ * GET /api/pipeline/health - Read-only pipeline state snapshot
+ */
+pipelineRouter.get("/health", (_req: Request, res: Response) => {
+  try {
+    ok(res, getPipelineHealth());
+  } catch (error) {
+    fail(
+      res,
+      new AppError({
+        status: 500,
+        code: "INTERNAL_ERROR",
+        message: error instanceof Error ? error.message : "Unknown error",
+      }),
+    );
+  }
 });
 
 /**

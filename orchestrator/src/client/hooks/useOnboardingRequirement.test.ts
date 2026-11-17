@@ -49,7 +49,11 @@ describe("useOnboardingRequirement", () => {
 
   it("treats the persisted onboarding basic-auth decision as the source of truth", async () => {
     let currentSettings: any = {
-      llmProvider: { value: "lmstudio", default: "lmstudio", override: null },
+      llmProvider: {
+        value: "openai_compatible",
+        default: "openai_compatible",
+        override: null,
+      },
       llmBaseUrl: {
         value: "http://localhost:1234",
         default: "",
@@ -102,11 +106,15 @@ describe("useOnboardingRequirement", () => {
   it("validates non-api-key providers before treating onboarding as complete", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "LM Studio is unreachable",
+      message: "The AI endpoint is unreachable",
     });
 
     const currentSettings: any = {
-      llmProvider: { value: "lmstudio", default: "lmstudio", override: null },
+      llmProvider: {
+        value: "openai_compatible",
+        default: "openai_compatible",
+        override: null,
+      },
       llmBaseUrl: {
         value: "http://localhost:1234",
         default: "",
@@ -137,7 +145,7 @@ describe("useOnboardingRequirement", () => {
 
     await waitFor(() => {
       expect(api.validateLlm).toHaveBeenCalledWith({
-        provider: "lmstudio",
+        provider: "openai_compatible",
         baseUrl: "http://localhost:1234",
       });
     });
@@ -154,7 +162,7 @@ describe("useOnboardingRequirement", () => {
     validateLlm
       .mockResolvedValueOnce({
         valid: false,
-        message: "LM Studio is unreachable",
+        message: "The AI endpoint is unreachable",
       })
       .mockResolvedValue({
         valid: true,
@@ -162,7 +170,11 @@ describe("useOnboardingRequirement", () => {
       });
 
     let currentSettings: any = {
-      llmProvider: { value: "lmstudio", default: "lmstudio", override: null },
+      llmProvider: {
+        value: "openai_compatible",
+        default: "openai_compatible",
+        override: null,
+      },
       llmBaseUrl: {
         value: "http://localhost:1234",
         default: "",
@@ -213,7 +225,7 @@ describe("useOnboardingRequirement", () => {
 
     await waitFor(() => {
       expect(validateLlm).toHaveBeenCalledWith({
-        provider: "lmstudio",
+        provider: "openai_compatible",
         baseUrl: "http://localhost:1235",
       });
     });

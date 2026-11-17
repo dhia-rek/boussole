@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildJobindexSearchUrl,
@@ -7,6 +10,19 @@ import {
   resolveGeoareaIds,
   runJobindex,
 } from "../src/run";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+
+/**
+ * Trimmed copy of a real jobindex.dk search page (Nov 2026): the Stash is
+ * wrapped in `//<![CDATA[ ... //]]>`, followed by another script, and the
+ * result app lives under `jobsearch/result_app/list`. Stored as .txt so the
+ * linter/formatter leaves the page's `\/` escapes and inline scripts intact.
+ */
+const CDATA_LIST_PAGE = readFileSync(
+  join(FIXTURES_DIR, "search-page-cdata-list.html.txt"),
+  "utf-8",
+);
 
 function createHtml(
   results: unknown[],
@@ -60,6 +76,51 @@ describe("Jobindex Stash parsing", () => {
     const response = extractJobindexSearchResponse(html);
 
     expect(response.results).toEqual([{ tid: "h1" }]);
+  });
+
+  it("parses the CDATA-wrapped Stash published under jobsearch/result_app/list", () => {
+    const response = extractJobindexSearchResponse(CDATA_LIST_PAGE);
+
+    expect(response.total_pages).toBe(3);
+    expect(Array.isArray(response.results)).toBe(true);
+    const results = response.results as Array<{ tid?: string }>;
+    expect(results.map((result) => result.tid)).toEqual([
+      "h1715301",
+      "h1715907",
+    ]);
+  });
+
+  it("reads geoarea options from the renamed result app", () => {
+    const storeData = extractJobindexStoreData(CDATA_LIST_PAGE);
+
+    expect(storeData.geoareaOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 56, text: "København", typeid: 30 }),
+      ]),
+    );
+  });
+
+  it("ignores statements that follow the Stash object in the same script", () => {
+    const html =
+      '<script>var Stash = {"jobsearch/result_app":{"storeData":{"searchResponse":{"results":[{"tid":"h9","headline":"a } b"}],"total_pages":1}}}};\nvar Other = {"x":1};\n</script>';
+
+    const response = extractJobindexSearchResponse(html);
+
+    expect(response.results).toEqual([{ tid: "h9", headline: "a } b" }]);
+  });
+
+  it("reports a clear error when the Stash object is truncated", () => {
+    expect(() =>
+      extractJobindexStoreData(
+        '<script>var Stash = {"jobsearch/result_app":{"storeData":{</script>',
+      ),
+    ).toThrow("Jobindex Stash JSON end was not found.");
+  });
+
+  it("reports a clear error when no result app carries storeData", () => {
+    expect(() =>
+      extractJobindexStoreData('<script>var Stash = {"common":{}};</script>'),
+    ).toThrow("Jobindex storeData payload was not found.");
   });
 
   it("builds query-only search URLs and adds page after the first page", () => {
@@ -233,6 +294,35 @@ describe("runJobindex", () => {
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       "https://www.jobindex.dk/jobsoegning?q=software+engineering&geoareaid=74",
     );
+  });
+
+  it("returns mapped jobs from the current jobindex.dk page format", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(CDATA_LIST_PAGE));
+
+    const result = await runJobindex({
+      selectedCountry: "denmark",
+      searchTerms: ["machine learning"],
+      maxJobsPerTerm: 2,
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+    expect(result.jobs).toHaveLength(2);
+    expect(result.jobs[0]).toEqual(
+      expect.objectContaining({
+        source: "jobindex",
+        sourceJobId: "h1715301",
+        employer: "DTU, Danmarks Tekniske Universitet",
+        jobUrl: "https://www.jobindex.dk/vis-job/h1715301",
+        location: "DTU Compute, Matematiktorvet 303B, 2800 Kongens Lyngby",
+      }),
+    );
+    expect(result.jobs[0]?.title).toMatch(/machine learning/i);
+    expect(result.jobs[0]?.applicationLink).toMatch(/^https:\/\//);
+    expect(result.jobs[0]?.jobDescription).toMatch(/machine learning/i);
   });
 
   it("does not run outside Denmark", async () => {

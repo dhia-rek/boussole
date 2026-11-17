@@ -109,11 +109,14 @@ interface JobindexStoreData {
   searchResponse?: JobindexSearchResponse;
 }
 
-interface JobindexStash {
-  "jobsearch/result_app"?: {
-    storeData?: JobindexStoreData;
-  };
-}
+/**
+ * The page-level `var Stash = {...}` object. The search result app has been
+ * published under `jobsearch/result_app` and, since late 2026, under
+ * `jobsearch/result_app/list`, so lookups must not depend on one exact key.
+ */
+type JobindexStash = Record<string, unknown>;
+
+const LEGACY_RESULT_APP_KEY = "jobsearch/result_app";
 
 function toPositiveIntOrFallback(
   value: number | string | undefined,
@@ -256,6 +259,80 @@ function parseAddresses(value: unknown): JobindexAddress[] {
   );
 }
 
+/**
+ * Returns the end index (exclusive) of the JSON object starting at `start`,
+ * by matching braces outside of string literals. Unlike "slice up to
+ * </script>", this tolerates trailing statements and wrappers such as the
+ * `//]]>` CDATA terminator Jobindex now emits after the Stash assignment.
+ */
+function findJsonObjectEnd(text: string, start: number): number {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+
+  return -1;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function getStoreData(entry: unknown): JobindexStoreData | undefined {
+  if (!isRecord(entry)) return undefined;
+  const storeData = entry.storeData;
+  return isRecord(storeData) ? (storeData as JobindexStoreData) : undefined;
+}
+
+function findResultAppStoreData(
+  stash: JobindexStash,
+): JobindexStoreData | undefined {
+  const legacy = getStoreData(stash[LEGACY_RESULT_APP_KEY]);
+  if (legacy) return legacy;
+
+  const candidates = Object.entries(stash)
+    .filter(([key]) => key.startsWith(`${LEGACY_RESULT_APP_KEY}/`))
+    .map(([, value]) => getStoreData(value))
+    .filter((value): value is JobindexStoreData => value !== undefined);
+
+  // Prefer the app that actually carries search results; fall back to any
+  // result app (e.g. a geoarea-only payload) before scanning other entries.
+  const withResults = candidates.find((storeData) =>
+    isRecord(storeData.searchResponse),
+  );
+  if (withResults) return withResults;
+  if (candidates[0]) return candidates[0];
+
+  for (const value of Object.values(stash)) {
+    const storeData = getStoreData(value);
+    if (storeData && isRecord(storeData.searchResponse)) return storeData;
+  }
+
+  return undefined;
+}
+
 export function extractJobindexStoreData(html: string): JobindexStoreData {
   const assignmentStart = html.indexOf("var Stash =");
   if (assignmentStart < 0) {
@@ -267,19 +344,24 @@ export function extractJobindexStoreData(html: string): JobindexStoreData {
     throw new Error("Jobindex Stash JSON start was not found.");
   }
 
-  const scriptEnd = html.indexOf("</script>", jsonStart);
-  if (scriptEnd < 0) {
-    throw new Error("Jobindex Stash script end was not found.");
-  }
-
-  const jsonText = html.slice(jsonStart, scriptEnd).trim().replace(/;\s*$/, "");
-  if (!jsonText.endsWith("}")) {
+  const jsonEnd = findJsonObjectEnd(html, jsonStart);
+  if (jsonEnd < 0) {
     throw new Error("Jobindex Stash JSON end was not found.");
   }
 
-  const stash = JSON.parse(jsonText) as JobindexStash;
-  const storeData = stash["jobsearch/result_app"]?.storeData;
-  if (!storeData || typeof storeData !== "object") {
+  let stash: unknown;
+  try {
+    stash = JSON.parse(html.slice(jsonStart, jsonEnd));
+  } catch {
+    // Do not echo the parser message: it quotes raw upstream page content.
+    throw new Error("Jobindex Stash JSON could not be parsed.");
+  }
+  if (!isRecord(stash)) {
+    throw new Error("Jobindex Stash payload was not an object.");
+  }
+
+  const storeData = findResultAppStoreData(stash);
+  if (!storeData) {
     throw new Error("Jobindex storeData payload was not found.");
   }
 

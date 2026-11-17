@@ -13,8 +13,8 @@ docs-site/build/
 # Data directory (bind mount in Docker)
 data/
 
-# Extractor storage outputs and cached auth
-extractors/ukvisajobs/storage/
+# Extractor storage outputs and cached auth (runtime data, never committed)
+extractors/*/storage/
 
 # OS files
 .DS_Store

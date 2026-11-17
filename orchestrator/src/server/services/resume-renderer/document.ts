@@ -16,6 +16,13 @@ const LATEX_RESUME_SECTION_TITLES: Record<
     education: "Education",
     projects: "Projects",
     skills: "Technical Skills",
+    certifications: "Certifications",
+    awards: "Awards",
+    publications: "Publications",
+    volunteer: "Volunteer",
+    languages: "Languages",
+    interests: "Interests",
+    other: "Other",
   },
   german: {
     summary: "Zusammenfassung",
@@ -23,13 +30,27 @@ const LATEX_RESUME_SECTION_TITLES: Record<
     education: "Ausbildung",
     projects: "Projekte",
     skills: "Fachliche Kenntnisse",
+    certifications: "Zertifizierungen",
+    awards: "Auszeichnungen",
+    publications: "Veröffentlichungen",
+    volunteer: "Ehrenamt",
+    languages: "Sprachen",
+    interests: "Interessen",
+    other: "Sonstiges",
   },
   french: {
-    summary: "Résumé",
+    summary: "Profil",
     experience: "Expérience",
     education: "Formation",
     projects: "Projets",
     skills: "Compétences techniques",
+    certifications: "Certifications",
+    awards: "Distinctions",
+    publications: "Publications",
+    volunteer: "Bénévolat",
+    languages: "Langues",
+    interests: "Centres d'intérêt",
+    other: "Autres",
   },
   spanish: {
     summary: "Resumen",
@@ -37,6 +58,13 @@ const LATEX_RESUME_SECTION_TITLES: Record<
     education: "Educación",
     projects: "Proyectos",
     skills: "Habilidades técnicas",
+    certifications: "Certificaciones",
+    awards: "Premios",
+    publications: "Publicaciones",
+    volunteer: "Voluntariado",
+    languages: "Idiomas",
+    interests: "Intereses",
+    other: "Otros",
   },
 };
 
@@ -51,6 +79,14 @@ export function normalizeResumeJsonToLatexDocument(
   options: NormalizeResumeJsonToLatexDocumentOptions = {},
 ): LatexResumeDocument {
   const document = buildDesignResumeJakeDocument(resumeJson);
+  const sectionTitles = getLatexResumeSectionTitles(options.language);
+  const extraSectionTitle = (kind: string, fallback: string): string => {
+    if (kind === "certifications") return sectionTitles.certifications;
+    if (kind === "awards") return sectionTitles.awards;
+    if (kind === "publications") return sectionTitles.publications;
+    if (kind === "volunteer") return sectionTitles.volunteer;
+    return fallback;
+  };
 
   return {
     name: document.name,
@@ -84,6 +120,19 @@ export function normalizeResumeJsonToLatexDocument(
       name: group.name,
       keywords: group.keywords,
     })),
-    sectionTitles: getLatexResumeSectionTitles(options.language),
+    languages: document.languages,
+    interests: document.interests,
+    extraSections: document.extraSections.map((section) => ({
+      title: extraSectionTitle(section.kind, section.title),
+      kind: section.kind,
+      entries: section.entries.map((entry) => ({
+        title: entry.title,
+        subtitle: entry.subtitle,
+        date: entry.date,
+        bullets: entry.bullets,
+        url: entry.url,
+      })),
+    })),
+    sectionTitles,
   };
 }

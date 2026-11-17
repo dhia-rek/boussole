@@ -363,7 +363,8 @@ vi.mock("./rxresume/baseResumeId", () => ({
 }));
 
 vi.mock("./design-resume", () => ({
-  getCurrentDesignResume: vi.fn().mockResolvedValue(null),
+  getDesignResumeForJobLanguage: vi.fn().mockResolvedValue(null),
+  requireCurrentDesignResume: vi.fn(),
 }));
 
 vi.mock("./rxresume", async () => {
@@ -671,7 +672,7 @@ describe("PDF Service Tailoring Logic", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const designResume = await import("./design-resume");
-    vi.mocked(designResume.getCurrentDesignResume).mockResolvedValueOnce({
+    vi.mocked(designResume.requireCurrentDesignResume).mockResolvedValueOnce({
       id: "design-resume-1",
       title: "Design Resume",
       sourceResumeId: null,
@@ -729,7 +730,7 @@ describe("PDF Service Tailoring Logic", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const designResume = await import("./design-resume");
-    vi.mocked(designResume.getCurrentDesignResume).mockResolvedValueOnce({
+    vi.mocked(designResume.requireCurrentDesignResume).mockResolvedValueOnce({
       id: "design-resume-1",
       title: "Design Resume",
       sourceResumeId: null,

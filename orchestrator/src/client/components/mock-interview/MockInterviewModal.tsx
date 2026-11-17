@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -100,9 +101,12 @@ export const MockInterviewButton: React.FC<MockInterviewButtonProps> = ({
         <Video className="mr-2 h-3.5 w-3.5" />
         {triggerLabel}
       </Button>
-      {open && job ? (
-        <MockInterviewRoom job={job} onClose={() => setOpen(false)} />
-      ) : null}
+      {open && job
+        ? createPortal(
+            <MockInterviewRoom job={job} onClose={() => setOpen(false)} />,
+            document.body,
+          )
+        : null}
     </>
   );
 };
@@ -399,6 +403,7 @@ function MockInterviewRoom({
 
         {phase === "live" ? (
           <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+            {/* AI interviewer panel */}
             <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border/70 bg-muted/20 p-6">
               <div
                 className={cn(
@@ -414,18 +419,19 @@ function MockInterviewRoom({
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 {speaking ? "Interviewer speaking…" : "Interviewer"}
               </div>
-              <p className="max-h-40 overflow-y-auto text-center text-sm leading-6 text-foreground">
+              <p className="max-h-48 overflow-y-auto text-center text-sm leading-6 text-foreground">
                 {currentQuestion || "…"}
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
+            {/* Candidate panel */}
+            <div className="flex min-h-0 flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
               <video
                 ref={videoRef}
                 autoPlay
                 muted
                 playsInline
-                className="aspect-video w-full rounded-xl bg-black object-cover"
+                className="min-h-0 w-full flex-1 rounded-xl bg-black object-cover"
               >
                 <track kind="captions" />
               </video>
@@ -437,7 +443,7 @@ function MockInterviewRoom({
                     ? "Your answer appears here as you speak — or type it."
                     : "Type your answer…"
                 }
-                rows={4}
+                rows={3}
                 className="w-full resize-none rounded-lg border border-border/70 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
               <div className="flex items-center gap-2">

@@ -8,6 +8,7 @@ export type AppErrorCode =
   | "REQUEST_TIMEOUT"
   | "CONFLICT"
   | "UNPROCESSABLE_ENTITY"
+  | "TOO_MANY_REQUESTS"
   | "UPSTREAM_ERROR"
   | "SERVICE_UNAVAILABLE"
   | "INTERNAL_ERROR";
@@ -20,6 +21,7 @@ const DEFAULT_CODE_BY_STATUS: Record<number, AppErrorCode> = {
   408: "REQUEST_TIMEOUT",
   409: "CONFLICT",
   422: "UNPROCESSABLE_ENTITY",
+  429: "TOO_MANY_REQUESTS",
   500: "INTERNAL_ERROR",
   502: "UPSTREAM_ERROR",
   503: "SERVICE_UNAVAILABLE",
@@ -60,6 +62,19 @@ export function badRequest(message: string, details?: unknown): AppError {
 
 export function unauthorized(message = "Unauthorized"): AppError {
   return new AppError({ status: 401, code: "UNAUTHORIZED", message });
+}
+
+export function tooManyRequests(
+  message: string,
+  retryAfterSeconds?: number,
+): AppError {
+  return new AppError({
+    status: 429,
+    code: "TOO_MANY_REQUESTS",
+    message,
+    details:
+      retryAfterSeconds === undefined ? undefined : { retryAfterSeconds },
+  });
 }
 
 export function forbidden(message = "Forbidden"): AppError {

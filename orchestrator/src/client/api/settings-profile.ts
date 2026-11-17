@@ -7,6 +7,7 @@ import type {
   DesignResumePatchRequest,
   DesignResumePdfResponse,
   DesignResumeStatusResponse,
+  DesignResumeVariantSummary,
   ProfileStatusResponse,
   ResumeProfile,
   ResumeProjectCatalogItem,
@@ -46,8 +47,22 @@ export async function getProfile(): Promise<ResumeProfile> {
   return fetchApi<ResumeProfile>("/profile");
 }
 
-export async function getDesignResume(): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume");
+/** Appends `?language=` so a request targets one CV variant (omit → primary). */
+function withDesignResumeLanguage(
+  path: string,
+  language?: string | null,
+): string {
+  if (!language) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}language=${encodeURIComponent(language)}`;
+}
+
+export async function getDesignResume(
+  language?: string | null,
+): Promise<DesignResumeDocument> {
+  return fetchApi<DesignResumeDocument>(
+    withDesignResumeLanguage("/design-resume", language),
+  );
 }
 
 export async function getDesignResumeStatus(): Promise<DesignResumeStatusResponse> {
@@ -64,6 +79,8 @@ export async function importDesignResumeFromFile(input: {
   fileName: string;
   mediaType?: string;
   dataBase64: string;
+  /** Creates/replaces that language variant (e.g. "en"); omit for the primary CV. */
+  language?: string;
 }): Promise<DesignResumeDocument> {
   return fetchApi<DesignResumeDocument>("/design-resume/import/file", {
     method: "POST",
@@ -73,66 +90,87 @@ export async function importDesignResumeFromFile(input: {
 
 export async function updateDesignResume(
   input: DesignResumePatchRequest,
+  language?: string | null,
 ): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume", {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
-}
-
-export async function uploadDesignResumePicture(input: {
-  fileName: string;
-  dataUrl: string;
-  baseRevision?: number;
-  document?: DesignResumeJson;
-}): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume/assets", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return fetchApi<DesignResumeDocument>(
+    withDesignResumeLanguage("/design-resume", language),
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export async function uploadDesignResumePictureFile(input: {
   file: File;
   baseRevision?: number;
+  language?: string | null;
 }): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume/assets", {
-    method: "POST",
-    headers: {
-      "Content-Type": input.file.type || "application/octet-stream",
-      "x-file-name": encodeURIComponent(input.file.name || "picture"),
-      ...(input.baseRevision
-        ? { "x-base-revision": String(input.baseRevision) }
-        : {}),
+  return fetchApi<DesignResumeDocument>(
+    withDesignResumeLanguage("/design-resume/assets", input.language),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": input.file.type || "application/octet-stream",
+        "x-file-name": encodeURIComponent(input.file.name || "picture"),
+        ...(input.baseRevision
+          ? { "x-base-revision": String(input.baseRevision) }
+          : {}),
+      },
+      body: await input.file.arrayBuffer(),
     },
-    body: await input.file.arrayBuffer(),
-  });
+  );
 }
 
-export async function deleteDesignResumePicture(input?: {
-  baseRevision?: number;
-  document?: DesignResumeJson;
-}): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume/assets/picture", {
-    method: "DELETE",
-    body: JSON.stringify(input ?? {}),
-  });
+export async function deleteDesignResumePicture(
+  input?: {
+    baseRevision?: number;
+    document?: DesignResumeJson;
+  },
+  language?: string | null,
+): Promise<DesignResumeDocument> {
+  return fetchApi<DesignResumeDocument>(
+    withDesignResumeLanguage("/design-resume/assets/picture", language),
+    {
+      method: "DELETE",
+      body: JSON.stringify(input ?? {}),
+    },
+  );
 }
 
-export async function exportDesignResume(): Promise<DesignResumeExportResponse> {
-  return fetchApi<DesignResumeExportResponse>("/design-resume/export");
+export async function exportDesignResume(
+  language?: string | null,
+): Promise<DesignResumeExportResponse> {
+  return fetchApi<DesignResumeExportResponse>(
+    withDesignResumeLanguage("/design-resume/export", language),
+  );
 }
 
-export async function generateDesignResumePdf(): Promise<DesignResumePdfResponse> {
-  return fetchApi<DesignResumePdfResponse>("/design-resume/generate-pdf", {
-    method: "POST",
-  });
+export async function generateDesignResumePdf(
+  language?: string | null,
+): Promise<DesignResumePdfResponse> {
+  return fetchApi<DesignResumePdfResponse>(
+    withDesignResumeLanguage("/design-resume/generate-pdf", language),
+    {
+      method: "POST",
+    },
+  );
 }
 
 export async function getDesignResumePdfBlob(pdfUrl?: string): Promise<Blob> {
   return fetchBlobApi(
     pdfUrl ? normalizeApiPath(pdfUrl) : "/design-resume/pdf",
     { cache: "no-store" },
+  );
+}
+
+/** Deletes a non-primary language variant; returns the remaining variants. */
+export async function deleteDesignResumeVariant(
+  language: string,
+): Promise<DesignResumeVariantSummary[]> {
+  return fetchApi<DesignResumeVariantSummary[]>(
+    `/design-resume/variants/${encodeURIComponent(language)}`,
+    { method: "DELETE" },
   );
 }
 

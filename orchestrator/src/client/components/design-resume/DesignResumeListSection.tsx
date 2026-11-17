@@ -1,4 +1,12 @@
-import { Plus, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   AlertDialog,
@@ -11,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { DesignResumeSection } from "./DesignResumeSection";
 import type { ItemDefinition } from "./definitions";
 import { getByPath, toBoolean, toText } from "./utils";
@@ -21,6 +30,8 @@ type DesignResumeListSectionProps = {
   onAdd: () => void;
   onEdit: (index: number) => void;
   onUpdateItems: (nextItems: Record<string, unknown>[]) => void;
+  /** Item id → short description of its AI guidance (shows a sparkle). */
+  aiHints?: Record<string, string>;
 };
 
 export function DesignResumeListSection({
@@ -29,6 +40,7 @@ export function DesignResumeListSection({
   onAdd,
   onEdit,
   onUpdateItems,
+  aiHints,
 }: DesignResumeListSectionProps) {
   const [pendingRemovalIndex, setPendingRemovalIndex] = useState<number | null>(
     null,
@@ -53,6 +65,18 @@ export function DesignResumeListSection({
     setPendingRemovalIndex(null);
   };
 
+  const move = (index: number, offset: -1 | 1) => {
+    const target = index + offset;
+    if (target < 0 || target >= items.length) return;
+    const nextItems = [...items];
+    const [currentItem] = nextItems.splice(index, 1);
+    nextItems.splice(target, 0, currentItem);
+    onUpdateItems(nextItems);
+  };
+
+  const iconButtonClass =
+    "h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground";
+
   return (
     <DesignResumeSection
       value={definition.key}
@@ -60,111 +84,133 @@ export function DesignResumeListSection({
       subtitle={definition.description}
       badge={items.length === 0 ? "Empty" : `${items.length}`}
     >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-          <div>
-            <div className="text-sm font-medium text-foreground">
-              {items.length} item{items.length === 1 ? "" : "s"}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Add entries, reorder them, or hide the ones you do not want to
-              show.
-            </div>
-          </div>
-          <Button type="button" variant="outline" onClick={onAdd}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-
+      <div className="space-y-2">
         {items.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-5 text-sm text-muted-foreground">
-            No items yet.
+          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-5 text-center text-sm text-muted-foreground">
+            No {definition.title.toLowerCase()} yet.
           </div>
         ) : (
-          items.map((item, index) => (
-            <div
-              key={toText(item.id, `${definition.key}-${index}`)}
-              className="rounded-lg border border-border/60 bg-background/60 px-4 py-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-foreground">
-                    {toText(
-                      getByPath(item, definition.primaryField),
-                      "Untitled",
-                    )}
+          items.map((item, index) => {
+            const hidden = toBoolean(item.hidden, false);
+            const title = toText(
+              getByPath(item, definition.primaryField),
+              "Untitled",
+            );
+            const subtitle = definition.secondaryField
+              ? toText(getByPath(item, definition.secondaryField))
+              : "";
+            const itemId = toText(item.id);
+            const aiHint = itemId ? aiHints?.[itemId] : undefined;
+            return (
+              <div
+                key={itemId || `${definition.key}-${index}`}
+                className={cn(
+                  "flex items-center gap-1 rounded-lg border border-border/60 bg-background/60 py-2 pl-3 pr-1.5 transition-opacity",
+                  hidden && "opacity-55",
+                )}
+              >
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => onEdit(index)}
+                  title={`Edit ${title}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {title}
+                    </span>
+                    {aiHint ? (
+                      <Sparkles
+                        className="h-3.5 w-3.5 shrink-0 text-primary"
+                        aria-label={aiHint}
+                      >
+                        <title>{aiHint}</title>
+                      </Sparkles>
+                    ) : null}
+                    {hidden ? (
+                      <span className="shrink-0 rounded-full border border-border/60 px-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Hidden
+                      </span>
+                    ) : null}
                   </div>
-                  {definition.secondaryField ? (
-                    <div className="text-xs text-muted-foreground">
-                      {toText(getByPath(item, definition.secondaryField))}
+                  {subtitle ? (
+                    <div className="truncate text-xs text-muted-foreground">
+                      {subtitle}
                     </div>
                   ) : null}
-                </div>
-                <div className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {toBoolean(item.hidden, false) ? "Hidden" : "Visible"}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => onEdit(index)}
+                  size="icon"
+                  className={iconButtonClass}
+                  aria-label="Move up"
+                  title="Move up"
+                  disabled={index === 0}
+                  onClick={() => move(index, -1)}
                 >
-                  Edit
+                  <ChevronUp className="h-4 w-4" />
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
+                  size="icon"
+                  className={iconButtonClass}
+                  aria-label="Move down"
+                  title="Move down"
+                  disabled={index === items.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={iconButtonClass}
+                  aria-label={hidden ? "Show" : "Hide"}
+                  title={hidden ? "Show on CV" : "Hide from CV"}
                   onClick={() => {
                     const nextItems = [...items];
-                    nextItems[index] = {
-                      ...nextItems[index],
-                      hidden: !toBoolean(nextItems[index].hidden, false),
-                    };
+                    nextItems[index] = { ...nextItems[index], hidden: !hidden };
                     onUpdateItems(nextItems);
                   }}
                 >
-                  {toBoolean(item.hidden, false) ? "Show" : "Hide"}
+                  {hidden ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => {
-                    if (index === 0) return;
-                    const nextItems = [...items];
-                    const [currentItem] = nextItems.splice(index, 1);
-                    nextItems.splice(index - 1, 0, currentItem);
-                    onUpdateItems(nextItems);
-                  }}
-                >
-                  Up
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    if (index === items.length - 1) return;
-                    const nextItems = [...items];
-                    const [currentItem] = nextItems.splice(index, 1);
-                    nextItems.splice(index + 1, 0, currentItem);
-                    onUpdateItems(nextItems);
-                  }}
-                >
-                  Down
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                  size="icon"
+                  className={cn(
+                    iconButtonClass,
+                    "hover:bg-rose-500/10 hover:text-rose-400",
+                  )}
+                  aria-label="Remove"
+                  title={`Remove ${title}`}
                   onClick={() => setPendingRemovalIndex(index)}
                 >
-                  Remove
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full border-dashed"
+          onClick={onAdd}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add {definition.singularTitle.toLowerCase()}
+        </Button>
       </div>
 
       <AlertDialog

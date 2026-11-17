@@ -109,6 +109,9 @@ export async function runRemoteCo(
   // Fetch all pages once, then filter per term
   const allRaw: CreateJobInput[] = [];
   let page = 1;
+  // Failures used to be swallowed (`break`), so a removed endpoint looked like
+  // "0 jobs found". Remember the reason and fail loudly if page 1 fails.
+  let firstPageError: string | undefined;
   while (allRaw.length < 500) {
     if (opts.shouldCancel?.()) break;
     let items: RemoteCoJob[];
@@ -120,9 +123,30 @@ export async function runRemoteCo(
           signal: AbortSignal.timeout(20_000),
         },
       );
-      if (!res.ok) break;
-      items = (await res.json()) as RemoteCoJob[];
-    } catch {
+      if (!res.ok) {
+        // WordPress answers 400 once `page` runs past the last page; only a
+        // first-page failure means the feed itself is unavailable.
+        if (page === 1) {
+          firstPageError =
+            res.status === 404
+              ? `Remote.co jobs feed returned HTTP 404 (${REMOTECO_API}); the WordPress job_listing endpoint no longer exists, so this source cannot fetch jobs.`
+              : `Remote.co jobs feed returned HTTP ${res.status} (${REMOTECO_API}).`;
+        }
+        break;
+      }
+      const payload = (await res.json()) as unknown;
+      if (!Array.isArray(payload)) {
+        if (page === 1) {
+          firstPageError = `Remote.co jobs feed returned an unexpected payload (expected a JSON array) from ${REMOTECO_API}.`;
+        }
+        break;
+      }
+      items = payload as RemoteCoJob[];
+    } catch (error) {
+      if (page === 1) {
+        const reason = error instanceof Error ? error.message : String(error);
+        firstPageError = `Remote.co jobs feed request failed (${REMOTECO_API}): ${reason}`;
+      }
       break;
     }
     if (!items.length) break;
@@ -132,6 +156,10 @@ export async function runRemoteCo(
     }
     if (items.length < PAGE_SIZE) break;
     page++;
+  }
+
+  if (firstPageError) {
+    return { success: false, jobs: [], error: firstPageError };
   }
 
   for (let ti = 0; ti < searchTerms.length; ti++) {

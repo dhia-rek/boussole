@@ -22,6 +22,11 @@ import {
   resolveHiringCafeCountryLocation,
 } from "./country-map.js";
 import { createDefaultSearchState } from "./default-search-state.js";
+import {
+  CloudflareChallengeError,
+  HIRING_CAFE_FAILURE_PREFIX,
+  shouldRetryWithVanillaFirefox,
+} from "./errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = "https://hiring.cafe";
@@ -678,7 +683,7 @@ async function run(): Promise<void> {
         // Signal the orchestrator that a human needs to solve this challenge.
         // The BOUSSOLE_PROGRESS line is parsed by run.ts to set challengeRequired.
         emitProgress({ event: "challenge_required", url: BASE_URL });
-        throw new Error("Cloudflare challenge timed out after all retries");
+        throw new CloudflareChallengeError(BASE_URL);
       }
 
       if (
@@ -699,6 +704,9 @@ async function run(): Promise<void> {
     try {
       await initializePage();
     } catch (error) {
+      // A Cloudflare challenge needs a human, not another browser: fail fast
+      // with the real cause instead of retrying (see errors.ts).
+      if (!shouldRetryWithVanillaFirefox(error)) throw error;
       const message = error instanceof Error ? error.message : String(error);
       console.warn(
         `${usedCamoufox ? "Camoufox" : "Firefox"} startup failed, retrying with vanilla Firefox: ${message}`,
@@ -836,6 +844,8 @@ async function run(): Promise<void> {
 
 run().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : "Unknown error";
-  console.error(`Hiring Cafe extractor failed: ${message}`);
+  // run.ts parses this line (HIRING_CAFE_FAILURE_PREFIX) into the error it
+  // reports to the pipeline, so keep the prefix in sync with errors.ts.
+  console.error(`${HIRING_CAFE_FAILURE_PREFIX}${message}`);
   process.exitCode = 1;
 });

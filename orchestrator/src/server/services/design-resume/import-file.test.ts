@@ -21,23 +21,13 @@ vi.mock("@server/services/modelSelection", () => modelSelection);
 vi.mock("./index", () => designResumeService);
 vi.mock("@server/infra/request-context", () => requestContext);
 
+import { createDesignResumeDocument } from "@shared/testing/factories";
 import { importDesignResumeFromFile } from "./import-file";
 
 function makeResumeDocument(
   resumeJson: DesignResumeJson = buildDefaultReactiveResumeDocument() as DesignResumeJson,
 ): DesignResumeDocument {
-  return {
-    id: "primary",
-    title: "Taylor Resume",
-    resumeJson,
-    revision: 1,
-    sourceResumeId: null,
-    sourceMode: null,
-    importedAt: "2026-04-11T00:00:00.000Z",
-    createdAt: "2026-04-11T00:00:00.000Z",
-    updatedAt: "2026-04-11T00:00:00.000Z",
-    assets: [],
-  };
+  return createDesignResumeDocument({ resumeJson });
 }
 
 function escapeXml(value: string): string {
@@ -548,9 +538,9 @@ describe("importDesignResumeFromFile", () => {
 
   it("returns a capability error when the configured provider does not support direct file import", async () => {
     modelSelection.resolveLlmRuntimeSettings.mockResolvedValueOnce({
-      provider: "ollama",
-      model: "llama3",
-      baseUrl: "http://localhost:11434",
+      provider: "codex",
+      model: "",
+      baseUrl: "",
       apiKey: "unused",
     });
 

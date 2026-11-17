@@ -73,6 +73,30 @@ services:
         - path: ./extractors/naukri
           target: /app/extractors/naukri
           action: sync+restart
+        - path: ./extractors/adzuna
+          target: /app/extractors/adzuna
+          action: sync+restart
+        - path: ./extractors/startupjobs/src
+          target: /app/extractors/startupjobs/src
+          action: sync+restart
+        - path: ./extractors/bravesearch
+          target: /app/extractors/bravesearch
+          action: sync+restart
+        - path: ./extractors/companyats
+          target: /app/extractors/companyats
+          action: sync+restart
+        - path: ./extractors/remoteco
+          target: /app/extractors/remoteco
+          action: sync+restart
+        - path: ./extractors/wellfound
+          target: /app/extractors/wellfound
+          action: sync+restart
+        - path: ./extractors/weworkremotely
+          target: /app/extractors/weworkremotely
+          action: sync+restart
+        - path: ./extractors/wttj
+          target: /app/extractors/wttj
+          action: sync+restart
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
