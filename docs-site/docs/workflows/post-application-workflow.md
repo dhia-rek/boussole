@@ -64,7 +64,7 @@ GMAIL_OAUTH_REDIRECT_URI=https://your-domain.com/oauth/gmail/callback
 
 For exact Google Cloud steps and scope requirements, see:
 
-- [Gmail OAuth Setup](/docs/next/getting-started/gmail-oauth-setup)
+- [Gmail OAuth Setup](/docs/getting-started/gmail-oauth-setup)
 
 Then in app:
 
