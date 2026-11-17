@@ -9,6 +9,10 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  BoussoleMark,
+  BoussoleWordmark,
+} from "../components/brand/BoussoleMark";
+import {
   loadRememberedAuthUsers,
   rememberAuthUser,
 } from "../lib/remembered-auth-users";
@@ -172,14 +176,14 @@ export function SignInPage() {
               width: 64,
               height: 64,
               borderRadius: 18,
-              background: "linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%)",
+              background: "var(--brand-indigo)",
               boxShadow:
-                "0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
-              color: "#fff",
+                "0 10px 30px rgba(255, 107, 87, 0.18), inset 0 1px 0 rgba(245, 243, 255, 0.12)",
+              color: "var(--brand-lilac)",
               marginBottom: 20,
             }}
           >
-            <img src="/favicon.svg" alt="Boussole logo" width={40} height={40} />
+            <BoussoleMark className="size-11" title="Boussole logo" />
           </div>
 
           <h1
@@ -191,7 +195,7 @@ export function SignInPage() {
               marginBottom: 6,
             }}
           >
-            Boussole
+            <BoussoleWordmark />
           </h1>
           <p
             style={{

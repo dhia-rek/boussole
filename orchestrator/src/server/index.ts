@@ -65,7 +65,7 @@ async function startServer() {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║   🚀 Boussole                                 ║
+║   🧭 Boussole                                             ║
 ║                                                           ║
 ║   Server running at: http://localhost:${PORT}               ║
 ║                                                           ║
