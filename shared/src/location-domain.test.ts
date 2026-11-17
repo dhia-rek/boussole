@@ -87,37 +87,53 @@ describe("location-domain", () => {
   it("plans source compatibility based on the selected country", () => {
     const result = planLocationSources({
       intent: {
-        selectedCountry: "united states",
-        cityLocations: ["New York"],
+        selectedCountry: "japan",
+        cityLocations: ["Tokyo"],
         workplaceTypes: ["remote"],
         searchScope: "selected_plus_remote_worldwide",
         matchStrictness: "exact_only",
       },
-      sources: [
-        "gradcracker",
-        "indeed",
-        "glassdoor",
-        "ukvisajobs",
-        "adzuna",
-        "startupjobs",
-      ],
+      sources: ["adzuna", "indeed", "glassdoor", "startupjobs"],
     });
 
-    expect(result.compatibleSources).toEqual([
-      "indeed",
-      "glassdoor",
-      "adzuna",
-      "startupjobs",
-    ]);
-    expect(result.incompatibleSources).toEqual(["gradcracker", "ukvisajobs"]);
+    expect(result.compatibleSources).toEqual(["indeed", "startupjobs"]);
+    expect(result.incompatibleSources).toEqual(["adzuna", "glassdoor"]);
     expect(result.plans[0]).toMatchObject({
-      source: "gradcracker",
+      source: "adzuna",
       isCompatible: false,
       canRun: false,
     });
     expect(result.plans[0]?.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining("Selected country")]),
     );
+  });
+
+  it("keeps every remaining pipeline source compatible for France with a city", () => {
+    const sources = [
+      "wttj",
+      "companyats",
+      "linkedin",
+      "indeed",
+      "glassdoor",
+      "adzuna",
+      "hiringcafe",
+      "startupjobs",
+      "wellfound",
+      "bravesearch",
+    ];
+    const result = planLocationSources({
+      intent: {
+        selectedCountry: "france",
+        cityLocations: ["Paris"],
+        workplaceTypes: ["hybrid", "onsite"],
+        searchScope: "selected_only",
+        matchStrictness: "exact_only",
+      },
+      sources,
+    });
+
+    expect(result.compatibleSources).toEqual(sources);
+    expect(result.incompatibleSources).toEqual([]);
   });
 
   it("marks glassdoor incompatible until at least one city is provided", () => {
@@ -218,21 +234,23 @@ describe("location-domain", () => {
 
   it("exposes normalized source capabilities for known sources", () => {
     expect(
-      normalizeLocationSourceCapabilities({ source: "gradcracker" }),
-    ).toEqual({
-      requiresCityLocations: false,
-      source: "gradcracker",
-      supportedCountryKeys: ["united kingdom"],
+      normalizeLocationSourceCapabilities({ source: "glassdoor" }),
+    ).toMatchObject({
+      requiresCityLocations: true,
+      source: "glassdoor",
+      supportedCountryKeys: expect.arrayContaining(["france"]),
     });
-    expect(normalizeLocationSourceCapabilities({ source: "seek" })).toEqual({
+    expect(
+      normalizeLocationSourceCapabilities({ source: "adzuna" }),
+    ).toMatchObject({
       requiresCityLocations: false,
-      source: "seek",
-      supportedCountryKeys: ["australia", "new zealand"],
+      source: "adzuna",
+      supportedCountryKeys: expect.arrayContaining(["france"]),
     });
-    expect(normalizeLocationSourceCapabilities({ source: "naukri" })).toEqual({
+    expect(normalizeLocationSourceCapabilities({ source: "wttj" })).toEqual({
       requiresCityLocations: false,
-      source: "naukri",
-      supportedCountryKeys: ["india"],
+      source: "wttj",
+      supportedCountryKeys: null,
     });
     expect(
       normalizeLocationSourceCapabilities({ source: "startupjobs" }),

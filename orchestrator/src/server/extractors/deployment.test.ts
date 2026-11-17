@@ -31,8 +31,22 @@ function countOccurrences(haystack: string, needle: string): number {
 describe("extractor deployment config", () => {
   it("discovers the extractor workspaces", () => {
     expect(extractorsWithManifest).toEqual(
-      expect.arrayContaining(["jobindex", "jobspy", "naukri", "companyats"]),
+      expect.arrayContaining(["jobspy", "wttj", "companyats", "adzuna"]),
     );
+    // Sources outside France were removed together with their workspaces.
+    for (const removed of [
+      "gradcracker",
+      "ukvisajobs",
+      "seek",
+      "naukri",
+      "jobindex",
+      "golangjobs",
+      "remoteco",
+      "weworkremotely",
+      "workingnomads",
+    ]) {
+      expect(extractorsWithManifest).not.toContain(removed);
+    }
   });
 
   it.each(

@@ -110,7 +110,7 @@ describe.sequential("Demo mode API behavior", () => {
       const response = await fetch(`${baseUrl}/api/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ llmProvider: "openrouter" }),
+        body: JSON.stringify({ model: "sonnet" }),
       });
       expect(response.status).toBe(403);
       const body = await response.json();

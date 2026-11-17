@@ -53,7 +53,7 @@ For each discovered job:
 
 `ready` jobs are the primary application queue.
 
-These jobs already have tailored PDFs generated for the specific job description, using the workflow described in [Reactive Resume](../features/reactive-resume).
+These jobs already have tailored PDFs generated for the specific job description, from your CV in the [CV Editor](../features/design-resume).
 
 At this stage:
 
@@ -97,7 +97,7 @@ Once a job is marked `applied`, it becomes part of:
 ## Related pages
 
 - [Orchestrator](../features/orchestrator)
-- [Reactive Resume](../features/reactive-resume)
+- [CV Editor](../features/design-resume)
 - [Settings](../features/settings)
 - [Overview](../features/overview)
 - [Post-Application Workflow](./post-application-workflow)

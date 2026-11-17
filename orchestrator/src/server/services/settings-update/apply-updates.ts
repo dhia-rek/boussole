@@ -47,7 +47,6 @@ export async function applySettingsUpdates(
     shouldRefreshBackupScheduler: deferredSideEffects.has(
       "refreshBackupScheduler",
     ),
-    shouldClearRxResumeCaches: deferredSideEffects.has("clearRxResumeCaches"),
     updatedSettingKeys: Array.from(updatedSettingKeys).sort(),
   };
 }

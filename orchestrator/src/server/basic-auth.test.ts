@@ -154,14 +154,17 @@ describe.sequential("Auth read-only enforcement", () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
-  it("keeps sensitive demo read APIs behind auth", async () => {
+  it.each([
+    "/api/auth/me",
+    "/api/workspaces",
+  ])("keeps sensitive demo read API %s behind auth", async (path) => {
     process.env.DEMO_MODE = "true";
     vi.mocked(countUsers).mockResolvedValue(0);
 
     const { middleware } = createAuthGuard();
     const req = createMockRequest({
       method: "GET",
-      path: "/api/settings/codex-auth",
+      path,
     });
     const res = createMockResponse();
     const next = vi.fn() as NextFunction;

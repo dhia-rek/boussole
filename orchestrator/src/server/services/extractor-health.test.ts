@@ -73,9 +73,9 @@ describe("extractor health service", () => {
         source: "linkedin",
         selectedSources: ["linkedin"],
         searchTerms: ["software"],
-        selectedCountry: "united kingdom",
+        selectedCountry: "france",
         settings: expect.objectContaining({
-          jobspyCountryIndeed: "UK",
+          jobspyCountryIndeed: "France",
           jobspyResultsWanted: "1",
         }),
       }),
@@ -92,10 +92,10 @@ describe("extractor health service", () => {
         success: true,
         jobs: [
           {
-            source: "gradcracker",
-            title: "Graduate Software Engineer",
+            source: "wttj",
+            title: "Développeur logiciel",
             employer: "Beta",
-            jobUrl: "https://example.com/jobs/grad-1",
+            jobUrl: "https://example.com/jobs/wttj-1",
           },
         ],
       })
@@ -103,17 +103,17 @@ describe("extractor health service", () => {
         success: true,
         jobs: [
           {
-            source: "gradcracker",
-            title: "Graduate Developer",
+            source: "wttj",
+            title: "Ingénieur data",
             employer: "Gamma",
-            jobUrl: "https://example.com/jobs/grad-2",
+            jobUrl: "https://example.com/jobs/wttj-2",
           },
         ],
       });
     const manifest: ExtractorManifest = {
-      id: "gradcracker",
-      displayName: "Gradcracker",
-      providesSources: ["gradcracker"],
+      id: "wttj",
+      displayName: "Welcome to the Jungle",
+      providesSources: ["wttj"],
       run,
     };
     mockGetExtractorRegistry.mockResolvedValue(createRegistry([manifest]));
@@ -121,16 +121,22 @@ describe("extractor health service", () => {
     const module = await import("./extractor-health");
     const ttlMs = module.__getExtractorHealthCacheTtlMsForTests();
 
-    const first = await module.checkExtractorHealth("gradcracker");
+    const first = await module.checkExtractorHealth("wttj");
     vi.setSystemTime(new Date(Date.now() + ttlMs - 1));
-    const cached = await module.checkExtractorHealth("gradcracker");
+    const cached = await module.checkExtractorHealth("wttj");
     vi.setSystemTime(new Date(Date.now() + 2));
-    const refreshed = await module.checkExtractorHealth("gradcracker");
+    const refreshed = await module.checkExtractorHealth("wttj");
 
     expect(first?.response.cached).toBe(false);
     expect(cached?.response.cached).toBe(true);
     expect(refreshed?.response.cached).toBe(false);
     expect(run).toHaveBeenCalledTimes(2);
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "wttj",
+        selectedCountry: "france",
+      }),
+    );
   });
 
   it("returns null when the source has no runtime manifest", async () => {

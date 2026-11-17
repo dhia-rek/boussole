@@ -30,12 +30,13 @@ describe("applySettingsUpdates", () => {
   it("applies representative handlers without mutating process env", async () => {
     const settingsRepo = await import("@server/repositories/settings");
 
+    const previousEnv = { ...process.env };
     const plan = await applySettingsUpdates({
-      model: "gpt-4o-mini",
-      ukvisajobsMaxJobs: 42,
+      model: "opus:high",
+      startupjobsMaxJobsPerTerm: 42,
       adzunaMaxJobsPerTerm: 25,
       searchTerms: ["backend", "platform"],
-      llmProvider: "openai",
+      jobspyCountryIndeed: "France",
       adzunaAppId: "app-id",
       adzunaAppKey: "app-key",
     });
@@ -43,28 +44,28 @@ describe("applySettingsUpdates", () => {
     expect(settingsRepo.setSetting).toHaveBeenCalledTimes(7);
     expect(vi.mocked(settingsRepo.setSetting).mock.calls).toEqual(
       expect.arrayContaining([
-        ["model", "gpt-4o-mini"],
-        ["ukvisajobsMaxJobs", "42"],
+        ["model", "opus:high"],
+        ["startupjobsMaxJobsPerTerm", "42"],
         ["adzunaMaxJobsPerTerm", "25"],
         ["searchTerms", '["backend","platform"]'],
-        ["llmProvider", "openai"],
+        ["jobspyCountryIndeed", "France"],
         ["adzunaAppId", "app-id"],
         ["adzunaAppKey", "app-key"],
       ]),
     );
     expect(plan.shouldRefreshBackupScheduler).toBe(false);
-    expect(plan.shouldClearRxResumeCaches).toBe(false);
     expect(plan.updatedSettingKeys).toEqual(
       expect.arrayContaining([
         "model",
-        "ukvisajobsMaxJobs",
+        "startupjobsMaxJobsPerTerm",
         "adzunaMaxJobsPerTerm",
         "searchTerms",
-        "llmProvider",
+        "jobspyCountryIndeed",
         "adzunaAppId",
         "adzunaAppKey",
       ]),
     );
+    expect(process.env).toEqual(previousEnv);
   });
 
   it("marks backup scheduler refresh when backup settings are changed", async () => {
@@ -82,7 +83,6 @@ describe("applySettingsUpdates", () => {
       ]),
     );
     expect(plan.shouldRefreshBackupScheduler).toBe(true);
-    expect(plan.shouldClearRxResumeCaches).toBe(false);
     expect(plan.updatedSettingKeys).toEqual(
       expect.arrayContaining(["backupEnabled", "backupHour"]),
     );
@@ -131,27 +131,6 @@ describe("applySettingsUpdates", () => {
     expect(vi.mocked(settingsRepo.setSetting)).toHaveBeenCalledWith(
       "resumeProjects",
       JSON.stringify(normalized),
-    );
-  });
-
-  it("marks Reactive Resume cache clearing when RxResume settings change", async () => {
-    const settingsRepo = await import("@server/repositories/settings");
-
-    const plan = await applySettingsUpdates({
-      rxresumeUrl: "https://resume.example.com",
-      rxresumeBaseResumeId: "resume-123",
-    });
-
-    expect(vi.mocked(settingsRepo.setSetting).mock.calls).toEqual(
-      expect.arrayContaining([
-        ["rxresumeUrl", "https://resume.example.com"],
-        ["rxresumeBaseResumeId", "resume-123"],
-      ]),
-    );
-    expect(plan.shouldClearRxResumeCaches).toBe(true);
-    expect(plan.shouldRefreshBackupScheduler).toBe(false);
-    expect(plan.updatedSettingKeys).toEqual(
-      expect.arrayContaining(["rxresumeUrl", "rxresumeBaseResumeId"]),
     );
   });
 

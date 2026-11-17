@@ -41,24 +41,16 @@ describe("location-support", () => {
   });
 
   it("applies source compatibility rules by country", () => {
-    expect(isSourceAllowedForCountry("gradcracker", "united kingdom")).toBe(
-      true,
-    );
-    expect(isSourceAllowedForCountry("ukvisajobs", "uk")).toBe(true);
-    expect(isSourceAllowedForCountry("jobindex", "denmark")).toBe(true);
-    expect(isSourceAllowedForCountry("gradcracker", "united states")).toBe(
-      false,
-    );
-    expect(isSourceAllowedForCountry("ukvisajobs", "worldwide")).toBe(false);
-    expect(isSourceAllowedForCountry("jobindex", "united kingdom")).toBe(false);
+    expect(isSourceAllowedForCountry("wttj", "france")).toBe(true);
+    expect(isSourceAllowedForCountry("companyats", "france")).toBe(true);
     expect(isSourceAllowedForCountry("indeed", "united states")).toBe(true);
     expect(isSourceAllowedForCountry("linkedin", "worldwide")).toBe(true);
+    expect(isSourceAllowedForCountry("glassdoor", "france")).toBe(true);
     expect(isSourceAllowedForCountry("glassdoor", "united states")).toBe(true);
     expect(isSourceAllowedForCountry("glassdoor", "japan")).toBe(false);
+    expect(isSourceAllowedForCountry("adzuna", "france")).toBe(true);
     expect(isSourceAllowedForCountry("adzuna", "united states")).toBe(true);
     expect(isSourceAllowedForCountry("adzuna", "japan")).toBe(false);
-    expect(isSourceAllowedForCountry("naukri", "india")).toBe(true);
-    expect(isSourceAllowedForCountry("naukri", "united kingdom")).toBe(false);
     expect(isSourceAllowedForCountry("startupjobs", "united states")).toBe(
       true,
     );
@@ -68,20 +60,16 @@ describe("location-support", () => {
   it("filters incompatible sources while preserving compatible order", () => {
     expect(
       getCompatibleSourcesForCountry(
-        [
-          "gradcracker",
-          "indeed",
-          "glassdoor",
-          "ukvisajobs",
-          "jobindex",
-          "adzuna",
-          "naukri",
-          "startupjobs",
-          "linkedin",
-        ],
-        "united states",
+        ["wttj", "indeed", "glassdoor", "adzuna", "startupjobs", "linkedin"],
+        "japan",
       ),
-    ).toEqual(["indeed", "glassdoor", "adzuna", "startupjobs", "linkedin"]);
+    ).toEqual(["wttj", "indeed", "startupjobs", "linkedin"]);
+    expect(
+      getCompatibleSourcesForCountry(
+        ["wttj", "indeed", "glassdoor", "adzuna", "linkedin"],
+        "france",
+      ),
+    ).toEqual(["wttj", "indeed", "glassdoor", "adzuna", "linkedin"]);
   });
 
   it("supports glassdoor only in explicitly supported countries", () => {

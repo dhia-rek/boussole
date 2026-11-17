@@ -7,8 +7,6 @@ import {
 import { ItemDialog } from "@client/components/design-resume/ItemDialog";
 import { PageHeader, PageMain } from "@client/components/layout";
 import { useDesignResume } from "@client/hooks/useDesignResume";
-import { useSettings } from "@client/hooks/useSettings";
-import { useTracerReadiness } from "@client/hooks/useTracerReadiness";
 import {
   DESIGN_RESUME_LANGUAGE_LABELS,
   DESIGN_RESUME_LANGUAGES,
@@ -21,7 +19,6 @@ import type {
   DesignResumeDocument,
   DesignResumeJson,
   DesignResumeVariantSummary,
-  PdfRenderer,
 } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -33,7 +30,6 @@ import {
   MoreHorizontal,
   PanelLeft,
   PenSquare,
-  RefreshCw,
   Trash2,
 } from "lucide-react";
 import type React from "react";
@@ -161,8 +157,6 @@ export const DesignResumePage: React.FC = () => {
   );
   const { document, status, isLoading, error } =
     useDesignResume(requestedLanguage);
-  const { settings, isLoading: settingsLoading } = useSettings();
-  const { readiness: tracerReadiness } = useTracerReadiness();
   const [draft, setDraft] = useState<DesignResumeDocument | null>(null);
   const [saveState, setSaveState] = useState<DesignResumeSaveState>("idle");
   const [dialogState, setDialogState] = useState<{
@@ -173,11 +167,9 @@ export const DesignResumePage: React.FC = () => {
   const [mobileRailOpen, setMobileRailOpen] = useState(false);
   const [pictureUploading, setPictureUploading] = useState(false);
   const [resumeImporting, setResumeImporting] = useState(false);
-  const [showReimportConfirm, setShowReimportConfirm] = useState(false);
   const [showDeleteVariantConfirm, setShowDeleteVariantConfirm] =
     useState(false);
   const [pdfDownloading, setPdfDownloading] = useState(false);
-  const [rendererUpdating, setRendererUpdating] = useState(false);
   const [switchingVariant, setSwitchingVariant] = useState(false);
   const [dirty, setDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -201,12 +193,7 @@ export const DesignResumePage: React.FC = () => {
     toast.info("Ready PDFs will refresh automatically.");
   }, []);
 
-  const pdfRenderer = settings?.pdfRenderer?.value ?? "rxresume";
   const canDownloadPdf = Boolean(draft) && !pdfDownloading;
-  const pictureEnabled = Boolean(tracerReadiness?.isPubliclyAvailable);
-  const pictureDisabledReason =
-    tracerReadiness?.reason ??
-    "Pictures require Boussole to be reachable at a public URL.";
 
   useEffect(() => {
     if (!document) return;
@@ -435,21 +422,6 @@ export const DesignResumePage: React.FC = () => {
     );
   }, [dialogState, draft]);
 
-  const handleImport = async () => {
-    try {
-      setResumeImporting(true);
-      const imported = await api.importDesignResumeFromRxResume();
-      setDesignResume(imported);
-      setSaveState("saved");
-      toast.success("Imported your resume from Reactive Resume.");
-      notifyReadyPdfRefresh();
-    } catch (importError) {
-      showErrorToast(importError, "Failed to import your resume.");
-    } finally {
-      setResumeImporting(false);
-    }
-  };
-
   const openImportFile = (target: ImportTarget) => {
     importTargetRef.current = target;
     importFileInputRef.current?.click();
@@ -541,14 +513,6 @@ export const DesignResumePage: React.FC = () => {
   };
 
   const handleUploadPicture = async (file: File) => {
-    if (!pictureEnabled) {
-      toast.error(pictureDisabledReason);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      return;
-    }
-
     try {
       setPictureUploading(true);
       const latestDraft = await ensureLatestPersistedDraft();
@@ -622,28 +586,6 @@ export const DesignResumePage: React.FC = () => {
     }
   };
 
-  const handlePdfRendererChange = async (nextRenderer: PdfRenderer) => {
-    if (settingsLoading || nextRenderer === pdfRenderer) return;
-
-    try {
-      setRendererUpdating(true);
-      const updatedSettings = await api.updateSettings({
-        pdfRenderer: nextRenderer,
-      });
-      queryClient.setQueryData(queryKeys.settings.current(), updatedSettings);
-      toast.success(
-        nextRenderer === "latex"
-          ? "Jake's template is now active."
-          : "React Resume Renderer is now active.",
-      );
-      notifyReadyPdfRefresh();
-    } catch (updateError) {
-      showErrorToast(updateError, "Failed to update the resume template.");
-    } finally {
-      setRendererUpdating(false);
-    }
-  };
-
   const busy = resumeImporting || switchingVariant;
 
   const rail = draft ? (
@@ -666,8 +608,6 @@ export const DesignResumePage: React.FC = () => {
       onUploadPicture={() => fileInputRef.current?.click()}
       onDeletePicture={handleDeletePicture}
       pictureUploading={pictureUploading}
-      pictureEnabled={pictureEnabled}
-      pictureDisabledReason={pictureDisabledReason}
     />
   ) : null;
 
@@ -712,12 +652,6 @@ export const DesignResumePage: React.FC = () => {
           <Download className="mr-2 h-4 w-4" />
           Export JSON
         </DropdownMenuItem>
-        {draft?.isPrimary ? (
-          <DropdownMenuItem onSelect={() => setShowReimportConfirm(true)}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Re-import from Reactive Resume
-          </DropdownMenuItem>
-        ) : null}
         {missingLanguages.length > 0 ? (
           <>
             <DropdownMenuSeparator />
@@ -887,16 +821,7 @@ export const DesignResumePage: React.FC = () => {
                   >
                     Back to my default CV
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleImport}
-                    disabled={resumeImporting}
-                  >
-                    Import from Reactive Resume
-                  </Button>
-                )}
+                ) : null}
               </div>
               {error && !requestedLanguage ? (
                 <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
@@ -914,11 +839,8 @@ export const DesignResumePage: React.FC = () => {
             <DesignResumePreviewPanel
               draft={draft}
               language={requestedLanguage}
-              pdfRenderer={pdfRenderer}
-              isUpdatingRenderer={rendererUpdating || settingsLoading}
               isDirty={dirty}
               saveState={saveState}
-              onPdfRendererChange={handlePdfRendererChange}
             />
           </div>
         )}
@@ -996,34 +918,6 @@ export const DesignResumePage: React.FC = () => {
           }
         />
       ) : null}
-
-      <AlertDialog
-        open={showReimportConfirm}
-        onOpenChange={setShowReimportConfirm}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Re-import from Reactive Resume?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This replaces your default CV with the latest data from Reactive
-              Resume. Edits made here will be overwritten. Your AI guidance is
-              kept.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowReimportConfirm(false);
-                void handleImport();
-              }}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Re-import
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog
         open={showDeleteVariantConfirm}

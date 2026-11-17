@@ -27,11 +27,6 @@ vi.mock("@server/services/job-brief", () => ({
   generateJobBrief: vi.fn(),
 }));
 
-vi.mock("@server/services/visa-sponsors/index", () => ({
-  searchSponsors: vi.fn(),
-  calculateSponsorMatchSummary: vi.fn(),
-}));
-
 vi.mock("../progress", () => ({
   updateProgress: vi.fn(),
   progressHelpers: {
@@ -48,7 +43,6 @@ describe("scoreJobsStep auto-skip behavior", () => {
     const settingsRepo = await import("@server/repositories/settings");
     const scorer = await import("@server/services/scorer");
     const jobBrief = await import("@server/services/job-brief");
-    const visaSponsors = await import("@server/services/visa-sponsors/index");
 
     vi.mocked(jobsRepo.getUnscoredDiscoveredJobs).mockResolvedValue([
       createJob({
@@ -66,11 +60,6 @@ describe("scoreJobsStep auto-skip behavior", () => {
       reason: "Low fit",
     });
     vi.mocked(jobBrief.generateJobBrief).mockResolvedValue(null);
-    vi.mocked(visaSponsors.searchSponsors).mockResolvedValue([]);
-    vi.mocked(visaSponsors.calculateSponsorMatchSummary).mockReturnValue({
-      sponsorMatchScore: 0,
-      sponsorMatchNames: null,
-    });
   });
 
   it("auto-skips jobs when score is below threshold", async () => {
@@ -82,13 +71,12 @@ describe("scoreJobsStep auto-skip behavior", () => {
 
     await scoreJobsStep({ profile: {} });
 
-    expect(jobsRepo.updateJob).toHaveBeenCalledWith(
-      "job-1",
-      expect.objectContaining({
-        suitabilityScore: 40,
-        status: "skipped",
-      }),
-    );
+    expect(jobsRepo.updateJob).toHaveBeenCalledWith("job-1", {
+      suitabilityScore: 40,
+      suitabilityReason: "Low fit",
+      jobBrief: null,
+      status: "skipped",
+    });
     expect(logger.info).toHaveBeenCalledWith(
       "Auto-skipped job due to low score",
       expect.objectContaining({

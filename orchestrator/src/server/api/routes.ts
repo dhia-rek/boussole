@@ -22,7 +22,6 @@ import { profileRouter } from "./routes/profile";
 import { settingsRouter } from "./routes/settings";
 import { spontaneousRouter } from "./routes/spontaneous";
 import { tracerLinksRouter } from "./routes/tracer-links";
-import { visaSponsorsRouter } from "./routes/visa-sponsors";
 import { webhookRouter } from "./routes/webhook";
 import { workspacesRouter } from "./routes/workspaces";
 
@@ -41,7 +40,6 @@ apiRouter.use("/webhook", webhookRouter);
 apiRouter.use("/profile", profileRouter);
 apiRouter.use("/database", databaseRouter);
 apiRouter.use("/design-resume", designResumeRouter);
-apiRouter.use("/visa-sponsors", visaSponsorsRouter);
 apiRouter.use("/onboarding", onboardingRouter);
 apiRouter.use("/backups", backupRouter);
 apiRouter.use("/tracer-links", tracerLinksRouter);

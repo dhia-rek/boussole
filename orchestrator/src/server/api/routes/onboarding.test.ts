@@ -82,4 +82,42 @@ describe.sequential("Onboarding API routes", () => {
       });
     });
   });
+
+  describe("POST /api/onboarding/validate/llm", () => {
+    it("checks the Claude CLI and reports when it is not installed", async () => {
+      // The route tests point CLAUDE_CLI_BIN at a binary that does not exist.
+      const res = await fetch(`${baseUrl}/api/onboarding/validate/llm`, {
+        method: "POST",
+      });
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body).toMatchObject({
+        ok: true,
+        data: {
+          valid: false,
+          message:
+            "Claude CLI was not found in PATH. Install Claude Code or set CLAUDE_CLI_BIN.",
+        },
+        meta: { requestId: expect.any(String) },
+      });
+    });
+  });
+
+  describe("GET /api/onboarding/validate/resume", () => {
+    it("asks for a CV when the CV editor is empty", async () => {
+      const res = await fetch(`${baseUrl}/api/onboarding/validate/resume`);
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body).toMatchObject({
+        ok: true,
+        data: {
+          valid: false,
+          message:
+            "No CV yet. Upload a PDF or DOCX CV, or create one in the CV editor.",
+        },
+      });
+    });
+  });
 });

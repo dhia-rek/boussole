@@ -222,33 +222,6 @@ export async function createThread(input: {
   return thread;
 }
 
-export async function updateThreadSelectedNoteIds(input: {
-  jobId: string;
-  threadId: string;
-  selectedNoteIds: string[];
-}): Promise<JobChatThread | null> {
-  const now = new Date().toISOString();
-  const tenantId = getActiveTenantId();
-
-  await db
-    .update(jobChatThreads)
-    .set({
-      selectedNoteIds: JSON.stringify(
-        normalizeGhostwriterSelectedNoteIds(input.selectedNoteIds),
-      ),
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(jobChatThreads.tenantId, tenantId),
-        eq(jobChatThreads.id, input.threadId),
-        eq(jobChatThreads.jobId, input.jobId),
-      ),
-    );
-
-  return getThreadForJob(input.jobId, input.threadId);
-}
-
 export async function updateThreadContext(input: {
   jobId: string;
   threadId: string;

@@ -23,10 +23,8 @@ vi.mock("./resumeProjects", () => ({
   resolveResumeProjectsSettings: vi.fn(),
 }));
 
-vi.mock("./rxresume", () => ({
+vi.mock("./resume-data", () => ({
   extractProjectsFromResume: vi.fn(),
-  getResume: vi.fn(),
-  RxResumeAuthConfigError: class RxResumeAuthConfigError extends Error {},
 }));
 
 import { getAllSettings } from "@server/repositories/settings";
@@ -36,11 +34,11 @@ import {
 } from "./design-resume";
 import { getEnvSettingsData } from "./envSettings";
 import { getProfile } from "./profile";
+import { extractProjectsFromResume } from "./resume-data";
 import {
   extractProjectsFromProfile,
   resolveResumeProjectsSettings,
 } from "./resumeProjects";
-import { extractProjectsFromResume } from "./rxresume";
 import { getEffectiveSettings } from "./settings";
 
 describe("getEffectiveSettings", () => {
@@ -62,7 +60,7 @@ describe("getEffectiveSettings", () => {
       selectionItems: [],
     } as never);
     vi.mocked(extractProjectsFromResume).mockImplementation(() => {
-      throw new Error("should not use RxResume extractor for local profile");
+      throw new Error("should use the profile project extractor");
     });
     vi.mocked(resolveResumeProjectsSettings).mockImplementation(
       ({ catalog }) =>

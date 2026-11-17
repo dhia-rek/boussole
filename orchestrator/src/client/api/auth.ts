@@ -12,19 +12,6 @@ import {
   toApiError,
 } from "./core";
 
-export type CodexAuthStatusResponse = {
-  authenticated: boolean;
-  username: string | null;
-  validationMessage: string | null;
-  flowStatus: string;
-  loginInProgress: boolean;
-  verificationUrl: string | null;
-  userCode: string | null;
-  startedAt: string | null;
-  expiresAt: string | null;
-  flowMessage: string | null;
-};
-
 export type { AuthCredentials };
 
 export type AuthUser = {

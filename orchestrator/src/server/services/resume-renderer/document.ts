@@ -1,4 +1,4 @@
-import { buildDesignResumeJakeDocument } from "@shared/design-resume-jake";
+import { buildDesignResumePrintDocument } from "@shared/design-resume-print";
 import type { ChatStyleManualLanguage } from "@shared/types";
 import type {
   LatexResumeDocument,
@@ -74,11 +74,20 @@ export function getLatexResumeSectionTitles(
   return LATEX_RESUME_SECTION_TITLES[language];
 }
 
+function basicsLocation(resumeJson: Record<string, unknown>): string | null {
+  const basics = resumeJson.basics;
+  if (!basics || typeof basics !== "object") return null;
+  const location = (basics as Record<string, unknown>).location;
+  return typeof location === "string" && location.trim()
+    ? location.trim()
+    : null;
+}
+
 export function normalizeResumeJsonToLatexDocument(
   resumeJson: Record<string, unknown>,
   options: NormalizeResumeJsonToLatexDocumentOptions = {},
 ): LatexResumeDocument {
-  const document = buildDesignResumeJakeDocument(resumeJson);
+  const document = buildDesignResumePrintDocument(resumeJson);
   const sectionTitles = getLatexResumeSectionTitles(options.language);
   const extraSectionTitle = (kind: string, fallback: string): string => {
     if (kind === "certifications") return sectionTitles.certifications;
@@ -100,6 +109,8 @@ export function normalizeResumeJsonToLatexDocument(
       date: entry.date,
       bullets: entry.bullets,
       url: entry.url,
+      role: entry.subtitle ?? null,
+      meta: entry.meta ?? null,
     })),
     education: document.education.map((entry) => ({
       title: entry.title,
@@ -108,6 +119,8 @@ export function normalizeResumeJsonToLatexDocument(
       date: entry.date,
       bullets: entry.bullets,
       url: entry.url,
+      role: entry.subtitle ?? null,
+      meta: entry.meta ?? null,
     })),
     projects: document.projects.map((entry) => ({
       title: entry.title,
@@ -134,5 +147,7 @@ export function normalizeResumeJsonToLatexDocument(
       })),
     })),
     sectionTitles,
+    language: options.language ?? "english",
+    location: basicsLocation(resumeJson),
   };
 }

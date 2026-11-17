@@ -2,7 +2,7 @@ import type { JobSource } from "@shared/types.js";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { FilterTab, JobSort, SponsorFilter } from "./constants";
+import type { FilterTab, JobSort } from "./constants";
 import { OrchestratorFilters } from "./OrchestratorFilters";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -36,8 +36,6 @@ const renderFilters = (
     onOpenCommandBar: vi.fn(),
     sourceFilter: "all" as const,
     onSourceFilterChange: vi.fn(),
-    sponsorFilter: "all" as SponsorFilter,
-    onSponsorFilterChange: vi.fn(),
     salaryFilter: {
       mode: "at_least" as const,
       min: null,
@@ -51,7 +49,7 @@ const renderFilters = (
       preset: null,
     },
     onDateFilterChange: vi.fn(),
-    sourcesWithJobs: ["gradcracker", "linkedin", "manual"] as JobSource[],
+    sourcesWithJobs: ["wttj", "linkedin", "manual"] as JobSource[],
     sort: { key: "score", direction: "desc" } as JobSort,
     onSortChange: vi.fn(),
     onResetFilters: vi.fn(),
@@ -88,16 +86,13 @@ describe("OrchestratorFilters", () => {
     ).toHaveLength(2);
   });
 
-  it("updates source, sponsor, salary range, and sort from the drawer", async () => {
+  it("updates source, salary range, and sort from the drawer", async () => {
     const { props } = renderFilters();
 
     fireEvent.click(screen.getByRole("button", { name: /^filters/i }));
 
     fireEvent.click(await screen.findByRole("button", { name: /linkedin/i }));
     expect(props.onSourceFilterChange).toHaveBeenCalledWith("linkedin");
-
-    fireEvent.click(screen.getByRole("button", { name: "Potential sponsor" }));
-    expect(props.onSponsorFilterChange).toHaveBeenCalledWith("potential");
 
     fireEvent.change(screen.getByLabelText("Minimum"), {
       target: { value: "65000" },
@@ -192,7 +187,7 @@ describe("OrchestratorFilters", () => {
 
   it("resets filters and only shows sources present in jobs", async () => {
     const { props } = renderFilters({
-      sourcesWithJobs: ["gradcracker", "manual"],
+      sourcesWithJobs: ["wttj", "manual"],
     });
 
     fireEvent.click(screen.getByRole("button", { name: /^filters/i }));
@@ -201,7 +196,7 @@ describe("OrchestratorFilters", () => {
       screen.queryByRole("button", { name: "LinkedIn" }),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Gradcracker" }),
+      await screen.findByRole("button", { name: "Welcome to the Jungle" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Manual" })).toBeInTheDocument();
 

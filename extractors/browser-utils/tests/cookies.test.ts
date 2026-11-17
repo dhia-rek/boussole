@@ -120,9 +120,9 @@ describe("cookies", () => {
 
     it("returns undefined userAgent when jar has no UA field", async () => {
       const dir = storageDir();
-      writeCookieJar(dir, "gradcracker"); // no userAgent override
+      writeCookieJar(dir, "wellfound"); // no userAgent override
 
-      const result = await readCookieJar("gradcracker", dir);
+      const result = await readCookieJar("wellfound", dir);
       expect(result.hasCookies).toBe(true);
       expect(result.userAgent).toBeUndefined();
     });

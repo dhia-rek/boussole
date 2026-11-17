@@ -13,7 +13,6 @@ const AUTH_ENV = {
   BASIC_AUTH_PASSWORD: "secret",
   JWT_SECRET: "an-explicit-jwt-secret-with-at-least-32-chars",
   FORSA_TEST_AUTH_BYPASS: "0",
-  LLM_PROVIDER: "claude_cli",
 };
 
 async function login(baseUrl: string, username: string, password: string) {
@@ -336,7 +335,7 @@ describe.sequential("AI agents API", () => {
     ).toEqual([]);
   });
 
-  it("validates input and requires the Claude CLI provider", async () => {
+  it("validates input", async () => {
     const admin = await login(baseUrl, "admin", "secret");
     expect(
       (await api(baseUrl, admin.token, "GET", "/api/agents/runs?limit=0"))
@@ -346,18 +345,5 @@ describe.sequential("AI agents API", () => {
       (await api(baseUrl, admin.token, "GET", "/api/agents/runs/missing"))
         .status,
     ).toBe(404);
-
-    const patched = await api(baseUrl, admin.token, "PATCH", "/api/settings", {
-      llmProvider: "openrouter",
-    });
-    expect(patched.status).toBe(200);
-    const refused = await api(
-      baseUrl,
-      admin.token,
-      "POST",
-      "/api/agents/learn",
-    );
-    expect(refused.status).toBe(409);
-    expect(refused.body.error.message).toContain("Claude (CLI)");
   });
 });

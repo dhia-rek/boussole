@@ -111,7 +111,7 @@ describe("AutomaticRunTab", () => {
       <AutomaticRunTab
         open
         settings={createAppSettings()}
-        enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
+        enabledSources={["linkedin", "wttj", "companyats"]}
         pipelineSources={["linkedin"]}
         onToggleSource={vi.fn()}
         onSetPipelineSources={vi.fn()}
@@ -136,7 +136,7 @@ describe("AutomaticRunTab", () => {
       <AutomaticRunTab
         open
         settings={createAppSettings()}
-        enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
+        enabledSources={["linkedin", "wttj", "companyats"]}
         pipelineSources={["linkedin"]}
         onToggleSource={vi.fn()}
         onSetPipelineSources={vi.fn()}
@@ -194,7 +194,7 @@ describe("AutomaticRunTab", () => {
           },
           searchCities: { value: "", default: "", override: null },
         })}
-        enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
+        enabledSources={["linkedin", "wttj", "companyats"]}
         pipelineSources={["linkedin"]}
         onToggleSource={vi.fn()}
         onSetPipelineSources={vi.fn()}
@@ -239,7 +239,7 @@ describe("AutomaticRunTab", () => {
     ).toBeInTheDocument();
   });
 
-  it("disables and prunes UK-only sources for non-UK country", async () => {
+  it("disables and prunes Adzuna for a country it does not cover, with guidance copy", async () => {
     const onSetPipelineSources = vi.fn();
 
     render(
@@ -252,14 +252,14 @@ describe("AutomaticRunTab", () => {
             override: null,
           },
           jobspyCountryIndeed: {
-            value: "united states",
+            value: "japan",
             default: "united kingdom",
-            override: "united states",
+            override: "japan",
           },
           searchCities: { value: "", default: "", override: null },
         })}
-        enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
-        pipelineSources={["linkedin", "gradcracker", "ukvisajobs"]}
+        enabledSources={["linkedin", "adzuna"]}
+        pipelineSources={["linkedin", "adzuna"]}
         onToggleSource={vi.fn()}
         onSetPipelineSources={onSetPipelineSources}
         isPipelineRunning={false}
@@ -273,45 +273,12 @@ describe("AutomaticRunTab", () => {
 
     openSourcePicker();
 
-    expect(screen.getByRole("button", { name: "Gradcracker" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "UK Visa Jobs" })).toBeDisabled();
-  });
-
-  it("disables and prunes Naukri outside India", async () => {
-    const onSetPipelineSources = vi.fn();
-
-    render(
-      <AutomaticRunTab
-        open
-        settings={createAppSettings({
-          searchTerms: {
-            value: ["backend engineer"],
-            default: ["backend engineer"],
-            override: null,
-          },
-          jobspyCountryIndeed: {
-            value: "united kingdom",
-            default: "united kingdom",
-            override: "united kingdom",
-          },
-          searchCities: { value: "", default: "", override: null },
-        })}
-        enabledSources={["linkedin", "naukri"]}
-        pipelineSources={["linkedin", "naukri"]}
-        onToggleSource={vi.fn()}
-        onSetPipelineSources={onSetPipelineSources}
-        isPipelineRunning={false}
-        onSaveAndRun={vi.fn().mockResolvedValue(undefined)}
-      />,
+    const adzunaButton = screen.getByRole("button", { name: "Adzuna" });
+    expect(adzunaButton).toBeDisabled();
+    expect(adzunaButton).toHaveAttribute(
+      "title",
+      "Adzuna is not available for Japan.",
     );
-
-    await waitFor(() => {
-      expect(onSetPipelineSources).toHaveBeenCalledWith(["linkedin"]);
-    });
-
-    openSourcePicker();
-
-    expect(screen.getByRole("button", { name: "Naukri" })).toBeDisabled();
   });
 
   it("moves a deselected source to the end of the ready list", async () => {
@@ -372,41 +339,6 @@ describe("AutomaticRunTab", () => {
         })
         .map((button) => button.getAttribute("aria-label")),
     ).toEqual(["Indeed", "Glassdoor", "LinkedIn"]);
-  });
-
-  it("shows disabled source guidance copy for UK-only source", async () => {
-    render(
-      <AutomaticRunTab
-        open
-        settings={createAppSettings({
-          searchTerms: {
-            value: ["backend engineer"],
-            default: ["backend engineer"],
-            override: null,
-          },
-          jobspyCountryIndeed: {
-            value: "united states",
-            default: "united kingdom",
-            override: "united states",
-          },
-          searchCities: { value: "", default: "", override: null },
-        })}
-        enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
-        pipelineSources={["linkedin"]}
-        onToggleSource={vi.fn()}
-        onSetPipelineSources={vi.fn()}
-        isPipelineRunning={false}
-        onSaveAndRun={vi.fn().mockResolvedValue(undefined)}
-      />,
-    );
-
-    openSourcePicker();
-
-    expect(
-      screen.getByTitle(
-        "Gradcracker is available only when country is United Kingdom.",
-      ),
-    ).toBeInTheDocument();
   });
 
   it("disables glassdoor for unsupported countries with guidance copy", async () => {

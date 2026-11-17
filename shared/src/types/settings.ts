@@ -18,13 +18,6 @@ export interface ResumeProjectsSettings {
   aiSelectableProjectIds: string[];
 }
 
-export const PDF_RENDERER_VALUES = ["rxresume", "latex"] as const;
-export type PdfRenderer = (typeof PDF_RENDERER_VALUES)[number];
-export const PDF_RENDERER_LABELS: Record<PdfRenderer, string> = {
-  rxresume: "RxResume export",
-  latex: "Local LaTeX (Jake template)",
-};
-
 export const CHAT_STYLE_LANGUAGE_MODE_VALUES = [
   "manual",
   "match-resume",
@@ -160,24 +153,15 @@ export interface DemoInfoResponse {
 }
 
 export type Resolved<T> = { value: T; default: T; override: T | null };
-export type ModelResolved = { value: string; override: string | null };
 
 export interface AppSettings {
   // Typed settings (Resolved):
   model: Resolved<string>;
-  llmProvider: Resolved<string>;
-  llmBaseUrl: Resolved<string>;
   pipelineWebhookUrl: Resolved<string>;
   jobCompleteWebhookUrl: Resolved<string>;
   resumeProjects: Resolved<ResumeProjectsSettings>;
-  pdfRenderer: Resolved<PdfRenderer>;
-  ukvisajobsMaxJobs: Resolved<number>;
   adzunaMaxJobsPerTerm: Resolved<number>;
-  gradcrackerMaxJobsPerTerm: Resolved<number>;
   startupjobsMaxJobsPerTerm: Resolved<number>;
-  seekMaxJobsPerTerm: Resolved<number>;
-  naukriMaxJobsPerTerm: Resolved<number>;
-  jobindexMaxJobsPerTerm: Resolved<number>;
   searchTerms: Resolved<string[]>;
   workplaceTypes: Resolved<Array<"remote" | "hybrid" | "onsite">>;
   blockedCompanyKeywords: Resolved<string[]>;
@@ -191,7 +175,6 @@ export interface AppSettings {
   locationMatchStrictness: Resolved<LocationMatchStrictness>;
   jobspyResultsWanted: Resolved<number>;
   jobspyCountryIndeed: Resolved<string>;
-  showSponsorInfo: Resolved<boolean>;
   renderMarkdownInJobDescriptions: Resolved<boolean>;
   chatStyleTone: Resolved<string>;
   chatStyleFormality: Resolved<string>;
@@ -208,29 +191,12 @@ export interface AppSettings {
   missingSalaryPenalty: Resolved<number>;
   autoSkipScoreThreshold: Resolved<number | null>;
 
-  // Model variants (no own default, fallback to model.value):
-  modelScorer: ModelResolved;
-  modelTailoring: ModelResolved;
-  modelProjectSelection: ModelResolved;
-
-  // Per-task provider override for multi-LLM routing (empty = global provider):
-  providerTailoring: Resolved<string>;
-
-  // Simple strings:
-  rxresumeBaseResumeId: string | null;
   onboardingBasicAuthDecision: "enabled" | "skipped" | null;
-  rxresumeUrl: string | null;
-  ukvisajobsEmail: string | null;
   adzunaAppId: string | null;
   basicAuthUser: string | null;
   basicAuthPassword: string | null;
 
-  // Secret hints:
-  llmApiKeyHint: string | null;
-  rxresumeApiKeyHint: string | null;
-  ukvisajobsPasswordHint: string | null;
   adzunaAppKeyHint: string | null;
-  apifyTokenHint: string | null;
   basicAuthPasswordHint: string | null;
   webhookSecretHint: string | null;
   notionApiKeyHint: string | null;

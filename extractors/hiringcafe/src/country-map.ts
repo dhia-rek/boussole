@@ -84,11 +84,6 @@ function toIso2(countryKey: string): string | null {
   return regionNameMap.get(countryKey) ?? null;
 }
 
-export function shouldUseGlobalLocation(countryInput?: string | null): boolean {
-  const countryKey = normalizeCountryKey(countryInput);
-  return !countryKey || GLOBAL_SEARCH_KEYS.has(countryKey);
-}
-
 export function resolveHiringCafeCountryLocation(
   countryInput?: string | null,
 ): HiringCafeCountryLocation | null {

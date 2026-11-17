@@ -8,13 +8,11 @@ import type {
   DesignResumePdfResponse,
   DesignResumeStatusResponse,
   DesignResumeVariantSummary,
-  ProfileStatusResponse,
   ResumeProfile,
   ResumeProjectCatalogItem,
   SearchTermsSuggestionResponse,
   ValidationResult,
 } from "@shared/types";
-import type { CodexAuthStatusResponse } from "./auth";
 import { fetchApi, fetchBlobApi, normalizeApiPath } from "./core";
 
 let settingsPromise: Promise<AppSettings> | null = null;
@@ -67,12 +65,6 @@ export async function getDesignResume(
 
 export async function getDesignResumeStatus(): Promise<DesignResumeStatusResponse> {
   return fetchApi<DesignResumeStatusResponse>("/design-resume/status");
-}
-
-export async function importDesignResumeFromRxResume(): Promise<DesignResumeDocument> {
-  return fetchApi<DesignResumeDocument>("/design-resume/import/rxresume", {
-    method: "POST",
-  });
 }
 
 export async function importDesignResumeFromFile(input: {
@@ -174,67 +166,17 @@ export async function deleteDesignResumeVariant(
   );
 }
 
-export async function getProfileStatus(): Promise<ProfileStatusResponse> {
-  return fetchApi<ProfileStatusResponse>("/profile/status");
-}
-
 export async function refreshProfile(): Promise<ResumeProfile> {
   return fetchApi<ResumeProfile>("/profile/refresh", {
     method: "POST",
   });
 }
 
-export async function validateLlm(input: {
-  provider?: string;
-  baseUrl?: string;
-  apiKey?: string;
-}): Promise<ValidationResult> {
+/** Checks that the Claude Code CLI is installed and signed in. */
+export async function validateLlm(): Promise<ValidationResult> {
   return fetchApi<ValidationResult>("/onboarding/validate/llm", {
     method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
-export async function getLlmModels(input?: {
-  provider?: string;
-  baseUrl?: string;
-  apiKey?: string;
-}): Promise<string[]> {
-  const data = await fetchApi<{ models: string[] }>("/settings/llm-models", {
-    method: "POST",
-    body: JSON.stringify(input ?? {}),
-  });
-  return data.models;
-}
-
-export async function getCodexAuthStatus(): Promise<CodexAuthStatusResponse> {
-  return fetchApi<CodexAuthStatusResponse>("/settings/codex-auth");
-}
-
-export async function startCodexAuth(input?: {
-  forceRestart?: boolean;
-}): Promise<CodexAuthStatusResponse> {
-  return fetchApi<CodexAuthStatusResponse>("/settings/codex-auth/start", {
-    method: "POST",
-    body: JSON.stringify({
-      forceRestart: input?.forceRestart ?? false,
-    }),
-  });
-}
-
-export async function disconnectCodexAuth(): Promise<CodexAuthStatusResponse> {
-  return fetchApi<CodexAuthStatusResponse>("/settings/codex-auth/disconnect", {
-    method: "POST",
-  });
-}
-
-export async function validateRxresume(input?: {
-  apiKey?: string;
-  baseUrl?: string;
-}): Promise<ValidationResult> {
-  return fetchApi<ValidationResult>("/onboarding/validate/rxresume", {
-    method: "POST",
-    body: JSON.stringify(input ?? {}),
+    body: JSON.stringify({}),
   });
 }
 
@@ -258,22 +200,4 @@ export async function updateSettings(
     method: "PATCH",
     body: JSON.stringify(update),
   });
-}
-
-export async function getRxResumes(): Promise<{ id: string; name: string }[]> {
-  const data = await fetchApi<{ resumes: { id: string; name: string }[] }>(
-    `/settings/rx-resumes`,
-  );
-  return data.resumes;
-}
-
-export async function getRxResumeProjects(
-  resumeId: string,
-  signal?: AbortSignal,
-): Promise<ResumeProjectCatalogItem[]> {
-  const data = await fetchApi<{ projects: ResumeProjectCatalogItem[] }>(
-    `/settings/rx-resumes/${encodeURIComponent(resumeId)}/projects`,
-    { signal },
-  );
-  return data.projects;
 }

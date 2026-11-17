@@ -1,15 +1,15 @@
 ---
 id: design-resume
-title: Design Resume
+title: CV Editor
 description: Edit your CV inside Boussole, keep one version per language, and tell the AI how to use each section.
 sidebar_position: 4
 ---
 
 ## What it is
 
-Design Resume is Boussole's local-first CV editor.
+The CV editor (called Design Resume in the code) is Boussole's local-first CV editor.
 
-It stores your CV as a Reactive Resume v5 document inside Boussole and uses it as the source of truth for:
+It stores your CV inside Boussole as structured data (Reactive Resume's open v5 JSON format) and uses it as the source of truth for:
 
 - profile context for job scoring
 - tailoring inputs (headline, summary, skills, projects)
@@ -30,10 +30,10 @@ You can keep **one CV per language** (for example a French and an English CV). E
 
 ### Import or create your CV
 
-1. Open **Design Resume** from the main navigation.
-2. Click **Upload a CV file** (PDF or DOCX) or **Import from Reactive Resume**.
+1. Open **CV** from the main navigation.
+2. Click **Upload a CV file** (PDF or DOCX). Claude reads the file's text and turns it into an editable CV; a scanned PDF without selectable text cannot be read.
 3. Edit sections in the **Content** tab on the left. Changes save automatically; the indicator next to the tabs shows **Saving…**, **Saved**, or **Not saved**.
-4. The right panel is a live preview of the exact PDF that will be generated with the selected template.
+4. The right panel is a live preview of the exact PDF recruiters will receive.
 
 ### Add a CV in another language
 
@@ -70,13 +70,21 @@ For **projects** in *AI picks* mode, each project can be pinned:
 - **Always include** — on every tailored CV.
 - **AI decides** — the AI picks it when relevant.
 - **Never include** — never on tailored CVs.
-- **Default** — follows **Settings → Resume projects**.
+- **Default** — a project visible in your CV is always included; a hidden one can be added by the AI when relevant. A tailored CV shows at most 3 projects, or more when more are visible or pinned.
 
 A sparkle icon on an entry in the **Content** tab means it has AI guidance (a note or a pin).
 
-### One-page PDFs
+### The PDF layout
 
-With the **Local LaTeX (Jake template)** renderer, a CV that slightly overflows onto a second page is re-rendered with progressively tighter spacing until it fits on one page. CVs of three pages or more are never squeezed. Bold text from the editor is kept in the PDF, and section titles follow the CV's language.
+Every CV, the one you edit and every tailored one, uses the same Boussole layout:
+
+- A4, one column, Source Sans at 9 pt: applicant tracking systems read it in order.
+- Your name and headline at the top, with your languages beside the headline (for example *Trilingual: French, English, Arabic*), contact details on one line and profile links on the next.
+- A round photo with a thin coral ring, when the CV has a picture (**Picture** section of the **Content** tab). Without a picture, the header uses the full width.
+- Indigo uppercase section titles over coral rules, skills aligned in two columns, and a **Stack:** line under each role or project (write a bullet that starts with `Stack:` and it moves there).
+- Section titles follow the CV's language: a French CV gets *Expériences*, *Formation*, *Compétences techniques*.
+
+A CV that slightly overflows onto a second page is re-rendered with progressively tighter spacing until it fits on one page. CVs of three pages or more are never squeezed. Bold text from the editor is kept in the PDF.
 
 When Design Resume changes, ready jobs with system-generated PDFs are queued for automatic regeneration. Until the queue catches up, those jobs show a `PDF stale` indicator and keep the old PDF available.
 
@@ -84,14 +92,14 @@ When Design Resume changes, ready jobs with system-generated PDFs are queued for
 
 - **The AI still rewrote my summary.** Check that the summary is set to **Keep as written** in the AI guidance tab of the CV used for that job (each language version has its own guidance). Then regenerate the job's tailoring.
 - **An English job used my French CV.** Boussole detects the job description's language from its text. Very short or mixed-language descriptions can be detected as unclear, in which case the default CV is used.
-- **A tailored CV is missing projects.** Check the project pins and **Settings → Resume projects → Max projects**. If you switched CV languages, Boussole automatically re-selects projects for jobs whose old selection no longer matches.
-- **Import fails.** File import needs a working LLM connection (Settings → AI). Reactive Resume import needs valid Reactive Resume credentials and a selected base resume.
-- **The PDF has two pages.** Auto-fit only applies to the LaTeX renderer and only when the overflow is small. Shorten content or hide entries with the eye icon.
-- **Picture upload fails.** Use `png`, `jpeg`, or `webp` images, and make Boussole reachable at a public URL (pictures are fetched by the renderer).
+- **A tailored CV is missing projects.** Check the project pins in the **AI guidance** tab: pin a project as **Always include** to force it. If you switched CV languages, Boussole automatically re-selects projects for jobs whose old selection no longer matches.
+- **Import fails.** File import needs Claude to be connected (Settings → AI model) and a file with selectable text.
+- **The PDF has two pages.** Auto-fit only works when the overflow is small. Shorten content or hide entries with the eye icon.
+- **The photo is missing from the PDF.** Use a `png` or `jpeg` picture and make sure the **Picture** section is not hidden. `webp` pictures show in the editor but cannot be printed in the PDF.
 
 ## Related pages
 
-- [Reactive Resume](/docs/features/reactive-resume)
+- [AI Agents](/docs/features/ai-agents)
 - [Ghostwriter](/docs/features/ghostwriter)
 - [Settings](/docs/features/settings)
 - [Orchestrator](/docs/features/orchestrator)

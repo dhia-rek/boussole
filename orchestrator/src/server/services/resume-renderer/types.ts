@@ -18,6 +18,10 @@ export interface LatexResumeEntry {
   bullets: string[];
   url?: string | null;
   linkLabel?: string | null;
+  /** Role or degree alone (the location is shown separately). */
+  role?: string | null;
+  /** Location (shown on the right of the role line). */
+  meta?: string | null;
 }
 
 export interface LatexResumeSkillGroup {
@@ -60,6 +64,12 @@ export interface LatexResumeDocument {
   interests?: string[];
   extraSections?: LatexResumeExtraSection[];
   sectionTitles?: LatexResumeSectionTitles;
+  /** Language the CV is written in (section titles, hyphenation). */
+  language?: ChatStyleManualLanguage;
+  /** Local image file for the round header photo. */
+  photoPath?: string | null;
+  /** Postal location from the CV basics (shown in the header). */
+  location?: string | null;
 }
 
 export interface RenderResumePdfArgs {

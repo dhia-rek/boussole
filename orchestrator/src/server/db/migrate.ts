@@ -561,7 +561,32 @@ const migrations = [
      'jobspySites',
      'jobspyLinkedinFetchDescription',
      'jobspyIsRemote',
-     'openrouterApiKey'
+     'openrouterApiKey',
+     -- Removed with Reactive Resume, the extra AI providers, the non-France
+     -- sources and the UK visa-sponsor checks.
+     'pdfRenderer',
+     'latexTemplate',
+     'rxresumeUrl',
+     'rxresumeApiKey',
+     'rxresumeBaseResumeId',
+     'llmProvider',
+     'llmBaseUrl',
+     'llmApiKey',
+     'modelScorer',
+     'modelTailoring',
+     'modelProjectSelection',
+     'providerTailoring',
+     'baseUrlTailoring',
+     'apiKeyTailoring',
+     'gradcrackerMaxJobsPerTerm',
+     'ukvisajobsMaxJobs',
+     'ukvisajobsEmail',
+     'ukvisajobsPassword',
+     'seekMaxJobsPerTerm',
+     'naukriMaxJobsPerTerm',
+     'jobindexMaxJobsPerTerm',
+     'apifyToken',
+     'showSponsorInfo'
    )`,
 
   // Add language slot to design résumés (safe to skip if already present)

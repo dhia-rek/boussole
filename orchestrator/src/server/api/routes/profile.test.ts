@@ -2,17 +2,14 @@ import type { Server } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startServer, stopServer } from "./test-utils";
 
-// Mock the RxResume adapter service
-vi.mock("@server/services/rxresume", () => ({
-  clearRxResumeResumeCache: vi.fn(),
-  getResume: vi.fn(),
-  RxResumeAuthConfigError: class RxResumeAuthConfigError extends Error {
-    constructor() {
-      super("Reactive Resume credentials not configured.");
-      this.name = "RxResumeAuthConfigError";
-    }
-  },
-}));
+// Mock the CV editor status
+vi.mock("@server/services/design-resume", async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...original,
+    getDesignResumeStatus: vi.fn(),
+  };
+});
 
 // Mock the profile service
 vi.mock("@server/services/profile", () => ({
@@ -29,9 +26,8 @@ vi.mock("@server/repositories/settings", async (importOriginal) => {
   };
 });
 
-import { getSetting } from "@server/repositories/settings";
+import { getDesignResumeStatus } from "@server/services/design-resume";
 import { getProfile } from "@server/services/profile";
-import { getResume, RxResumeAuthConfigError } from "@server/services/rxresume";
 
 describe.sequential("Profile API routes", () => {
   let server: Server;
@@ -159,8 +155,10 @@ describe.sequential("Profile API routes", () => {
   });
 
   describe("GET /api/profile/status", () => {
-    it("returns exists: false when rxresumeBaseResumeId is not configured", async () => {
-      vi.mocked(getSetting).mockResolvedValue(null);
+    it("returns exists: false when the CV editor has no CV", async () => {
+      vi.mocked(getDesignResumeStatus).mockResolvedValue({
+        exists: false,
+      } as never);
 
       const res = await fetch(`${baseUrl}/api/profile/status`);
       const body = await res.json();
@@ -168,15 +166,13 @@ describe.sequential("Profile API routes", () => {
       expect(res.ok).toBe(true);
       expect(body.ok).toBe(true);
       expect(body.data.exists).toBe(false);
-      expect(body.data.error).toContain("No base resume selected");
+      expect(body.data.error).toContain("No CV yet");
     });
 
-    it("returns exists: true when resume is accessible", async () => {
-      vi.mocked(getSetting).mockResolvedValue("test-resume-id");
-      vi.mocked(getResume).mockResolvedValue({
-        id: "test-resume-id",
-        data: { basics: { name: "Test" } },
-      } as any);
+    it("returns exists: true when the CV editor holds a CV", async () => {
+      vi.mocked(getDesignResumeStatus).mockResolvedValue({
+        exists: true,
+      } as never);
 
       const res = await fetch(`${baseUrl}/api/profile/status`);
       const body = await res.json();
@@ -185,37 +181,6 @@ describe.sequential("Profile API routes", () => {
       expect(body.ok).toBe(true);
       expect(body.data.exists).toBe(true);
       expect(body.data.error).toBeNull();
-    });
-
-    it("returns exists: false when RxResume credentials are missing", async () => {
-      vi.mocked(getSetting).mockResolvedValue("test-resume-id");
-      vi.mocked(getResume).mockRejectedValue(
-        new (RxResumeAuthConfigError as unknown as new () => Error)(),
-      );
-
-      const res = await fetch(`${baseUrl}/api/profile/status`);
-      const body = await res.json();
-
-      expect(res.ok).toBe(true);
-      expect(body.ok).toBe(true);
-      expect(body.data.exists).toBe(false);
-      expect(body.data.error).toContain("credentials not configured");
-    });
-
-    it("returns exists: false when resume data is empty", async () => {
-      vi.mocked(getSetting).mockResolvedValue("test-resume-id");
-      vi.mocked(getResume).mockResolvedValue({
-        id: "test-resume-id",
-        data: null,
-      } as any);
-
-      const res = await fetch(`${baseUrl}/api/profile/status`);
-      const body = await res.json();
-
-      expect(res.ok).toBe(true);
-      expect(body.ok).toBe(true);
-      expect(body.data.exists).toBe(false);
-      expect(body.data.error).toContain("empty or invalid");
     });
   });
 

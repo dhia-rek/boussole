@@ -25,12 +25,11 @@ Edit files under `docs-site/docs` for latest docs.
 
 ## What does this cost in practice?
 
-Real-world reference: from early December 2025 to mid-February 2026, with heavy usage and testing (about 10 to 15 applications per day), easily more than 3000 jobs scored, total LLM spend was about **$12 USD** using Gemini 3 Flash through OpenRouter.
+Boussole runs every AI step on Claude through the Claude Code CLI, so it uses your Claude subscription instead of per-call API billing. There is no extra cost per job.
 
-Cost varies by:
+What matters instead is your subscription's usage limits:
 
-- selected model/provider
-- prompt volume and size
-- number of jobs scored/tailored per run
-
-For this workload, Gemini 3 Flash has been low-cost while still producing high-quality outputs.
+- scoring is one Claude call per new job, and responses are cached, so re-runs over unchanged jobs cost nothing
+- tailoring a CV and writing a cover letter take a few calls per job
+- the agent team (analyst, CV tailor, letter writer, critic) takes several calls per job, so keep it for the jobs you will really apply to
+- a lighter model (`sonnet`, `haiku`) or a lower effort (`opus:low`) in **Settings → AI model** stretches the limits further

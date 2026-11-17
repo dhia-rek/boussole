@@ -1,7 +1,7 @@
 ---
 id: settings
 title: Settings
-description: Configure models, webhooks, workspaces, backup behavior, scoring, and safety controls.
+description: Configure the Claude model, writing style, webhooks, workspaces, backups, scoring, and safety controls.
 sidebar_position: 2
 ---
 
@@ -13,12 +13,11 @@ The Settings page is the control center for app-wide behavior.
 
 It lets you configure:
 
-- LLM provider and models
+- The Claude model every AI step uses
 - Webhook destinations and secret
 - Display and writing-style defaults
 - Editable prompt templates for core AI workflows
 - Service credentials and workspace users
-- Reactive Resume project selection
 - Tracer Links readiness verification
 - Backup and scoring rules
 - Data-clearing actions in the Danger Zone
@@ -38,29 +37,15 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 
 ## Section-by-section guide
 
-### Model
+### AI model
 
-![Model settings section](/img/features/settings-model-section.png)
+Every AI step (scoring, CV tailoring, cover letters, Ghostwriter, agents) runs on Claude through the Claude Code CLI, with your Claude subscription. There is no API key to enter.
 
-- Choose provider (`openrouter`, `openai`, `openai_compatible`, `gemini`, `gemini_cli`, `claude_cli`, `codex`)
-- Set provider-specific base URL/API key when required
-- Configure default model plus task-specific overrides:
-  - Scoring model
-  - Tailoring model
-  - Project-selection model
-- Provider defaults are applied automatically when the model fields are left blank:
-  - `openai` defaults to `gpt-5.4-mini`
-  - `gemini` and `gemini_cli` default to `google/gemini-3-flash-preview`
-  - `claude_cli` defaults to `opus:medium`
-- The settings page shows provider-aware model pickers for:
-  - `openai`: available text-generation models only
-  - `gemini`: available Gemini text-generation models only
-  - `gemini_cli`: a curated list of Gemini model ids the CLI typically supports (install [Gemini CLI](https://www.npmjs.com/package/@google/gemini-cli), run `gemini` and complete Google sign-in, or set `GEMINI_API_KEY` for the CLI; Boussole spawns headless `gemini -p ...` with `--approval-mode plan` and no Boussole API key field). **Resume import** uses the CLI with extracted text: DOCX is parsed locally; PDF uses local text extraction then JSON extraction via the CLI (scanned PDFs without a text layer may not import well).
-  - `claude_cli`: Claude Code model aliases (`opus`, `sonnet`, `haiku`). Boussole runs headless `claude -p` on this host with your Claude subscription (run `claude` once to log in) and denies every tool, so the model can only answer. Append an effort level to the model to control reasoning depth, for example `opus:medium` (`low`, `medium`, `high`, `xhigh`, `max`); without a suffix `CLAUDE_CLI_EFFORT` or the CLI default applies. **Resume import** works like `gemini_cli` (extracted text).
-- `openrouter` and `openai_compatible` stay manual-entry because Boussole cannot safely infer the exact model catalog from those providers
-- Local model servers (Ollama, LM Studio) are no longer built-in providers; point `openai_compatible` at their OpenAI-compatible endpoint if you need one
-- Changing the provider clears stale model overrides in the form, so inherited fields follow the new provider default unless you explicitly choose a new override
-- The preview under each field and the **Resolved config** block reflect the model currently selected in the form, even before you save
+- Set the **Claude model**: a model alias with an optional effort, for example `opus:medium` (the default), `opus:high`, `sonnet` or `haiku`.
+- Effort levels: `low`, `medium`, `high`, `xhigh`, `max`. Without a suffix, `CLAUDE_CLI_EFFORT` or the CLI default applies.
+- Leave the field empty to use the default (`MODEL` from the environment, else `opus:medium`).
+- Boussole runs headless `claude -p` on the host with every tool denied, so the model can only answer.
+- Sign in once by running `claude` in a terminal on the host. On a server, run `claude setup-token` and set `CLAUDE_CODE_OAUTH_TOKEN` (see [Run Boussole 24/7 on Your Server](/docs/getting-started/deploy-server)).
 
 ### Webhooks
 
@@ -74,7 +59,6 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 
 ![Display settings section](/img/features/settings-display-section.png)
 
-- Toggle visa sponsor badge visibility in job lists/details
 - Toggle `Render Markdown in job descriptions` to control whether expanded job descriptions show formatted headings, lists, bold text, and code blocks
 - Default: Markdown rendering is enabled
 
@@ -99,7 +83,7 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
   - `Match Resume`: detect the dominant language from your resume/profile content and use that language for generated output
 - If language detection is unclear or there is not enough resume/profile text, Boussole falls back to English
 - Resume tailoring keeps the exact source wording for ATS-sensitive resume headlines and job titles, even when the rest of the tailored content is generated in the selected language
-- When using the local LaTeX PDF renderer, fixed resume section titles follow the resolved output language
+- Fixed CV section titles in the PDF follow the CV's own language (a French CV gets "Expériences")
 - Summary max words: optional cap on AI-generated summary length (empty = no limit)
 - Max keywords per skill: optional cap on keywords per skill category in tailoring (empty = no limit)
 - These numeric limits override any similar constraints written in the Constraints text field
@@ -127,7 +111,7 @@ Defaults and constraints:
 - `Match Resume` is best when your base resume is already written in the language you want to preserve.
 - If Boussole cannot determine a reliable resume/profile language, it safely uses English.
 - The generated resume content follows the resolved language, but ATS-sensitive headline and job-title wording stays exact so matching and parsing remain safer.
-- The local LaTeX PDF renderer uses the resolved language for fixed section headings such as Summary, Experience, Education, Projects, and Technical Skills.
+- The PDF uses the CV's language for fixed section headings such as Profile, Experience, Education, Projects, and Technical Skills.
 
 ### Prompt Templates
 
@@ -143,26 +127,6 @@ Defaults and constraints:
   - removing placeholders can strip important runtime data from the prompt
   - resetting restores the shared default templates
 - Existing writing-style, language, and scoring-instructions settings still matter because the default templates consume those values through placeholders
-
-### Reactive Resume
-
-![Reactive Resume settings section](/img/features/settings-reactive-resume-section.png)
-
-- Configure a shared RxResume URL for cloud or self-hosted deployments
-- Configure a v5 API key
-- Choose the PDF renderer:
-  - RxResume export
-  - Local LaTeX renderer
-- Boussole uses the selected RxResume resume as the source of truth in both modes
-- Invalid Reactive Resume credentials or other `4xx` config failures block the save and stay visible as an inline error
-- Temporary Reactive Resume downtime shows an inline warning, but the save still succeeds
-- Changing PDF-affecting settings (`pdfRenderer`, `rxresumeBaseResumeId`, RxResume URL/key) auto-queues regeneration for ready jobs that currently use system-generated PDFs
-- Select a template/base resume
-- Configure project selection behavior:
-  - Max projects
-  - Must-include projects
-  - AI-selectable projects
-- Boussole briefly caches successful Reactive Resume resume data to reduce repeated API calls across settings, profile, and PDF flows
 
 ### Tracer Links
 
@@ -180,8 +144,6 @@ Readiness requires:
 ### Environment & Workspaces
 
 - Configure service accounts:
-  - RxResume API key
-  - UKVisaJobs email/password
   - Adzuna app ID/app key
 - Manage workspace users when signed in as a system admin:
   - create a user with a private workspace
@@ -230,10 +192,8 @@ curl "http://localhost:3001/api/settings"
 curl -X PATCH "http://localhost:3001/api/settings" \
   -H "content-type: application/json" \
   -d '{
-    "llmProvider": "openrouter",
-    "model": "openai/gpt-4.1-mini",
-    "chatStyleTone": "concise",
-    "showSponsorInfo": true
+    "model": "opus:medium",
+    "chatStyleTone": "concise"
   }'
 ```
 
@@ -258,7 +218,7 @@ curl -X POST "http://localhost:3001/api/backups"
 
 - Some settings apply only to new runs/actions after save.
 - Re-run scoring/tailoring/pipeline to validate effect.
-- In the **Model** section, the field preview and **Resolved config** update immediately when you choose a model, but the change only applies to future actions after you click **Save**.
+- A new **AI model** only applies to future actions after you click **Save**.
 - Prompt-template changes only affect new Ghostwriter runs, new tailoring generations, and new scoring runs after you save.
 
 ### I do not see workspace user controls
@@ -274,11 +234,11 @@ curl -X POST "http://localhost:3001/api/backups"
 - Save settings and rerun the affected workflow.
 - If you keep a custom template, make sure required placeholders still exist where you need runtime data such as `{{jobDescription}}`, `{{profileJson}}`, or `{{outputLanguage}}`.
 
-### Tailoring or scoring says the selected model does not exist for the current provider
+### AI steps fail with a Claude error
 
-- Open **Settings -> Model** and confirm the provider and model belong together.
-- If you switch providers, leave the model fields blank to use the provider default, or pick a new provider-compatible model from the dropdown.
-- Boussole ignores stale Gemini-style overrides under `openai`, and ignores stale OpenAI-style overrides under `gemini`, but you still need to save the current form selection for future runs.
+- Run `claude` once in a terminal on the host to sign in, then retry.
+- On a server, refresh the token: run `claude setup-token` and update `CLAUDE_CODE_OAUTH_TOKEN`.
+- Check the model value in **Settings → AI model**: an unknown alias fails every call. Clear the field to use the default.
 
 ### Resume tailoring used English instead of my resume language
 
@@ -293,22 +253,6 @@ curl -X POST "http://localhost:3001/api/backups"
 - Boussole intentionally preserves exact headline and job-title wording for ATS safety, even when other tailored sections are generated in another language.
 - If you need a different headline or target title, change the source resume/profile text first and then re-run tailoring.
 
-### RxResume controls are disabled
-
-- Boussole resolves the RxResume URL in this order: the value saved in **Settings → Reactive Resume**, then the `RXRESUME_URL` environment variable (if set), and finally the public cloud default.
-- Open **Settings → Reactive Resume** and configure the shared RxResume URL if you use a self-hosted instance.
-- If you leave the URL blank, Boussole will fall back to `RXRESUME_URL` when it is configured; otherwise it uses the public cloud default.
-- Invalid credentials block the save and remain visible inline until you edit the selected mode's credentials or URL.
-- Temporary instance downtime shows a warning inline, but does not block unrelated settings updates.
-- Then refresh available resumes from the Reactive Resume section.
-
-### RxResume projects look empty in the RxResume UI
-
-- Root cause: your resume on [rxresu.me](https://rxresu.me) has an empty **Projects** section.
-- Fix in RxResume first: add project entries to the base resume you selected in Settings.
-- Then return to Boussole, refresh/select the same base resume in **Reactive Resume**, and regenerate the PDF.
-- Boussole preserves current visibility state, but it cannot create missing project content if the source resume has no projects.
-
 ### Webhook calls fail
 
 - Verify URL reachability from the server host.
@@ -322,7 +266,7 @@ curl -X POST "http://localhost:3001/api/backups"
 
 ## Related pages
 
-- [Reactive Resume](/docs/features/reactive-resume)
+- [CV Editor](/docs/features/design-resume)
 - [Database Backups](/docs/getting-started/database-backups)
 - [Overview](/docs/features/overview)
 - [Orchestrator](/docs/features/orchestrator)
