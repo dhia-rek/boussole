@@ -1,4 +1,6 @@
 import { logger } from "@infra/logger";
+import type { AiProvider } from "@shared/types";
+import { resolveActiveAiProvider } from "../modelSelection";
 import {
   computeLlmCacheKey,
   getCachedLlmResponse,
@@ -8,6 +10,7 @@ import {
   CLAUDE_CLI_SUGGESTED_MODELS,
   ClaudeCliClient,
 } from "./claude-cli/client";
+import { CodexCliClient } from "./codex-cli/client";
 import { getRetryDelayMs, shouldRetryAttempt } from "./policies/retry-policy";
 import type {
   LlmProvider,
@@ -17,25 +20,51 @@ import type {
 } from "./types";
 import { parseJsonContent } from "./utils/json";
 
+/*
+ * Responses are cached per workspace, provider and model, so re-runs over
+ * unchanged inputs (re-scoring, re-tailoring) cost nothing.
+ */
+/** What LlmService needs from a provider CLI client. */
+type AiCliClient = {
+  callJson(options: LlmRequestOptions<unknown>): Promise<{ text: string }>;
+  validateCredentials(signal?: AbortSignal): Promise<LlmValidationResult>;
+};
+
 /**
- * Structured (JSON) calls to Claude through the Claude Code CLI, which runs on
- * the user's Claude subscription: no API key. Responses are cached so re-runs
- * over unchanged inputs (re-scoring, re-tailoring) cost nothing.
+ * JSON calls on the workspace's own AI account: Claude (Claude Code CLI) or
+ * ChatGPT (Codex CLI), whichever the person picked in Settings → AI account.
  */
 export class LlmService {
-  private readonly claudeCliClient: ClaudeCliClient;
+  private readonly claudeCliClient: AiCliClient;
+  private readonly codexCliClient: AiCliClient;
+  private readonly resolveProvider: () => Promise<AiProvider>;
 
-  constructor(client: ClaudeCliClient = new ClaudeCliClient()) {
+  constructor(
+    client: AiCliClient = new ClaudeCliClient(),
+    codexClient: AiCliClient = new CodexCliClient(),
+    resolveProvider: () => Promise<AiProvider> = resolveActiveAiProvider,
+  ) {
     this.claudeCliClient = client;
+    this.codexCliClient = codexClient;
+    this.resolveProvider = resolveProvider;
   }
 
-  getProvider(): LlmProvider {
-    return "claude_cli";
+  async getProvider(): Promise<LlmProvider> {
+    return (await this.resolveProvider()) === "chatgpt"
+      ? "codex_cli"
+      : "claude_cli";
+  }
+
+  private clientFor(provider: LlmProvider): AiCliClient {
+    return provider === "codex_cli"
+      ? this.codexCliClient
+      : this.claudeCliClient;
   }
 
   async callJson<T>(options: LlmRequestOptions<T>): Promise<LlmResponse<T>> {
+    const provider = await this.getProvider();
     const cacheKey = computeLlmCacheKey({
-      provider: this.getProvider(),
+      provider,
       model: options.model,
       messages: options.messages,
       jsonSchema: options.jsonSchema,
@@ -50,7 +79,10 @@ export class LlmService {
       }
     }
 
-    const result = await this.callClaude(options);
+    const result = await this.callWithRetries(
+      this.clientFor(provider),
+      options,
+    );
     if (result.success) {
       setCachedLlmResponse(cacheKey, JSON.stringify(result.data));
     }
@@ -58,14 +90,15 @@ export class LlmService {
   }
 
   async validateCredentials(): Promise<LlmValidationResult> {
-    return this.claudeCliClient.validateCredentials();
+    return this.clientFor(await this.getProvider()).validateCredentials();
   }
 
   async listModels(): Promise<string[]> {
     return [...CLAUDE_CLI_SUGGESTED_MODELS];
   }
 
-  private async callClaude<T>(
+  private async callWithRetries<T>(
+    client: AiCliClient,
     options: LlmRequestOptions<T>,
   ): Promise<LlmResponse<T>> {
     const { maxRetries = 0, retryDelayMs = 500, signal, jobId } = options;
@@ -81,8 +114,8 @@ export class LlmService {
           await sleep(getRetryDelayMs(retryDelayMs, attempt));
         }
 
-        const result = await this.claudeCliClient.callJson({
-          ...options,
+        const result = await client.callJson({
+          ...(options as LlmRequestOptions<unknown>),
           signal,
         });
         return { success: true, data: parseJsonContent<T>(result.text, jobId) };
@@ -90,7 +123,7 @@ export class LlmService {
         const message = error instanceof Error ? error.message : String(error);
 
         if (attempt < maxRetries && shouldRetryAttempt({ message })) {
-          logger.warn("Claude CLI attempt failed, retrying", {
+          logger.warn("AI CLI attempt failed, retrying", {
             jobId: jobId ?? "unknown",
             attempt: attempt + 1,
             maxRetries,

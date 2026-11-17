@@ -156,7 +156,9 @@ export const createResumeProjectCatalogItem = (
 export const createAppSettings = (
   overrides: Partial<AppSettings> = {},
 ): AppSettings => ({
+  aiProvider: { value: "claude", default: "claude", override: null },
   model: { value: "opus:medium", default: "opus:medium", override: null },
+  chatgptModel: { value: "", default: "", override: null },
   pipelineWebhookUrl: { value: "", default: "", override: null },
   jobCompleteWebhookUrl: { value: "", default: "", override: null },
   profileProjects: [],

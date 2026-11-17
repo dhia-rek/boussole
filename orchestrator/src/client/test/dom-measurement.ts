@@ -49,7 +49,7 @@ const defineDimensionProperty = (
   });
 };
 
-const getMeasurement = (element: Element): ElementMeasurement => {
+const _getMeasurement = (element: Element): ElementMeasurement => {
   return (
     elementMeasurements.get(element) ?? {
       width: 0,

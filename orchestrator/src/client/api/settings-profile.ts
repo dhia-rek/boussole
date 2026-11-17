@@ -172,7 +172,7 @@ export async function refreshProfile(): Promise<ResumeProfile> {
   });
 }
 
-/** Checks that the Claude Code CLI is installed and signed in. */
+/** Checks that the workspace's chosen AI account (Claude or ChatGPT) is signed in. */
 export async function validateLlm(): Promise<ValidationResult> {
   return fetchApi<ValidationResult>("/onboarding/validate/llm", {
     method: "POST",

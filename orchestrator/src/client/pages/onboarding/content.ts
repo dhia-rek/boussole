@@ -17,15 +17,15 @@ export const STEP_COPY: Record<
 > = {
   llm: {
     eyebrow: "Step 1",
-    title: "Connect Claude.",
+    title: "Connect your AI",
     description:
-      "Boussole runs every AI step on Claude through the Claude Code CLI, with your Claude subscription. Check that it is signed in on this computer and pick the model.",
+      "Boussole scores jobs, tailors your CV and writes cover letters with your own Claude or ChatGPT account. Sign in with the one you use, then pick its model.",
   },
   baseresume: {
     eyebrow: "Step 2",
     title: "Import your current CV.",
     description:
-      "Upload your CV as a PDF or DOCX. Claude reads it and creates your CV in the CV editor, where you can check and edit every section.",
+      "Upload your CV as a PDF or DOCX. Your AI reads it and creates your CV in the CV editor, where you can check and edit every section.",
   },
   searchterms: {
     eyebrow: "Step 3",
