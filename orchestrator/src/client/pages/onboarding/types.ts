@@ -8,12 +8,9 @@ export type ValidationState = ValidationResult & {
 export type OnboardingFormData = {
   searchTerms: string[];
   searchTermDraft: string;
-  basicAuthUser: string;
-  basicAuthPassword: string;
 };
 
-export type StepId = "llm" | "baseresume" | "searchterms" | "basicauth";
-export type BasicAuthChoice = "enable" | "skip" | null;
+export type StepId = "llm" | "baseresume" | "searchterms";
 
 export type OnboardingStep = {
   id: StepId;

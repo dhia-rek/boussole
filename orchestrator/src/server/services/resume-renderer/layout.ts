@@ -36,6 +36,10 @@ interface ResumeLabels {
   multilingual: (count: number) => string | null;
   /** Joins the last two names of the closing section's title. */
   and: string;
+  /** Heading when three or more short sections are combined. */
+  additional: string;
+  /** Row label for skills listed without a group. */
+  otherSkills: string;
 }
 
 function countLabel(
@@ -65,6 +69,8 @@ export const RESUME_LABELS: Record<ChatStyleManualLanguage, ResumeLabels> = {
     multilingual: (n) =>
       countLabel(n, "Bilingual", "Trilingual", "Multilingual"),
     and: "&",
+    additional: "Additional information",
+    otherSkills: "Other",
   },
   french: {
     babel: "french",
@@ -80,6 +86,8 @@ export const RESUME_LABELS: Record<ChatStyleManualLanguage, ResumeLabels> = {
     colon: " :",
     multilingual: (n) => countLabel(n, "Bilingue", "Trilingue", "Multilingue"),
     and: "&",
+    additional: "Informations complémentaires",
+    otherSkills: "Autres",
   },
   german: {
     babel: "ngerman",
@@ -96,6 +104,8 @@ export const RESUME_LABELS: Record<ChatStyleManualLanguage, ResumeLabels> = {
     multilingual: (n) =>
       countLabel(n, "Zweisprachig", "Dreisprachig", "Mehrsprachig"),
     and: "&",
+    additional: "Weitere Angaben",
+    otherSkills: "Weitere",
   },
   spanish: {
     babel: "spanish",
@@ -111,6 +121,8 @@ export const RESUME_LABELS: Record<ChatStyleManualLanguage, ResumeLabels> = {
     colon: ":",
     multilingual: (n) => countLabel(n, "Bilingüe", "Trilingüe", "Multilingüe"),
     and: "y",
+    additional: "Información adicional",
+    otherSkills: "Otras",
   },
 };
 
@@ -369,10 +381,15 @@ function renderClosingSection(
   if (rows.length === 0) return "";
 
   const names = rows.map((row) => row.label);
+  // Up to three short sections read well as a combined title
+  // ("Certifications, Volunteering & Interests"); beyond that a plain
+  // heading, with every line still labelled.
   const title =
     names.length === 1
       ? (names[0] ?? "")
-      : `${names.slice(0, -1).join(", ")} ${labels.and} ${names.at(-1)}`;
+      : names.length <= 3
+        ? `${names.slice(0, -1).join(", ")} ${labels.and} ${names.at(-1)}`
+        : labels.additional;
   const body = rows
     .map((row, index) => {
       const end = index < rows.length - 1 ? "\\par\\vspace{2pt}" : "\\par";
@@ -406,14 +423,37 @@ export function buildResumeLatex(
       ),
     );
   }
-  if (document.skillGroups.length > 0) {
+  const groupedSkills = document.skillGroups.filter(
+    (group) => group.keywords.length > 0,
+  );
+  const looseSkills = document.skillGroups
+    .filter((group) => group.keywords.length === 0)
+    .map((group) => group.name.trim())
+    .filter(Boolean);
+  if (groupedSkills.length === 0 && looseSkills.length > 0) {
+    // A flat list (no groups): one wrapped line, not one skill per row.
+    parts.push(
+      section(
+        labels.skills,
+        [
+          "\\vspace{1pt}",
+          `{\\small\\leftskip=0.15in ${looseSkills.map((skill) => escapeForCommand(skill)).join(" $\\cdot$ ")}\\par}`,
+          "",
+        ].join("\n"),
+      ),
+    );
+  } else if (groupedSkills.length > 0) {
     // Labels in one column, technologies in the other: faster to scan.
-    const rows = document.skillGroups
-      .map(
-        (group) =>
-          `${escapeForCommand(group.name)} & ${group.keywords.map((keyword) => escapeForCommand(keyword)).join(", ")} \\\\[2pt]`,
-      )
-      .join("\n");
+    const groupRows = groupedSkills.map(
+      (group) =>
+        `${escapeForCommand(group.name)} & ${group.keywords.map((keyword) => escapeForCommand(keyword)).join(", ")} \\\\[2pt]`,
+    );
+    if (looseSkills.length > 0) {
+      groupRows.push(
+        `${escapeForCommand(labels.otherSkills)} & ${looseSkills.map((skill) => escapeForCommand(skill)).join(", ")} \\\\[2pt]`,
+      );
+    }
+    const rows = groupRows.join("\n");
     parts.push(
       section(
         labels.skills,
