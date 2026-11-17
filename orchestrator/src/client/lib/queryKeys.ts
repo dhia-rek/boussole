@@ -3,7 +3,13 @@ import type { JobStatus, PostApplicationProvider } from "@shared/types";
 export const queryKeys = {
   designResume: {
     all: ["design-resume"] as const,
-    current: () => [...queryKeys.designResume.all, "current"] as const,
+    /** One cache entry per CV variant; no language → the primary CV. */
+    current: (language?: string | null) =>
+      [
+        ...queryKeys.designResume.all,
+        "current",
+        language || "primary",
+      ] as const,
     status: () => [...queryKeys.designResume.all, "status"] as const,
   },
   settings: {
@@ -41,6 +47,7 @@ export const queryKeys = {
       [...queryKeys.jobs.all, "list", options ?? {}] as const,
     revision: (options?: { statuses?: JobStatus[] }) =>
       [...queryKeys.jobs.all, "revision", options ?? {}] as const,
+    statusCounts: () => [...queryKeys.jobs.all, "status-counts"] as const,
     detail: (id: string) => [...queryKeys.jobs.all, "detail", id] as const,
     stageEvents: (id: string) =>
       [...queryKeys.jobs.all, "stage-events", id] as const,
@@ -53,6 +60,9 @@ export const queryKeys = {
     all: ["pipeline"] as const,
     status: () => [...queryKeys.pipeline.all, "status"] as const,
     runs: () => [...queryKeys.pipeline.all, "runs"] as const,
+    health: () => [...queryKeys.pipeline.all, "health"] as const,
+    progressSnapshot: () =>
+      [...queryKeys.pipeline.all, "progress-snapshot"] as const,
     runInsights: (id: string) =>
       [...queryKeys.pipeline.all, "run-insights", id] as const,
   },

@@ -1,4 +1,5 @@
 import type {
+  DesignResumeAiGuidance,
   ResumeProfile,
   ResumeProjectCatalogItem,
   ResumeProjectsSettings,
@@ -154,6 +155,97 @@ export function resolveResumeProjectsSettings(args: {
     overrideResumeProjects,
     resumeProjects,
   };
+}
+
+/**
+ * How projects are chosen for one tailored CV.
+ * - `keep`: the candidate locked the projects section → exactly the projects
+ *   visible in their CV, no AI involved.
+ * - `tailor`: `lockedIds` are always shown, and the AI picks `desiredCount`
+ *   more among `eligibleIds`.
+ */
+export type ProjectSelectionPlan =
+  | { mode: "keep"; selectedIds: string[] }
+  | {
+      mode: "tailor";
+      lockedIds: string[];
+      eligibleIds: string[];
+      desiredCount: number;
+    };
+
+/**
+ * Combines Settings → Resume projects (global defaults: locked / AI-selectable
+ * / max) with the per-project pins the candidate set in the Design Resume
+ * editor. Pins are the most specific choice, so they win for their project.
+ */
+export function resolveProjectSelectionPlan(args: {
+  catalog: ResumeProjectCatalogItem[];
+  overrideRaw: string | null;
+  guidance?: DesignResumeAiGuidance | null;
+}): ProjectSelectionPlan {
+  const { catalog, guidance } = args;
+  if (guidance?.sections.projects.mode === "keep") {
+    return {
+      mode: "keep",
+      selectedIds: catalog.filter((p) => p.isVisibleInBase).map((p) => p.id),
+    };
+  }
+
+  const { resumeProjects } = resolveResumeProjectsSettings({
+    catalog,
+    overrideRaw: args.overrideRaw,
+  });
+  const locked = new Set(resumeProjects.lockedProjectIds);
+  const eligible = new Set(resumeProjects.aiSelectableProjectIds);
+
+  for (const project of catalog) {
+    const include = guidance?.items[project.id]?.include;
+    if (!include) continue;
+    locked.delete(project.id);
+    eligible.delete(project.id);
+    if (include === "always") locked.add(project.id);
+    if (include === "auto") eligible.add(project.id);
+  }
+
+  // Keep catalog order so the CV reads the same way the candidate wrote it.
+  const lockedIds = catalog.filter((p) => locked.has(p.id)).map((p) => p.id);
+  const eligibleIds = catalog
+    .filter((p) => eligible.has(p.id))
+    .map((p) => p.id);
+
+  return {
+    mode: "tailor",
+    lockedIds,
+    eligibleIds,
+    desiredCount: Math.max(
+      0,
+      Math.min(
+        eligibleIds.length,
+        resumeProjects.maxProjects - lockedIds.length,
+      ),
+    ),
+  };
+}
+
+/**
+ * Per-job project ids are stored as a comma-separated string. A selection
+ * made against another CV variant (different ids) — or an outdated version of
+ * this CV — matches nothing here; treat it as "no selection yet" instead of
+ * hiding every project.
+ */
+export function resolveStoredProjectSelection(
+  stored: string | null | undefined,
+  catalog: ResumeProjectCatalogItem[],
+): string[] | null {
+  if (stored === null || stored === undefined) return null;
+  const ids = stored
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return [];
+  const known = new Set(catalog.map((p) => p.id));
+  const usable = ids.filter((id) => known.has(id));
+  return usable.length > 0 ? usable : null;
 }
 
 export function stripHtml(input: string): string {

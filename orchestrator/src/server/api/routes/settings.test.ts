@@ -125,7 +125,8 @@ describe.sequential("Settings API routes", () => {
       expect(body.ok).toBe(true);
       expect(body.data.basicAuthActive).toBe(false);
       expect(body.data.basicAuthPassword).toBeNull();
-      expect(body.data.basicAuthPasswordHint).toBe("secr");
+      // A hint shows that a password exists without revealing any of it.
+      expect(body.data.basicAuthPasswordHint).toBe("****");
     } finally {
       await stopServer(partialBasicAuth);
     }
@@ -266,7 +267,14 @@ describe.sequential("Settings API routes", () => {
     expect(patchBody.data.rxresumeUrl).toBe("https://resume.example.com");
     expect(patchBody.data.llmApiKeyHint).toBe("upda");
     expect(patchBody.data.basicAuthUser).toBe("admin");
-    expect(patchBody.data.basicAuthPassword).toBe("letmein");
+    expect(patchBody.data.basicAuthActive).toBe(true);
+    // The login password is never echoed back nor stored in plain text.
+    expect(patchBody.data.basicAuthPassword).toBeNull();
+    expect(JSON.stringify(patchBody)).not.toContain("letmein");
+    const { getSetting } = await import("@server/repositories/settings");
+    const stored = await getSetting("basicAuthPassword");
+    expect(stored).toMatch(/^scrypt:/);
+    expect(stored).not.toContain("letmein");
     expect(patchBody.data.ghostwriterSystemPromptTemplate.override).toBe(
       "Custom Ghostwriter {{tone}}",
     );

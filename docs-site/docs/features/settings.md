@@ -42,7 +42,7 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 
 ![Model settings section](/img/features/settings-model-section.png)
 
-- Choose provider (`openrouter`, `lmstudio`, `ollama`, `openai`, `gemini`, `gemini_cli`, `codex`)
+- Choose provider (`openrouter`, `openai`, `openai_compatible`, `gemini`, `gemini_cli`, `claude_cli`, `codex`)
 - Set provider-specific base URL/API key when required
 - Configure default model plus task-specific overrides:
   - Scoring model
@@ -51,12 +51,14 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 - Provider defaults are applied automatically when the model fields are left blank:
   - `openai` defaults to `gpt-5.4-mini`
   - `gemini` and `gemini_cli` default to `google/gemini-3-flash-preview`
+  - `claude_cli` defaults to `opus:medium`
 - The settings page shows provider-aware model pickers for:
   - `openai`: available text-generation models only
   - `gemini`: available Gemini text-generation models only
   - `gemini_cli`: a curated list of Gemini model ids the CLI typically supports (install [Gemini CLI](https://www.npmjs.com/package/@google/gemini-cli), run `gemini` and complete Google sign-in, or set `GEMINI_API_KEY` for the CLI; Forsa spawns headless `gemini -p ...` with `--approval-mode plan` and no Forsa API key field). **Resume import** uses the CLI with extracted text: DOCX is parsed locally; PDF uses local text extraction then JSON extraction via the CLI (scanned PDFs without a text layer may not import well).
-  - `ollama`: locally installed Ollama models
-- `openrouter`, `lmstudio`, and `openai_compatible` stay manual-entry because Forsa cannot safely infer the exact model catalog from those providers
+  - `claude_cli`: Claude Code model aliases (`opus`, `sonnet`, `haiku`). Forsa runs headless `claude -p` on this host with your Claude subscription (run `claude` once to log in) and denies every tool, so the model can only answer. Append an effort level to the model to control reasoning depth, for example `opus:medium` (`low`, `medium`, `high`, `xhigh`, `max`); without a suffix `CLAUDE_CLI_EFFORT` or the CLI default applies. **Resume import** works like `gemini_cli` (extracted text).
+- `openrouter` and `openai_compatible` stay manual-entry because Forsa cannot safely infer the exact model catalog from those providers
+- Local model servers (Ollama, LM Studio) are no longer built-in providers; point `openai_compatible` at their OpenAI-compatible endpoint if you need one
 - Changing the provider clears stale model overrides in the form, so inherited fields follow the new provider default unless you explicitly choose a new override
 - The preview under each field and the **Resolved config** block reflect the model currently selected in the form, even before you save
 

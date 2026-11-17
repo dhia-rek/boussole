@@ -1,0 +1,70 @@
+{
+  "query": { "original": "stage data science jobs Paris" },
+  "web": {
+    "results": [
+      {
+        "title": "Stage Data Scientist, Paris (75) : plus de 200 emplois (25 juin 2026) | Indeed",
+        "url": "https://fr.indeed.com/q-stage-data-scientist-l-paris-(75)-emplois.html",
+        "description": "Stage Data Scientist - Paris (75) : 200+ offres.",
+        "meta_url": { "hostname": "fr.indeed.com" },
+        "age": "June 25, 2026"
+      },
+      {
+        "title": "Stage Data Scientist Paris, Paris (75) : plus de 100 emplois (29 août 2026) | Indeed",
+        "url": "https://fr.indeed.com/Paris-(75)-Emplois-Stage-Data-Scientist-Paris",
+        "description": "Postulez dès maintenant.",
+        "meta_url": { "hostname": "fr.indeed.com" },
+        "age": "August 29, 2026"
+      },
+      {
+        "title": "2,000+ Data Science Intern jobs in France (95 new)",
+        "url": "https://fr.linkedin.com/jobs/data-science-intern-jobs",
+        "description": "Today's top Data Science Intern jobs in France.",
+        "meta_url": { "hostname": "fr.linkedin.com" }
+      },
+      {
+        "title": "Criteo hiring Product Data Scientist Intern in Paris, Île-de-France, France | LinkedIn",
+        "url": "https://fr.linkedin.com/jobs/view/product-data-scientist-intern-at-criteo-4390810974",
+        "description": "Posted 3 days ago. Product Data Scientist Intern.",
+        "meta_url": { "hostname": "fr.linkedin.com" },
+        "age": "3 days ago"
+      },
+      {
+        "title": "Mistral AI - Stage Machine Learning Engineer",
+        "url": "https://jobs.lever.co/mistral/0d6c0a1e-1111-2222-3333-444455556666",
+        "description": "Stage de 6 mois à Paris.",
+        "meta_url": { "hostname": "jobs.lever.co" }
+      },
+      {
+        "title": "Job Application for Data Science Intern 2027 at Datadog",
+        "url": "https://boards.greenhouse.io/datadog/jobs/7012345",
+        "description": "Datadog is looking for a data science intern.",
+        "meta_url": { "hostname": "boards.greenhouse.io" }
+      },
+      {
+        "title": "Stage - Data Scientist (2 postes) - Withings",
+        "url": "https://careers.withings.com/jobs/stage-data-scientist",
+        "description": "Rejoignez l'équipe data de Withings.",
+        "meta_url": { "hostname": "careers.withings.com" }
+      },
+      {
+        "title": "Stage Data Scientist F/H - Groupe BPCE - Paris (75)",
+        "url": "https://fr.indeed.com/viewjob?jk=848a130c7d4bdd02",
+        "description": "Stage de 6 mois.",
+        "meta_url": { "hostname": "fr.indeed.com" }
+      },
+      {
+        "title": "Stage - ML Research - Hugging Face",
+        "url": "https://www.welcometothejungle.com/fr/companies/hugging-face/jobs/stage-ml-research_paris",
+        "description": "Stage ML Research.",
+        "meta_url": { "hostname": "www.welcometothejungle.com" }
+      },
+      {
+        "title": "Data science | Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Data_science",
+        "description": "Not a job page.",
+        "meta_url": { "hostname": "en.wikipedia.org" }
+      }
+    ]
+  }
+}

@@ -20,6 +20,13 @@ export function clearDatabase(): { jobsDeleted: number; runsDeleted: number } {
     sqlite.prepare("DELETE FROM stage_events").run();
     sqlite.prepare("DELETE FROM tasks").run();
     sqlite.prepare("DELETE FROM interviews").run();
+    // Agent runs are tied to jobs; learned preferences (agent_memories) stay.
+    const hasAgentRuns = sqlite
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'agent_runs'",
+      )
+      .get();
+    if (hasAgentRuns) sqlite.prepare("DELETE FROM agent_runs").run();
     const jobsResult = sqlite.prepare("DELETE FROM jobs").run();
     const runsResult = sqlite.prepare("DELETE FROM pipeline_runs").run();
 

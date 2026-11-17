@@ -168,7 +168,7 @@ vi.mock("./rxresume/baseResumeId", () => ({
 }));
 
 vi.mock("./design-resume", () => ({
-  getCurrentDesignResume: vi.fn().mockResolvedValue(null),
+  getDesignResumeForJobLanguage: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("./rxresume", async () => {

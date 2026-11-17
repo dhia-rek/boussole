@@ -101,11 +101,32 @@ export async function runWellfound(
       },
       signal: AbortSignal.timeout(20_000),
     });
-    if (!res.ok)
-      return { success: false, jobs: [], error: `HTTP ${res.status}` };
+    if (!res.ok) {
+      return {
+        success: false,
+        jobs: [],
+        error:
+          res.status === 404
+            ? `Wellfound RSS feed returned HTTP 404 (${WELLFOUND_RSS}); the public feed no longer exists, so this source cannot fetch jobs.`
+            : `Wellfound RSS feed returned HTTP ${res.status} (${WELLFOUND_RSS}).`,
+      };
+    }
     xml = await res.text();
   } catch (err) {
-    return { success: false, jobs: [], error: String(err) };
+    const reason = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      jobs: [],
+      error: `Wellfound RSS feed request failed (${WELLFOUND_RSS}): ${reason}`,
+    };
+  }
+
+  if (!/<(rss|feed)\b/i.test(xml)) {
+    return {
+      success: false,
+      jobs: [],
+      error: `Wellfound returned a non-RSS response from ${WELLFOUND_RSS} (likely a bot-protection or error page).`,
+    };
   }
 
   const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? [];

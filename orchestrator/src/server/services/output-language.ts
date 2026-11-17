@@ -251,6 +251,16 @@ function detectLanguageFromSample(
   return best.language;
 }
 
+/**
+ * Detect the language of arbitrary text (e.g. a job description) so the
+ * tailored CV can be written in the same language the role is posted in.
+ */
+export function detectLanguageFromText(
+  text: string,
+): ChatStyleManualLanguage | null {
+  return detectLanguageFromSample(text);
+}
+
 export function resolveWritingOutputLanguage(args: {
   style: WritingLanguageConfig;
   profile: ResumeProfile;

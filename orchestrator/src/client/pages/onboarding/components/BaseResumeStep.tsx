@@ -146,6 +146,17 @@ export const BaseResumeStep: React.FC<{
                 Supported formats: PDF and DOCX.
               </div>
             </div>
+
+            {isImportingResume && (
+              <div className="mt-3 space-y-1.5">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div className="h-full animate-[progress-indeterminate_1.4s_ease-in-out_infinite] rounded-full bg-primary" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sending to AI — this can take 10–30 seconds…
+                </p>
+              </div>
+            )}
           </div>
 
           {(baseResumeValidation.checked || rxresumeValidation.checked) &&

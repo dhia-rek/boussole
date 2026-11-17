@@ -13,4 +13,4 @@ for orchestrator ingestion.
 - `ADZUNA_MAX_JOBS_PER_TERM` (default: `50`)
 - `ADZUNA_RESULTS_PER_PAGE` (default: `50`, max `50`)
 - `ADZUNA_OUTPUT_JSON` (default: `storage/datasets/default/jobs.json`)
-- `JOBOPS_EMIT_PROGRESS=1` to emit `JOBOPS_PROGRESS` events
+- `FORSA_EMIT_PROGRESS=1` to emit `FORSA_PROGRESS ` lines on stdout (parsed by `src/run.ts`)

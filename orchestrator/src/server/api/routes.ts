@@ -3,6 +3,7 @@
  */
 
 import { Router } from "express";
+import { agentsRouter } from "./routes/agents";
 import { authRouter } from "./routes/auth";
 import { backupRouter } from "./routes/backup";
 import { databaseRouter } from "./routes/database";
@@ -47,4 +48,5 @@ apiRouter.use("/tracer-links", tracerLinksRouter);
 apiRouter.use("/workspaces", workspacesRouter);
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/spontaneous", spontaneousRouter);
+apiRouter.use("/agents", agentsRouter);
 apiRouter.use("/", extractorHealthRouter);

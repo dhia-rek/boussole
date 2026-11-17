@@ -1,6 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
+  "ignoreExportsUsedInFile": true,
+  "ignore": ["docs-site/src/css/custom.css"],
+  "ignoreDependencies": [
+    "vitest",
+    "forsa-shared",
+    "@docusaurus/plugin-content-docs"
+  ],
   "workspaces": {
     ".": {
       "entry": [],
@@ -26,21 +33,74 @@
       "project": ["src/**/*.ts"],
       "ignore": ["src/**/*.test.ts"]
     },
+    "extractors/browser-utils": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["tests/**/*.test.ts"]
+    },
     "extractors/adzuna": {
-      "entry": ["src/main.ts"],
+      "entry": ["manifest.ts", "src/main.ts", "tests/**/*.test.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/bravesearch": {
+      "entry": ["manifest.ts", "src/run.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/golangjobs": {
+      "entry": ["src/manifest.ts", "src/run.ts", "tests/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     },
     "extractors/gradcracker": {
-      "entry": ["src/main.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": ["manifest.ts", "src/main.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
     },
     "extractors/hiringcafe": {
-      "entry": ["src/main.ts"],
+      "entry": ["manifest.ts", "src/main.ts", "tests/**/*.test.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/jobindex": {
+      "entry": ["src/manifest.ts", "src/run.ts", "tests/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "extractors/jobspy": {
+      "entry": ["manifest.ts", "src/run.ts", "tests/**/*.test.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/naukri": {
+      "entry": ["manifest.ts", "src/main.ts", "tests/**/*.test.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/remoteco": {
+      "entry": ["manifest.ts", "src/run.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/seek": {
+      "entry": ["manifest.ts", "src/main.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/startupjobs": {
+      "entry": ["src/manifest.ts", "src/run.ts", "tests/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     },
     "extractors/ukvisajobs": {
-      "entry": ["src/main.ts"],
+      "entry": ["manifest.ts", "src/main.ts", "tests/**/*.test.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/wellfound": {
+      "entry": ["manifest.ts", "src/run.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/weworkremotely": {
+      "entry": ["manifest.ts", "src/run.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
+    },
+    "extractors/workingnomads": {
+      "entry": ["src/manifest.ts", "src/run.ts", "tests/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "extractors/wttj": {
+      "entry": ["manifest.ts", "src/run.ts"],
+      "project": ["manifest.ts", "src/**/*.ts"]
     }
   }
 }

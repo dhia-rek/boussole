@@ -1,12 +1,10 @@
 import { PageHeader, StatusIndicator } from "@client/components/layout";
 import type { JobSource } from "@shared/types.js";
-import { Loader2, Play, Square } from "lucide-react";
+import { LayoutDashboard, Loader2, Play, Square } from "lucide-react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
 
 interface OrchestratorHeaderProps {
-  navOpen: boolean;
-  onNavOpenChange: (open: boolean) => void;
   isPipelineRunning: boolean;
   isCancelling: boolean;
   pipelineSources: JobSource[];
@@ -15,8 +13,6 @@ interface OrchestratorHeaderProps {
 }
 
 export const OrchestratorHeader: React.FC<OrchestratorHeaderProps> = ({
-  navOpen,
-  onNavOpenChange,
   isPipelineRunning,
   isCancelling,
   pipelineSources,
@@ -49,13 +45,9 @@ export const OrchestratorHeader: React.FC<OrchestratorHeaderProps> = ({
 
   return (
     <PageHeader
-      icon={() => (
-        <img src="/favicon.svg" alt="" className="size-8 rounded-lg" />
-      )}
-      title="Forsa"
-      subtitle="Orchestrator"
-      navOpen={navOpen}
-      onNavOpenChange={onNavOpenChange}
+      icon={LayoutDashboard}
+      title="Jobs"
+      subtitle="Review, tailor and apply"
       statusIndicator={
         isPipelineRunning ? (
           <StatusIndicator label="Pipeline running" variant="amber" />

@@ -3,11 +3,14 @@ import { asyncRoute, fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
 import { enqueueAutoPdfRegenerationForReadyJobs } from "@server/services/auto-pdf-regeneration";
 import {
+  type DesignResumeVariantSelector,
   deleteDesignResumePicture,
+  deleteDesignResumeVariant,
   exportDesignResume,
   getCurrentDesignResume,
   getDesignResumeStatus,
   importDesignResumeFromReactiveResume,
+  listDesignResumeVariants,
   readDesignResumeAssetContent,
   updateCurrentDesignResume,
   uploadDesignResumePicture,
@@ -18,6 +21,7 @@ import { generateDesignResumePdf } from "@server/services/pdf";
 import { getTenantDesignResumePdfPath } from "@server/services/pdf-storage";
 import { clearProfileCache } from "@server/services/profile";
 import { getForsaPublicAvailability } from "@server/services/tracer-links";
+import { DESIGN_RESUME_LANGUAGES } from "@shared/design-resume-variants";
 import type { DesignResumeJson, DesignResumePatchRequest } from "@shared/types";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
@@ -168,8 +172,20 @@ const patchOperationSchema = z.union([
 export const designResumePatchSchema = z.object({
   baseRevision: z.number().int().min(1),
   document: z.unknown().optional(),
+  // Validated strictly by the service (unknown sections/keys → 400).
+  aiGuidance: z.unknown().optional(),
   operations: z.array(patchOperationSchema).optional(),
 });
+
+/** `?language=en` targets that CV variant; omitted → the primary CV. */
+const variantQuerySchema = z.object({
+  language: z.string().trim().max(10).optional(),
+});
+
+function variantSelector(req: Request): DesignResumeVariantSelector {
+  const { language } = variantQuerySchema.parse(req.query ?? {});
+  return { language: language || null };
+}
 
 const pictureMutationSchema = z.object({
   baseRevision: z.number().int().min(1).optional(),
@@ -201,6 +217,7 @@ const importFileSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
   mediaType: z.string().trim().min(1).max(200).optional(),
   dataBase64: z.string().trim().min(1),
+  language: z.enum(DESIGN_RESUME_LANGUAGES).optional(),
 });
 
 function asDesignResumeJson(value: unknown): DesignResumeJson | undefined {
@@ -229,13 +246,40 @@ function queueDesignResumeAutoPdfRegeneration(route: string): void {
 
 designResumeRouter.get(
   "/",
-  asyncRoute(async (_req: Request, res: Response) => {
-    const document = await getCurrentDesignResume();
+  asyncRoute(async (req: Request, res: Response) => {
+    const selector = variantSelector(req);
+    const document = await getCurrentDesignResume(selector);
     if (!document) {
-      fail(res, notFound("Design Resume has not been imported yet."));
+      fail(
+        res,
+        notFound(
+          selector.language
+            ? `No "${selector.language}" CV has been imported yet.`
+            : "Design Resume has not been imported yet.",
+        ),
+      );
       return;
     }
     ok(res, document);
+  }),
+);
+
+designResumeRouter.get(
+  "/variants",
+  asyncRoute(async (_req: Request, res: Response) => {
+    ok(res, await listDesignResumeVariants());
+  }),
+);
+
+designResumeRouter.delete(
+  "/variants/:language",
+  asyncRoute(async (req: Request, res: Response) => {
+    await deleteDesignResumeVariant({ language: req.params.language ?? "" });
+    clearProfileCache();
+    ok(res, await listDesignResumeVariants());
+    queueDesignResumeAutoPdfRegeneration(
+      "DELETE /api/design-resume/variants/:language",
+    );
   }),
 );
 
@@ -275,7 +319,10 @@ designResumeRouter.patch(
     const input = designResumePatchSchema.parse(
       req.body,
     ) as DesignResumePatchRequest;
-    const document = await updateCurrentDesignResume(input);
+    const document = await updateCurrentDesignResume(
+      input,
+      variantSelector(req),
+    );
     clearProfileCache();
     ok(res, document);
     queueDesignResumeAutoPdfRegeneration("PATCH /api/design-resume");
@@ -292,12 +339,15 @@ designResumeRouter.post(
         fileName: req.header("x-file-name"),
         baseRevision: req.header("x-base-revision"),
       });
-      const document = await uploadDesignResumePictureFile({
-        fileName: input.fileName,
-        mimeType: req.header("content-type"),
-        data: req.body,
-        baseRevision: input.baseRevision,
-      });
+      const document = await uploadDesignResumePictureFile(
+        {
+          fileName: input.fileName,
+          mimeType: req.header("content-type"),
+          data: req.body,
+          baseRevision: input.baseRevision,
+        },
+        variantSelector(req),
+      );
       clearProfileCache();
       ok(res, document, 201);
       queueDesignResumeAutoPdfRegeneration("POST /api/design-resume/assets");
@@ -305,12 +355,15 @@ designResumeRouter.post(
     }
 
     const input = uploadSchema.parse(req.body);
-    const document = await uploadDesignResumePicture({
-      fileName: input.fileName,
-      dataUrl: input.dataUrl,
-      baseRevision: input.baseRevision,
-      document: asDesignResumeJson(input.document),
-    });
+    const document = await uploadDesignResumePicture(
+      {
+        fileName: input.fileName,
+        dataUrl: input.dataUrl,
+        baseRevision: input.baseRevision,
+        document: asDesignResumeJson(input.document),
+      },
+      variantSelector(req),
+    );
     clearProfileCache();
     ok(res, document, 201);
     queueDesignResumeAutoPdfRegeneration("POST /api/design-resume/assets");
@@ -321,10 +374,13 @@ designResumeRouter.delete(
   "/assets/picture",
   asyncRoute(async (req: Request, res: Response) => {
     const input = pictureMutationSchema.parse(req.body ?? {});
-    const document = await deleteDesignResumePicture({
-      baseRevision: input.baseRevision,
-      document: asDesignResumeJson(input.document),
-    });
+    const document = await deleteDesignResumePicture(
+      {
+        baseRevision: input.baseRevision,
+        document: asDesignResumeJson(input.document),
+      },
+      variantSelector(req),
+    );
     clearProfileCache();
     ok(res, document);
     queueDesignResumeAutoPdfRegeneration(
@@ -353,8 +409,8 @@ designResumeRouter.get(
 
 designResumeRouter.get(
   "/export",
-  asyncRoute(async (_req: Request, res: Response) => {
-    ok(res, await exportDesignResume());
+  asyncRoute(async (req: Request, res: Response) => {
+    ok(res, await exportDesignResume(variantSelector(req)));
   }),
 );
 
@@ -365,6 +421,7 @@ designResumeRouter.post(
       res,
       await generateDesignResumePdf({
         requestOrigin: resolveRequestOrigin(req),
+        language: variantSelector(req).language,
       }),
     );
   }),
@@ -372,8 +429,8 @@ designResumeRouter.post(
 
 designResumeRouter.get(
   "/pdf",
-  asyncRoute(async (_req: Request, res: Response) => {
-    const pdfPath = getTenantDesignResumePdfPath();
+  asyncRoute(async (req: Request, res: Response) => {
+    const pdfPath = getTenantDesignResumePdfPath(variantSelector(req).language);
     res.setHeader("Cache-Control", "no-store");
     res.sendFile(pdfPath, (error) => {
       if (error) {

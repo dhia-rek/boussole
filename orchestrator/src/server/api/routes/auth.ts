@@ -1,6 +1,12 @@
-import { badRequest, serviceUnavailable, unauthorized } from "@infra/errors";
+import {
+  badRequest,
+  serviceUnavailable,
+  tooManyRequests,
+  unauthorized,
+} from "@infra/errors";
 import { asyncRoute, fail, ok } from "@infra/http";
 import { blacklistToken, signToken, verifyToken } from "@server/auth/jwt";
+import { clientAddress, loginThrottle } from "@server/auth/login-throttle";
 import { verifyPassword } from "@server/auth/password";
 import { isDemoMode } from "@server/config/demo";
 import * as usersRepo from "@server/repositories/users";
@@ -35,8 +41,23 @@ authRouter.post(
     }
 
     const { username, password } = parsed.data;
+    const ip = clientAddress(req.socket.remoteAddress, req.headers);
+    const retryAfter = loginThrottle.retryAfterSeconds(ip, username);
+    if (retryAfter > 0) {
+      res.setHeader("Retry-After", String(retryAfter));
+      fail(
+        res,
+        tooManyRequests(
+          `Too many sign-in attempts. Try again in ${Math.ceil(retryAfter / 60)} minute(s).`,
+          retryAfter,
+        ),
+      );
+      return;
+    }
+
     const user = await usersRepo.getUserForLogin(username);
     if (!user || user.isDisabled) {
+      loginThrottle.recordFailure(ip, username);
       fail(res, unauthorized("Invalid credentials"));
       return;
     }
@@ -47,9 +68,11 @@ authRouter.post(
       passwordSalt: user.passwordSalt,
     });
     if (!passwordValid) {
+      loginThrottle.recordFailure(ip, username);
       fail(res, unauthorized("Invalid credentials"));
       return;
     }
+    loginThrottle.recordSuccess(ip, username);
 
     let token: string;
     let expiresIn: number;

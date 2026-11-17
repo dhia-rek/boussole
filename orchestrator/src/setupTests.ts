@@ -3,7 +3,22 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import "@testing-library/jest-dom";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterAll } from "vitest";
 import { installDomMeasurementMocks } from "@/client/test/dom-measurement";
+
+// Never let a test touch the developer's real database or PDFs: unless a test
+// configures its own DATA_DIR, point the app at a throwaway directory before
+// any module opens the SQLite file.
+if (!process.env.DATA_DIR) {
+  const isolatedDataDir = mkdtempSync(join(tmpdir(), "forsa-test-"));
+  process.env.DATA_DIR = isolatedDataDir;
+  afterAll(() => {
+    rmSync(isolatedDataDir, { recursive: true, force: true });
+  });
+}
 
 installDomMeasurementMocks();
 

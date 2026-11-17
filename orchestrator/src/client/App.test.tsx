@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import type React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { App } from "./App";
+import { App, isShellFreePath } from "./App";
 import { useDemoInfo } from "./hooks/useDemoInfo";
 
 vi.mock("./hooks/useDemoInfo", () => ({
@@ -16,6 +16,17 @@ vi.mock("react-transition-group", () => ({
 
 vi.mock("@/components/ui/sonner", () => ({
   Toaster: () => null,
+}));
+
+// The real shell needs react-query and live API data; these tests cover routing.
+vi.mock("./components/app-shell/AppShell", () => ({
+  AppShell: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="app-shell">{children}</div>
+  ),
+}));
+
+vi.mock("./pages/TodayPage", () => ({
+  TodayPage: () => <div>today</div>,
 }));
 
 vi.mock("./components/OnboardingGate", () => ({
@@ -113,5 +124,33 @@ describe("App demo banner", () => {
 
     expect(screen.getByText("sign-in")).toBeInTheDocument();
     expect(useDemoInfo).toHaveBeenCalledWith({ enabled: false });
+  });
+});
+
+describe("App shell", () => {
+  it("opens Today from the root URL inside the app shell", () => {
+    vi.mocked(useDemoInfo).mockReturnValue(null);
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId("app-shell")).toContainElement(
+      screen.getByText("today"),
+    );
+  });
+
+  it("keeps sign-in and onboarding full-screen", () => {
+    vi.mocked(useDemoInfo).mockReturnValue(null);
+    render(
+      <MemoryRouter initialEntries={["/sign-in"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("sign-in")).toBeInTheDocument();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+    expect(isShellFreePath("/onboarding")).toBe(true);
+    expect(isShellFreePath("/oauth/gmail/callback")).toBe(true);
+    expect(isShellFreePath("/jobs/ready")).toBe(false);
   });
 });

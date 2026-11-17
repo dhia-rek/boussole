@@ -3,12 +3,20 @@
  */
 
 import { logger } from "@infra/logger";
+import { getOriginalEnvValue } from "@server/services/envSettings";
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
-import type { Job } from "@shared/types";
+import type { Job, ResumeProfile } from "@shared/types";
+import { buildAiProfileView, formatCandidateNotes } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
 import { stripMarkdownCodeFences } from "./llm/utils/json";
 import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
 import { renderPromptTemplate } from "./prompt-templates";
+import {
+  buildProfileKeywords,
+  PREFILTER_SCORE,
+  prefilterJob,
+  resolveMinOverlap,
+} from "./scoring-prefilter";
 import { getEffectiveSettings } from "./settings";
 
 interface SuitabilityResult {
@@ -97,6 +105,34 @@ export async function scoreJobSuitability(
     getEffectiveSettings(),
   ]);
 
+  // Cheap pre-filter: skip the LLM entirely for jobs with essentially no
+  // keyword overlap with the candidate profile. Conserves free-tier quota;
+  // the job stays in the DB, just deterministically ranked low.
+  const prefilter = prefilterJob({
+    title: job.title,
+    description: job.jobDescription ?? "",
+    profileKeywords: buildProfileKeywords(profile),
+    minOverlap: resolveMinOverlap(
+      getOriginalEnvValue("SCORING_PREFILTER_MIN_OVERLAP"),
+    ),
+  });
+  if (!prefilter.pass) {
+    logger.info("Job pre-filtered, skipping LLM scoring", {
+      jobId: job.id,
+      overlap: prefilter.overlap,
+    });
+    const penalized = applySalaryPenalty(
+      job,
+      PREFILTER_SCORE,
+      prefilter.reason,
+      {
+        penalizeMissingSalary: settings.penalizeMissingSalary.value,
+        missingSalaryPenalty: settings.missingSalaryPenalty.value,
+      },
+    );
+    return { score: penalized.score, reason: penalized.reason };
+  }
+
   const prompt = buildScoringPrompt(job, sanitizeProfileForPrompt(profile), {
     instructions: settings.scoringInstructions?.value ?? "",
     promptTemplate:
@@ -104,7 +140,7 @@ export async function scoreJobSuitability(
       getDefaultPromptTemplate("scoringPromptTemplate"),
   });
 
-  const llm = await createConfiguredLlmService();
+  const llm = await createConfiguredLlmService("scoring");
   const result = await llm.callJson<{ score: number; reason: string }>({
     model,
     messages: [{ role: "user", content: prompt }],
@@ -278,16 +314,21 @@ function buildScoringPrompt(
 function sanitizeProfileForPrompt(
   profile: Record<string, unknown>,
 ): Record<string, unknown> {
+  // The AI view drops sections the candidate marked private and attaches
+  // their notes (`aiNotes`) to sections/items.
+  const source = buildAiProfileView(profile as ResumeProfile) as ProfileRecord;
+  const candidateNotes = formatCandidateNotes(profile as ResumeProfile);
   return {
-    basics: sanitizeBasics(profile.basics),
-    skills: sanitizeItems(profile, "skills", [
+    basics: sanitizeBasics(source.basics),
+    skills: sanitizeItems(source, "skills", [
       "name",
       "description",
       "level",
       "proficiency",
       "keywords",
+      "aiNotes",
     ]),
-    experience: sanitizeItems(profile, "experience", [
+    experience: sanitizeItems(source, "experience", [
       "company",
       "position",
       "location",
@@ -295,16 +336,18 @@ function sanitizeProfileForPrompt(
       "period",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    projects: sanitizeItems(profile, "projects", [
+    projects: sanitizeItems(source, "projects", [
       "name",
       "description",
       "date",
       "period",
       "summary",
       "keywords",
+      "aiNotes",
     ]),
-    education: sanitizeItems(profile, "education", [
+    education: sanitizeItems(source, "education", [
       "school",
       "institution",
       "degree",
@@ -315,34 +358,39 @@ function sanitizeProfileForPrompt(
       "period",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    languages: sanitizeItems(profile, "languages", [
+    languages: sanitizeItems(source, "languages", [
       "language",
       "fluency",
       "level",
+      "aiNotes",
     ]),
-    awards: sanitizeItems(profile, "awards", [
+    awards: sanitizeItems(source, "awards", [
       "title",
       "awarder",
       "date",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    certifications: sanitizeItems(profile, "certifications", [
+    certifications: sanitizeItems(source, "certifications", [
       "title",
       "issuer",
       "date",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    publications: sanitizeItems(profile, "publications", [
+    publications: sanitizeItems(source, "publications", [
       "title",
       "publisher",
       "date",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    volunteer: sanitizeItems(profile, "volunteer", [
+    volunteer: sanitizeItems(source, "volunteer", [
       "organization",
       "position",
       "location",
@@ -350,13 +398,16 @@ function sanitizeProfileForPrompt(
       "period",
       "summary",
       "description",
+      "aiNotes",
     ]),
-    interests: sanitizeItems(profile, "interests", [
+    interests: sanitizeItems(source, "interests", [
       "name",
       "summary",
       "description",
       "keywords",
+      "aiNotes",
     ]),
+    ...(candidateNotes ? { candidateNotes } : {}),
   };
 }
 

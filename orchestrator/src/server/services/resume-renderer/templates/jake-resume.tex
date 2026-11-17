@@ -1,11 +1,10 @@
 %-------------------------
 % Resume in Latex
-% Author : Jake Gutierrez
-% Based off of: https://github.com/sb2nov/resume
-% License : MIT
-%------------------------
+% Author : Jake Gutierrez (MIT) — adapted for Forsa
+% A4 / 9pt / FontAwesome contact icons / single page
+%-------------------------
 
-\documentclass[a4paper,10pt]{article}
+\documentclass[a4paper,9pt]{extarticle}
 
 \usepackage{latexsym}
 \usepackage[empty]{fullpage}
@@ -19,6 +18,8 @@
 \usepackage[english]{babel}
 \usepackage{iftex}
 \usepackage{tabularx}
+\usepackage{microtype}
+\usepackage{fontawesome}
 
 \ifPDFTeX
   \input{glyphtounicode}
@@ -31,11 +32,9 @@
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
-\addtolength{\oddsidemargin}{-0.6in}
-\addtolength{\evensidemargin}{-0.6in}
-\addtolength{\textwidth}{1.1in}
-\addtolength{\topmargin}{-.8in}
-\addtolength{\textheight}{1.6in}
+% Explicit page margins. (Growing \textheight with \addtolength pushed the
+% text block past the A4 paper edge, clipping the name and the last lines.)
+\usepackage[a4paper,top=0.4in,bottom=0.4in,left=0.45in,right=0.45in]{geometry}
 
 \urlstyle{same}
 
@@ -44,42 +43,50 @@
 \setlength{\tabcolsep}{0in}
 
 \titleformat{\section}{
-  \vspace{-6pt}\scshape\raggedright\large
-}{}{0em}{}[\color{black}\titlerule \vspace{-7pt}]
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
 \newcommand{\resumeItem}[1]{
   \item\small{
-    {#1 \vspace{-3pt}}
+    {#1 \vspace{0pt}}
   }
 }
 
 \newcommand{\resumeSubheading}[4]{
-  \vspace{-2pt}\item
+  \vspace{0pt}\item
     \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
-      \textbf{#1} & #2 \\
+      \textbf{#1} & #2 \\[3pt]
       \textit{\small#3} & \textit{\small #4} \\
-    \end{tabular*}\vspace{-9pt}
+    \end{tabular*}\vspace{-2pt}
 }
 
 \newcommand{\resumeProjectHeading}[2]{
     \item
     \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
       \small#1 & #2 \\
-    \end{tabular*}\vspace{-9pt}
+    \end{tabular*}\vspace{-2pt}
 }
 
 \renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
 
-\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+% Explicit list spacing so every entry (with or without bullets) shares the
+% same vertical rhythm — LaTeX's default itemsep/topsep makes bulleted entries
+% look more spaced than bulletless ones, which reads as incoherent.
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}, itemsep=3pt, parsep=0pt, topsep=3pt, partopsep=0pt]}
 \newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
-\newcommand{\resumeItemListStart}{\begin{itemize}}
-\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-7pt}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[itemsep=1pt, parsep=0pt, topsep=2pt, partopsep=0pt, leftmargin=*]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-3pt}}
+
+% One-page auto-fit: the renderer injects progressively tighter spacing here
+% when the CV would otherwise spill onto a second page.
+__FIT__
 
 \begin{document}
 
 \begin{center}
-    \textbf{\Huge \scshape __NAME__} \\ \vspace{1pt}
+    {\Huge \scshape \textbf{__NAME__}} \\ \vspace{4pt}
 __HEADLINE_BLOCK____CONTACT_BLOCK__\end{center}
+\vspace{-4pt}
 
 __BODY__
 

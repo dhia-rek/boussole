@@ -74,6 +74,7 @@ vi.mock("@server/services/job-brief", () => ({
 
 vi.mock("@server/services/profile", () => ({
   getProfile: vi.fn().mockResolvedValue({}),
+  getProfileForJob: vi.fn().mockResolvedValue({}),
   clearProfileCache: vi.fn(),
 }));
 

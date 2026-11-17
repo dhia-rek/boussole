@@ -67,6 +67,12 @@ COPY extractors/workingnomads/package*.json ./extractors/workingnomads/
 COPY extractors/golangjobs/package*.json ./extractors/golangjobs/
 COPY extractors/ukvisajobs/package*.json ./extractors/ukvisajobs/
 COPY extractors/seek/package*.json ./extractors/seek/
+COPY extractors/bravesearch/package*.json ./extractors/bravesearch/
+COPY extractors/companyats/package*.json ./extractors/companyats/
+COPY extractors/remoteco/package*.json ./extractors/remoteco/
+COPY extractors/wellfound/package*.json ./extractors/wellfound/
+COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
+COPY extractors/wttj/package*.json ./extractors/wttj/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
 # Install Node dependencies with npm cache (dev deps needed for build).
@@ -95,6 +101,12 @@ COPY extractors/workingnomads ./extractors/workingnomads
 COPY extractors/golangjobs ./extractors/golangjobs
 COPY extractors/ukvisajobs ./extractors/ukvisajobs
 COPY extractors/seek ./extractors/seek
+COPY extractors/bravesearch ./extractors/bravesearch
+COPY extractors/companyats ./extractors/companyats
+COPY extractors/remoteco ./extractors/remoteco
+COPY extractors/wellfound ./extractors/wellfound
+COPY extractors/weworkremotely ./extractors/weworkremotely
+COPY extractors/wttj ./extractors/wttj
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # ============================================================================
@@ -135,6 +147,12 @@ COPY extractors/workingnomads/package*.json ./extractors/workingnomads/
 COPY extractors/golangjobs/package*.json ./extractors/golangjobs/
 COPY extractors/ukvisajobs/package*.json ./extractors/ukvisajobs/
 COPY extractors/seek/package*.json ./extractors/seek/
+COPY extractors/bravesearch/package*.json ./extractors/bravesearch/
+COPY extractors/companyats/package*.json ./extractors/companyats/
+COPY extractors/remoteco/package*.json ./extractors/remoteco/
+COPY extractors/wellfound/package*.json ./extractors/wellfound/
+COPY extractors/weworkremotely/package*.json ./extractors/weworkremotely/
+COPY extractors/wttj/package*.json ./extractors/wttj/
 COPY extractors/browser-utils/package*.json ./extractors/browser-utils/
 
 # Install production Node dependencies only.
@@ -192,6 +210,12 @@ COPY extractors/workingnomads ./extractors/workingnomads
 COPY extractors/golangjobs ./extractors/golangjobs
 COPY extractors/ukvisajobs ./extractors/ukvisajobs
 COPY extractors/seek ./extractors/seek
+COPY extractors/bravesearch ./extractors/bravesearch
+COPY extractors/companyats ./extractors/companyats
+COPY extractors/remoteco ./extractors/remoteco
+COPY extractors/wellfound ./extractors/wellfound
+COPY extractors/weworkremotely ./extractors/weworkremotely
+COPY extractors/wttj ./extractors/wttj
 COPY extractors/browser-utils ./extractors/browser-utils
 
 # Create runtime directories.

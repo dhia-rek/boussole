@@ -13,11 +13,14 @@ import { settingsRegistry } from "@shared/settings-registry";
 import type { Job, ResumeProfile } from "@shared/types";
 import * as jobsRepo from "../repositories/jobs";
 import * as settingsRepo from "../repositories/settings";
+import { buildAiProfileView, formatCandidateNotes } from "./ai-profile-context";
 import {
+  detectLanguageFromText,
+  detectProfileLanguage,
   getWritingLanguageLabel,
   resolveWritingOutputLanguage,
 } from "./output-language";
-import { getProfile } from "./profile";
+import { getProfileForJob } from "./profile";
 import {
   getEffectivePromptTemplate,
   renderPromptTemplate,
@@ -97,7 +100,14 @@ function buildJobSnapshot(job: Job): string {
   return JSON.stringify(snapshot, null, 2);
 }
 
-function buildProfileSnapshot(profile: ResumeProfile): string {
+function buildProfileSnapshot(rawProfile: ResumeProfile): string {
+  // AI view: private sections removed, candidate notes attached as `aiNotes`.
+  const profile = buildAiProfileView(rawProfile);
+  const candidateNotes = formatCandidateNotes(rawProfile);
+  const withNotes = (text: string, notes: unknown) =>
+    typeof notes === "string" && notes
+      ? `${text} [candidate note: ${truncate(notes, MAX_ITEM_TEXT)}]`
+      : text;
   const summary =
     truncate(profile?.sections?.summary?.content, MAX_PROFILE_SUMMARY) ||
     truncate(profile?.basics?.summary, MAX_PROFILE_SUMMARY);
@@ -112,17 +122,21 @@ function buildProfileSnapshot(profile: ResumeProfile): string {
   const projects = (profile?.sections?.projects?.items ?? [])
     .filter((item) => item.visible !== false)
     .slice(0, MAX_PROJECTS)
-    .map(
-      (item) =>
+    .map((item) =>
+      withNotes(
         `${item.name} (${item.date || "n/a"}): ${truncate(item.summary, MAX_ITEM_TEXT)}`,
+        (item as Record<string, unknown>).aiNotes,
+      ),
     );
 
   const experience = (profile?.sections?.experience?.items ?? [])
     .filter((item) => item.visible !== false)
     .slice(0, MAX_EXPERIENCE)
-    .map(
-      (item) =>
+    .map((item) =>
+      withNotes(
         `${item.position} @ ${item.company} (${item.date || "n/a"}): ${truncate(item.summary, MAX_ITEM_TEXT)}`,
+        (item as Record<string, unknown>).aiNotes,
+      ),
     );
 
   return compactJoin([
@@ -132,6 +146,9 @@ function buildProfileSnapshot(profile: ResumeProfile): string {
     skills.length > 0 ? `Skills:\n- ${skills.join("\n- ")}` : null,
     projects.length > 0 ? `Projects:\n- ${projects.join("\n- ")}` : null,
     experience.length > 0 ? `Experience:\n- ${experience.join("\n- ")}` : null,
+    candidateNotes
+      ? `Candidate notes (private guidance, do not quote):\n${candidateNotes}`
+      : null,
   ]);
 }
 
@@ -223,11 +240,19 @@ async function buildSelectedEmailsSnapshot(
 async function buildSystemPrompt(
   style: WritingStyle,
   profile: ResumeProfile,
+  jobDescription: string,
 ): Promise<string> {
-  const resolvedLanguage = resolveWritingOutputLanguage({
-    style,
-    profile,
-  });
+  // Match the cover letter to the job posting's language. Priority:
+  //   1. confidently detected from the job description
+  //   2. else the candidate's own profile language (never silently English)
+  //   3. else the configured/style default
+  const jobLanguage = detectLanguageFromText(jobDescription);
+  const profileLanguage = detectProfileLanguage(profile);
+  const resolvedLanguage = jobLanguage
+    ? { language: jobLanguage }
+    : profileLanguage
+      ? { language: profileLanguage }
+      : resolveWritingOutputLanguage({ style, profile });
   const outputLanguage = getWritingLanguageLabel(resolvedLanguage.language);
   const effectiveConstraints = stripLanguageDirectivesFromConstraints(
     style.constraints,
@@ -271,7 +296,7 @@ export async function buildJobChatPromptContext(
 
   let profile: ResumeProfile = {};
   try {
-    profile = await getProfile();
+    profile = await getProfileForJob(job.jobDescription);
   } catch (error) {
     logger.warn("Failed to load profile for job chat context", {
       jobId,
@@ -286,7 +311,7 @@ export async function buildJobChatPromptContext(
     selectedNotesSnapshot,
     selectedEmailsSnapshot,
   ] = await Promise.all([
-    buildSystemPrompt(style, profile),
+    buildSystemPrompt(style, profile, job.jobDescription ?? ""),
     isStopSlopEnabled(),
     buildSelectedNotesSnapshot(jobId, selectedNoteIds),
     buildSelectedEmailsSnapshot(jobId, selectedEmailIds),

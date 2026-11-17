@@ -3,6 +3,7 @@ declare const __APP_VERSION__: string;
 const GITHUB_REPO = "dhia-rek/forsa";
 const STORAGE_KEY = "forsa_version_check";
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const FAILED_CHECK_RETRY_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 function canUseStorage(): boolean {
   return (
@@ -33,28 +34,64 @@ export function parseVersion(rawVersion: string): string {
   return normalized || "unknown";
 }
 
+function readCache(): VersionCheckResult | null {
+  if (!canUseStorage()) return null;
+  try {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    return cached ? (JSON.parse(cached) as VersionCheckResult) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(result: VersionCheckResult): void {
+  if (!canUseStorage()) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
+  } catch {
+    // Storage full or blocked (private mode): skip caching.
+  }
+}
+
+let inFlightCheck: Promise<VersionCheckResult> | null = null;
+
 /**
  * Check for updates against GitHub releases API.
- * Results are cached for 24 hours to avoid rate limits.
+ * Successful results are cached for 24 hours and failures (rate limit,
+ * offline, private repo) for 6 hours, so a failing check is not retried on
+ * every page load. Concurrent callers share a single request.
  */
-export async function checkForUpdate(): Promise<VersionCheckResult> {
+export function checkForUpdate(): Promise<VersionCheckResult> {
+  if (!inFlightCheck) {
+    inFlightCheck = runVersionCheck().finally(() => {
+      inFlightCheck = null;
+    });
+  }
+  return inFlightCheck;
+}
+
+async function runVersionCheck(): Promise<VersionCheckResult> {
   const currentRaw =
     typeof __APP_VERSION__ !== "undefined"
       ? (__APP_VERSION__ as string)
       : "unknown";
   const currentVersion = parseVersion(currentRaw);
 
-  // Check cached result
-  const cached = canUseStorage() ? localStorage.getItem(STORAGE_KEY) : null;
-  if (cached) {
-    try {
-      const parsed: VersionCheckResult = JSON.parse(cached);
-      const timeSinceCheck = Date.now() - parsed.lastChecked;
-      if (timeSinceCheck < CHECK_INTERVAL_MS) {
-        return { ...parsed, currentVersion };
-      }
-    } catch {
-      // Invalid cache, continue to fetch
+  const cached = readCache();
+  if (cached && typeof cached.lastChecked === "number") {
+    const maxAge =
+      cached.latestVersion === null ? FAILED_CHECK_RETRY_MS : CHECK_INTERVAL_MS;
+    if (Date.now() - cached.lastChecked < maxAge) {
+      const latestVersion = cached.latestVersion ?? null;
+      return {
+        currentVersion,
+        latestVersion,
+        updateAvailable:
+          latestVersion !== null &&
+          currentVersion !== "unknown" &&
+          latestVersion !== currentVersion,
+        lastChecked: cached.lastChecked,
+      };
     }
   }
 
@@ -75,27 +112,24 @@ export async function checkForUpdate(): Promise<VersionCheckResult> {
     }
     const latestVersion = parseVersion((data as { tag_name: string }).tag_name);
 
-    const updateAvailable =
-      currentVersion !== "unknown" && latestVersion !== currentVersion;
-
     const result: VersionCheckResult = {
       currentVersion,
       latestVersion,
-      updateAvailable,
+      updateAvailable:
+        currentVersion !== "unknown" && latestVersion !== currentVersion,
       lastChecked: Date.now(),
     };
-
-    if (canUseStorage()) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
-    }
+    writeCache(result);
     return result;
   } catch {
-    // On error, return current version with no update info
-    return {
+    // Remember the failure too, so the next page load does not retry at once.
+    const result: VersionCheckResult = {
       currentVersion,
       latestVersion: null,
       updateAvailable: false,
       lastChecked: Date.now(),
     };
+    writeCache(result);
+    return result;
   }
 }

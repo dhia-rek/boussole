@@ -187,7 +187,7 @@ export function SpontaneousPage() {
     setGeneratedEmail(null);
     setGenerateError(null);
     try {
-      const result = await fetchApi<LookupResult>("/api/spontaneous/lookup", {
+      const result = await fetchApi<LookupResult>("/spontaneous/lookup", {
         method: "POST",
         body: JSON.stringify({ domain: trimmed }),
       });
@@ -206,7 +206,7 @@ export function SpontaneousPage() {
     setGeneratedEmail(null);
     try {
       const result = await fetchApi<GeneratedEmail>(
-        "/api/spontaneous/generate-email",
+        "/spontaneous/generate-email",
         {
           method: "POST",
           body: JSON.stringify({
