@@ -140,7 +140,6 @@ export async function getJobListItems(
     outcome: jobs.outcome,
     closedAt: jobs.closedAt,
     suitabilityScore: jobs.suitabilityScore,
-    sponsorMatchScore: jobs.sponsorMatchScore,
     pdfPath: jobs.pdfPath,
     pdfSource: jobs.pdfSource,
     pdfRegenerating: jobs.pdfRegenerating,
@@ -724,27 +723,6 @@ export async function getJobStats(): Promise<Record<JobStatus, number>> {
   return stats;
 }
 
-/**
- * Get jobs ready for processing (discovered with description).
- */
-export async function getJobsForProcessing(limit: number = 10): Promise<Job[]> {
-  const tenantId = getActiveTenantId();
-  const rows = await db
-    .select()
-    .from(jobs)
-    .where(
-      and(
-        eq(jobs.status, "discovered"),
-        eq(jobs.tenantId, tenantId),
-        sql`${jobs.jobDescription} IS NOT NULL`,
-      ),
-    )
-    .orderBy(desc(jobs.discoveredAt))
-    .limit(limit);
-
-  return rows.map(mapRowToJob);
-}
-
 export async function getReadyJobsWithGeneratedPdfs(
   limit: number,
   offset = 0,
@@ -867,8 +845,6 @@ function mapRowToJob(row: typeof jobs.$inferSelect): Job {
     pdfFingerprint: row.pdfFingerprint ?? null,
     pdfGeneratedAt: row.pdfGeneratedAt ?? null,
     tracerLinksEnabled: row.tracerLinksEnabled ?? false,
-    sponsorMatchScore: row.sponsorMatchScore ?? null,
-    sponsorMatchNames: row.sponsorMatchNames ?? null,
     jobType: row.jobType ?? null,
     salarySource: row.salarySource ?? null,
     salaryInterval: row.salaryInterval ?? null,

@@ -73,7 +73,6 @@ export function toJobListItem(
     outcome: job.outcome,
     closedAt: job.closedAt,
     suitabilityScore: job.suitabilityScore,
-    sponsorMatchScore: job.sponsorMatchScore,
     jobType: job.jobType,
     jobFunction: job.jobFunction,
     pdfRegenerating: job.pdfRegenerating,
@@ -171,8 +170,6 @@ export const updateJobSchema = z.object({
   selectedProjectIds: z.string().optional(),
   pdfPath: z.string().optional(),
   tracerLinksEnabled: z.boolean().optional(),
-  sponsorMatchScore: z.number().min(0).max(100).optional(),
-  sponsorMatchNames: z.string().optional(),
 });
 
 export function isJobUrlConflictError(error: unknown): boolean {

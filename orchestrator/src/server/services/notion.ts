@@ -171,24 +171,3 @@ export async function pushJobToNotion(
     return { success: false, error: message };
   }
 }
-
-export async function validateNotionCredentials(
-  apiKey: string,
-  databaseId: string,
-): Promise<{ valid: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${NOTION_API}/databases/${databaseId}`, {
-      headers: makeHeaders(apiKey),
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      return { valid: false, error: `Notion API ${res.status}: ${err}` };
-    }
-    return { valid: true };
-  } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-}

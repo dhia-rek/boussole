@@ -5,8 +5,7 @@
   "description": "Company career-page extractor - fetches jobs directly from companies' ATS (Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Teamtailor)",
   "main": "manifest.ts",
   "dependencies": {
-    "boussole-shared": "^1.0.0",
-    "tsx": "^4.4.0"
+    "boussole-shared": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

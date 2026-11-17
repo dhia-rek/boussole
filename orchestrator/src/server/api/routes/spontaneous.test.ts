@@ -93,11 +93,9 @@ describe.sequential("Spontaneous applications API routes", () => {
   });
 
   it("returns a structured error (never a 200) when the LLM cannot fulfil generation", async () => {
-    // Test env sets MODEL=test-model, so the service constructs but the call
-    // fails with no reachable endpoint. Either guard rail is acceptable:
-    //   - 400 INVALID_REQUEST  ("LLM not configured")
-    //   - 502 UPSTREAM_ERROR   ("LLM generation failed")
-    // The contract guarantee is: structured envelope, never a fabricated 200.
+    // The route tests point CLAUDE_CLI_BIN at a missing binary, so the Claude
+    // call fails. The contract guarantee is: structured envelope, never a
+    // fabricated 200.
     const res = await fetch(`${baseUrl}/api/spontaneous/generate-email`, {
       method: "POST",
       headers: {
@@ -113,9 +111,9 @@ describe.sequential("Spontaneous applications API routes", () => {
     const body = await res.json();
 
     expect(res.ok).toBe(false);
-    expect([400, 502]).toContain(res.status);
+    expect(res.status).toBe(502);
     expect(body.ok).toBe(false);
-    expect(["INVALID_REQUEST", "UPSTREAM_ERROR"]).toContain(body.error.code);
+    expect(body.error.code).toBe("UPSTREAM_ERROR");
     expect(body.meta.requestId).toBe("req-spont-llm");
     expect(typeof body.error.message).toBe("string");
     expect(body.error.message.length).toBeGreaterThan(0);

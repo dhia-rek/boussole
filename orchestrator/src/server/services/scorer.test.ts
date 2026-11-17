@@ -9,13 +9,11 @@ const {
   getEffectiveSettingsMock,
   getSettingMock,
   resolveLlmModelMock,
-  createConfiguredLlmServiceMock,
   callJsonMock,
 } = vi.hoisted(() => ({
   getEffectiveSettingsMock: vi.fn(),
   getSettingMock: vi.fn(),
   resolveLlmModelMock: vi.fn(),
-  createConfiguredLlmServiceMock: vi.fn(),
   callJsonMock: vi.fn(),
 }));
 
@@ -27,14 +25,16 @@ vi.mock("../repositories/settings", () => ({
   getSetting: getSettingMock,
 }));
 
-vi.mock("./modelSelection", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./modelSelection")>();
-  return {
-    ...actual,
-    resolveLlmModel: resolveLlmModelMock,
-    createConfiguredLlmService: createConfiguredLlmServiceMock,
-  };
-});
+vi.mock("./modelSelection", () => ({
+  resolveLlmModel: resolveLlmModelMock,
+}));
+
+// Never spawn the real Claude CLI from unit tests.
+vi.mock("./llm/service", () => ({
+  LlmService: class {
+    callJson = callJsonMock;
+  },
+}));
 
 // These tests assert on the LLM scoring prompt, so the job must reach the LLM.
 // The pre-filter (a pre-LLM relevance gate) is orthogonal here and has its own
@@ -305,15 +305,11 @@ describe("salary penalty", () => {
       missingSalaryPenalty: { value: 10, default: 10, override: null },
       scoringInstructions: { value: "", default: "", override: null },
       scoringPromptTemplate: { value: "", default: "", override: null },
-      rxresumeBaseResumeId: "base-resume-123",
     } as any);
-    resolveLlmModelMock.mockResolvedValue("gpt-4.1-mini");
+    resolveLlmModelMock.mockResolvedValue("opus:medium");
     callJsonMock.mockResolvedValue({
       success: true,
       data: { score: 80, reason: "Good match" },
-    });
-    createConfiguredLlmServiceMock.mockResolvedValue({
-      callJson: callJsonMock,
     });
   });
 
@@ -335,6 +331,25 @@ describe("salary penalty", () => {
     return JSON.parse(match?.groups?.profile ?? "{}");
   }
 
+  it("scores through Claude with the configured model and retries", async () => {
+    const { scoreJobSuitability } = await import("./scorer");
+
+    await scoreJobSuitability(
+      createJob({ id: "test-job-claude-call", salary: "€55k" }),
+      {},
+    );
+
+    expect(resolveLlmModelMock).toHaveBeenCalled();
+    expect(callJsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "opus:medium",
+        jobId: "test-job-claude-call",
+        maxRetries: 2,
+        jsonSchema: expect.objectContaining({ name: "job_suitability_score" }),
+      }),
+    );
+  });
+
   describe("profile prompt sanitization", () => {
     it("includes top-level education and the full top-level CV content", async () => {
       const { scoreJobSuitability } = await import("./scorer");
@@ -342,7 +357,6 @@ describe("salary penalty", () => {
         penalizeMissingSalary: { value: false, default: false, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
         scoringInstructions: { value: "", default: "", override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       await scoreJobSuitability(
@@ -432,7 +446,6 @@ describe("salary penalty", () => {
         penalizeMissingSalary: { value: false, default: false, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
         scoringInstructions: { value: "", default: "", override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       await scoreJobSuitability(
@@ -476,7 +489,6 @@ describe("salary penalty", () => {
         penalizeMissingSalary: { value: false, default: false, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
         scoringInstructions: { value: "", default: "", override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       await scoreJobSuitability(
@@ -537,7 +549,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -563,7 +574,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -587,7 +597,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -611,7 +620,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -635,7 +643,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -668,7 +675,6 @@ describe("salary penalty", () => {
           override:
             "Open to relocating, so do not mark down for location discrepancies.",
         },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -713,7 +719,6 @@ describe("salary penalty", () => {
           override:
             "Custom scoring {{jobTitle}} {{scoringInstructionsText}} {{unknownToken}}",
         },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -747,7 +752,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: false, default: false, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -771,7 +775,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 100, default: 100, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -795,7 +798,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -819,7 +821,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 0, default: 0, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -843,7 +844,6 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 25, default: 25, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
@@ -871,13 +871,12 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: true, default: true, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
-      // Simulate API key error to trigger mock scoring
+      // Simulate a Claude CLI failure to trigger mock scoring
       callJsonMock.mockResolvedValue({
         success: false,
-        error: "API key not configured",
+        error: "Claude CLI was not found in PATH.",
       });
 
       const job = createJob({
@@ -898,12 +897,11 @@ describe("salary penalty", () => {
       getEffectiveSettingsMock.mockResolvedValue({
         penalizeMissingSalary: { value: false, default: false, override: null },
         missingSalaryPenalty: { value: 10, default: 10, override: null },
-        rxresumeBaseResumeId: "base-resume-123",
       } as any);
 
       callJsonMock.mockResolvedValue({
         success: false,
-        error: "API key not configured",
+        error: "Claude CLI was not found in PATH.",
       });
 
       const job = createJob({

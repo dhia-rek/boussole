@@ -9,7 +9,7 @@ import type {
 
 const HEALTH_CACHE_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_HEALTH_SEARCH_TERM = "software";
-const DEFAULT_HEALTH_SELECTED_COUNTRY = "united kingdom";
+const DEFAULT_HEALTH_SELECTED_COUNTRY = "france";
 
 type HealthProbeConfig = {
   searchTerm: string;
@@ -33,18 +33,11 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
   ExtractorSourceId,
   HealthProbeConfig
 > = {
-  gradcracker: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: {
-      gradcrackerMaxJobsPerTerm: "1",
-    },
-  },
   indeed: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: {
-      jobspyCountryIndeed: "UK",
+      jobspyCountryIndeed: "France",
       jobspyResultsWanted: "1",
     },
   },
@@ -52,7 +45,7 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: {
-      jobspyCountryIndeed: "UK",
+      jobspyCountryIndeed: "France",
       jobspyResultsWanted: "1",
     },
   },
@@ -60,15 +53,8 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: {
-      jobspyCountryIndeed: "UK",
+      jobspyCountryIndeed: "France",
       jobspyResultsWanted: "1",
-    },
-  },
-  ukvisajobs: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: {
-      ukvisajobsMaxJobs: "1",
     },
   },
   adzuna: {
@@ -92,57 +78,12 @@ const HEALTH_PROBE_CONFIG_BY_SOURCE: Record<
       startupjobsMaxJobsPerTerm: "1",
     },
   },
-  workingnomads: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: {
-      jobspyResultsWanted: "1",
-    },
-  },
-  golangjobs: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: {
-      jobspyResultsWanted: "1",
-    },
-  },
-  jobindex: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "denmark",
-    settings: {
-      jobindexMaxJobsPerTerm: "1",
-    },
-  },
-  seek: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "australia",
-    settings: {
-      seekMaxJobsPerTerm: "1",
-    },
-  },
-  naukri: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: "india",
-    settings: {
-      naukriMaxJobsPerTerm: "1",
-    },
-  },
   wttj: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: { jobspyResultsWanted: "1" },
   },
   wellfound: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: { jobspyResultsWanted: "1" },
-  },
-  remoteco: {
-    searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
-    selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
-    settings: { jobspyResultsWanted: "1" },
-  },
-  weworkremotely: {
     searchTerm: DEFAULT_HEALTH_SEARCH_TERM,
     selectedCountry: DEFAULT_HEALTH_SELECTED_COUNTRY,
     settings: { jobspyResultsWanted: "1" },
@@ -480,13 +421,4 @@ export function __resetExtractorHealthCacheForTests(): void {
 
 export function __getExtractorHealthCacheTtlMsForTests(): number {
   return HEALTH_CACHE_TTL_MS;
-}
-
-export function __getExtractorHealthProbeConfigForTests(
-  source: ExtractorSourceId,
-): HealthProbeConfig {
-  return {
-    ...HEALTH_PROBE_CONFIG_BY_SOURCE[source],
-    settings: { ...HEALTH_PROBE_CONFIG_BY_SOURCE[source].settings },
-  };
 }

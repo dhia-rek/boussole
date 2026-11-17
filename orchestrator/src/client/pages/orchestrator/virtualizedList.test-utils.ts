@@ -16,19 +16,6 @@ const readRectSize = (element: Element) => {
   return { height, width };
 };
 
-export const setVirtualElementSize = (
-  element: HTMLElement,
-  size: VirtualElementSize,
-) => {
-  if (size.height != null) {
-    element.dataset.virtualHeight = String(size.height);
-  }
-
-  if (size.width != null) {
-    element.dataset.virtualWidth = String(size.width);
-  }
-};
-
 export const installVirtualizerSizeMock = () => {
   const originalGetBoundingClientRect =
     HTMLElement.prototype.getBoundingClientRect;

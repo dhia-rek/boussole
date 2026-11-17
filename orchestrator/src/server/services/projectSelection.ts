@@ -2,10 +2,11 @@
  * Service for AI-powered project selection for resumes.
  */
 
+import { LlmService } from "@server/services/llm/service";
 import type { DesignResumeAiGuidance } from "@shared/types";
 import { getItemNotes } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
-import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
+import { resolveLlmModel } from "./modelSelection";
 import {
   type ResumeProjectSelectionItem,
   resolveProjectSelectionPlan,
@@ -86,7 +87,7 @@ export async function pickProjectIdsForJob(args: {
   const eligibleIds = new Set(args.eligibleProjects.map((p) => p.id));
   if (eligibleIds.size === 0) return [];
 
-  const model = await resolveLlmModel("projectSelection");
+  const model = await resolveLlmModel();
 
   const prompt = buildProjectSelectionPrompt({
     jobDescription: args.jobDescription,
@@ -95,7 +96,7 @@ export async function pickProjectIdsForJob(args: {
     sectionNotes: args.sectionNotes ?? "",
   });
 
-  const llm = await createConfiguredLlmService();
+  const llm = new LlmService();
   const result = await llm.callJson<{ selectedProjectIds: string[] }>({
     model,
     messages: [{ role: "user", content: prompt }],

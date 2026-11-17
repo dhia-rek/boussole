@@ -17,15 +17,15 @@ export const STEP_COPY: Record<
 > = {
   llm: {
     eyebrow: "Step 1",
-    title: "Choose the LLM connection Boussole should use.",
+    title: "Connect Claude.",
     description:
-      "Pick the provider, confirm the endpoint, and validate the credentials this workspace will use for scoring and tailoring.",
+      "Boussole runs every AI step on Claude through the Claude Code CLI, with your Claude subscription. Check that it is signed in on this computer and pick the model.",
   },
   baseresume: {
     eyebrow: "Step 2",
-    title: "Import your current resume.",
+    title: "Import your current CV.",
     description:
-      "Choose how to bring your base resume into Boussole. Upload a PDF or DOCX to create a local Design Resume, or connect Reactive Resume with a v5 API key and select an existing resume there.",
+      "Upload your CV as a PDF or DOCX. Claude reads it and creates your CV in the CV editor, where you can check and edit every section.",
   },
   searchterms: {
     eyebrow: "Step 3",

@@ -19,7 +19,7 @@ export const DisplaySettingsSection: React.FC<DisplaySettingsSectionProps> = ({
   isSaving,
   layoutMode,
 }) => {
-  const { showSponsorInfo, renderMarkdownInJobDescriptions } = values;
+  const { renderMarkdownInJobDescriptions } = values;
   const { control } = useFormContext<UpdateSettingsInput>();
 
   return (
@@ -29,40 +29,6 @@ export const DisplaySettingsSection: React.FC<DisplaySettingsSectionProps> = ({
       value="display"
     >
       <div className="space-y-4">
-        <div className="flex items-start space-x-3">
-          <Controller
-            name="showSponsorInfo"
-            control={control}
-            render={({ field }) => (
-              <Checkbox
-                id="showSponsorInfo"
-                checked={field.value ?? showSponsorInfo.default}
-                onCheckedChange={(checked) => {
-                  field.onChange(
-                    checked === "indeterminate" ? null : checked === true,
-                  );
-                }}
-                disabled={isLoading || isSaving}
-              />
-            )}
-          />
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="showSponsorInfo"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
-              Show visa sponsor information
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Display a badge next to the employer name showing the match
-              percentage with the UK visa sponsor list. This helps identify
-              employers that are licensed to sponsor work visas.
-            </p>
-          </div>
-        </div>
-
-        <Separator />
-
         <div className="flex items-start space-x-3">
           <Controller
             name="renderMarkdownInJobDescriptions"
@@ -98,22 +64,6 @@ export const DisplaySettingsSection: React.FC<DisplaySettingsSectionProps> = ({
         <Separator />
 
         <div className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <div className="text-xs text-muted-foreground">
-              Sponsor info effective
-            </div>
-            <div className="break-words font-mono text-xs">
-              {showSponsorInfo.effective ? "Enabled" : "Disabled"}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">
-              Sponsor info default
-            </div>
-            <div className="break-words font-mono text-xs font-semibold">
-              {showSponsorInfo.default ? "Enabled" : "Disabled"}
-            </div>
-          </div>
           <div>
             <div className="text-xs text-muted-foreground">
               Markdown rendering effective

@@ -39,14 +39,6 @@ export function getTenantId(): string | undefined {
   return storage.getStore()?.tenantId;
 }
 
-export function requireTenantId(): string {
-  const tenantId = getTenantId();
-  if (!tenantId) {
-    throw new Error("Tenant context is required");
-  }
-  return tenantId;
-}
-
 export function getUserId(): string | undefined {
   return storage.getStore()?.userId;
 }

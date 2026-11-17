@@ -1,12 +1,6 @@
 // Analytics disabled — no data is sent anywhere.
 
-export function trackEvent(_event: string, _data?: Record<string, unknown>) {}
-
 export function trackProductEvent(_event: string, _data?: unknown) {}
-
-export function getAnalyticsSessionId(): string | null {
-  return null;
-}
 
 export function getAnalyticsRequestHeaders(): Record<string, string> {
   return {};

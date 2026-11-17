@@ -9,8 +9,6 @@ import {
   CHAT_STYLE_MANUAL_LANGUAGE_VALUES,
   type ChatStyleLanguageMode,
   type ChatStyleManualLanguage,
-  PDF_RENDERER_VALUES,
-  type PdfRenderer,
   type ResumeProjectsSettings,
 } from "./types/settings";
 
@@ -41,46 +39,7 @@ function parseBitBoolOrNull(raw: string | undefined): boolean | null {
   return null;
 }
 
-function normalizeLlmProviderOrNull(raw: string | undefined): string | null {
-  if (raw === undefined) return null;
-  const normalized = raw.trim().toLowerCase().replace(/-/g, "_");
-  return normalized ? normalized : null;
-}
-
-export const DEFAULT_GEMINI_MODEL = "google/gemini-3-flash-preview";
-export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
-export const DEFAULT_CODEX_MODEL = "";
-/** Claude Code CLI model alias; ":medium" sets the reasoning effort. */
 export const DEFAULT_CLAUDE_CLI_MODEL = "opus:medium";
-
-export function getDefaultModelForProvider(
-  provider: string | null | undefined,
-  fallbackModel?: string | null,
-): string {
-  const trimmedFallback = fallbackModel?.trim();
-  if (trimmedFallback) {
-    return trimmedFallback;
-  }
-
-  const normalizedProvider = normalizeLlmProviderOrNull(provider ?? undefined);
-
-  if (normalizedProvider === "openai") {
-    return DEFAULT_OPENAI_MODEL;
-  }
-
-  if (normalizedProvider === "gemini" || normalizedProvider === "gemini_cli") {
-    return DEFAULT_GEMINI_MODEL;
-  }
-
-  if (normalizedProvider === "codex") {
-    return DEFAULT_CODEX_MODEL;
-  }
-
-  if (normalizedProvider === "claude_cli") {
-    return DEFAULT_CLAUDE_CLI_MODEL;
-  }
-  return DEFAULT_GEMINI_MODEL;
-}
 
 function serializeNullableNumber(
   value: number | null | undefined,
@@ -146,7 +105,6 @@ const parseChatStyleLanguageModeOrNull = createEnumParser(
 const parseChatStyleManualLanguageOrNull = createEnumParser(
   CHAT_STYLE_MANUAL_LANGUAGE_VALUES,
 );
-const parsePdfRendererOrNull = createEnumParser(PDF_RENDERER_VALUES);
 
 const WORKPLACE_TYPE_VALUES = ["remote", "hybrid", "onsite"] as const;
 const parseWorkplaceTypesOrNull = createEnumArrayParser(WORKPLACE_TYPE_VALUES);
@@ -169,50 +127,8 @@ export const settingsRegistry = {
     kind: "typed" as const,
     schema: z.string().trim().max(200),
     default: (): string =>
-      typeof process !== "undefined"
-        ? getDefaultModelForProvider(
-            process.env.LLM_PROVIDER,
-            process.env.MODEL,
-          )
-        : DEFAULT_GEMINI_MODEL,
-    parse: parseNonEmptyStringOrNull,
-    serialize: (value: string | null | undefined): string | null =>
-      value ?? null,
-  },
-  llmProvider: {
-    kind: "typed" as const,
-    envKey: "LLM_PROVIDER",
-    schema: z.preprocess(
-      (v) => (typeof v === "string" ? normalizeLlmProviderOrNull(v) : v),
-      z
-        .enum([
-          "openrouter",
-          "openai",
-          "openai_compatible",
-          "gemini",
-          "gemini_cli",
-          "claude_cli",
-          "codex",
-        ])
-        .nullable(),
-    ),
-    default: (): string =>
-      typeof process !== "undefined"
-        ? normalizeLlmProviderOrNull(process.env.LLM_PROVIDER) || "openrouter"
-        : "openrouter",
-    parse: normalizeLlmProviderOrNull,
-    serialize: (value: string | null | undefined): string | null =>
-      value ?? null,
-  },
-  llmBaseUrl: {
-    kind: "typed" as const,
-    envKey: "LLM_BASE_URL",
-    schema: z.preprocess(
-      (v) => (v === "" ? null : v),
-      z.string().trim().url().max(2000).nullable(),
-    ),
-    default: (): string =>
-      typeof process !== "undefined" ? process.env.LLM_BASE_URL || "" : "",
+      (typeof process !== "undefined" && process.env.MODEL?.trim()) ||
+      DEFAULT_CLAUDE_CLI_MODEL,
     parse: parseNonEmptyStringOrNull,
     serialize: (value: string | null | undefined): string | null =>
       value ?? null,
@@ -261,21 +177,6 @@ export const settingsRegistry = {
       return value ? JSON.stringify(value) : null;
     },
   },
-  pdfRenderer: {
-    kind: "typed" as const,
-    schema: z.enum(PDF_RENDERER_VALUES),
-    default: (): PdfRenderer => "rxresume",
-    parse: parsePdfRendererOrNull,
-    serialize: (value: PdfRenderer | null | undefined): string | null =>
-      value ?? null,
-  },
-  ukvisajobsMaxJobs: {
-    kind: "typed" as const,
-    schema: z.number().int().min(1).max(1000),
-    default: (): number => 50,
-    parse: parseIntOrNull,
-    serialize: serializeNullableNumber,
-  },
   adzunaMaxJobsPerTerm: {
     kind: "typed" as const,
     schema: z.number().int().min(1).max(1000),
@@ -289,13 +190,6 @@ export const settingsRegistry = {
     parse: parseIntOrNull,
     serialize: serializeNullableNumber,
   },
-  gradcrackerMaxJobsPerTerm: {
-    kind: "typed" as const,
-    schema: z.number().int().min(1).max(1000),
-    default: (): number => 50,
-    parse: parseIntOrNull,
-    serialize: serializeNullableNumber,
-  },
   startupjobsMaxJobsPerTerm: {
     kind: "typed" as const,
     schema: z.number().int().min(1).max(1000),
@@ -303,45 +197,6 @@ export const settingsRegistry = {
       parseInt(
         typeof process !== "undefined"
           ? process.env.STARTUPJOBS_MAX_RESULTS || "50"
-          : "50",
-        10,
-      ),
-    parse: parseIntOrNull,
-    serialize: serializeNullableNumber,
-  },
-  seekMaxJobsPerTerm: {
-    kind: "typed" as const,
-    schema: z.number().int().min(1).max(1000),
-    default: (): number =>
-      parseInt(
-        typeof process !== "undefined"
-          ? process.env.SEEK_MAX_JOBS_PER_TERM || "50"
-          : "50",
-        10,
-      ),
-    parse: parseIntOrNull,
-    serialize: serializeNullableNumber,
-  },
-  naukriMaxJobsPerTerm: {
-    kind: "typed" as const,
-    schema: z.number().int().min(1).max(1000),
-    default: (): number =>
-      parseInt(
-        typeof process !== "undefined"
-          ? process.env.NAUKRI_MAX_JOBS_PER_TERM || "50"
-          : "50",
-        10,
-      ),
-    parse: parseIntOrNull,
-    serialize: serializeNullableNumber,
-  },
-  jobindexMaxJobsPerTerm: {
-    kind: "typed" as const,
-    schema: z.number().int().min(1).max(1000),
-    default: (): number =>
-      parseInt(
-        typeof process !== "undefined"
-          ? process.env.JOBINDEX_MAX_JOBS_PER_TERM || "50"
           : "50",
         10,
       ),
@@ -470,13 +325,6 @@ export const settingsRegistry = {
     parse: parseNonEmptyStringOrNull,
     serialize: (value: string | null | undefined): string | null =>
       value ?? null,
-  },
-  showSponsorInfo: {
-    kind: "typed" as const,
-    schema: z.boolean(),
-    default: (): boolean => true,
-    parse: parseBitBoolOrNull,
-    serialize: serializeBitBool,
   },
   renderMarkdownInJobDescriptions: {
     kind: "typed" as const,
@@ -641,53 +489,9 @@ export const settingsRegistry = {
     },
   },
 
-  // --- Model Variants ---
-  modelScorer: {
-    kind: "model" as const,
-    schema: z.string().trim().max(200),
-  },
-  modelTailoring: {
-    kind: "model" as const,
-    schema: z.string().trim().max(200),
-  },
-  modelProjectSelection: {
-    kind: "model" as const,
-    schema: z.string().trim().max(200),
-  },
-
-  // Per-task provider override (multi-LLM routing). Empty = use the global
-  // llmProvider. Lets e.g. scoring run on free Gemini while tailoring runs on
-  // a separate free quota, so neither task starves the other.
-  providerTailoring: {
-    kind: "string" as const,
-    schema: z.string().trim().max(64),
-  },
-  baseUrlTailoring: {
-    kind: "string" as const,
-    schema: z.string().trim().max(300),
-  },
-
-  // --- Simple Strings ---
-  rxresumeBaseResumeId: {
-    kind: "string" as const,
-    schema: z.string().trim().max(200),
-  },
   onboardingBasicAuthDecision: {
     kind: "string" as const,
     schema: z.enum(["enabled", "skipped"]),
-  },
-  rxresumeUrl: {
-    kind: "string" as const,
-    envKey: "RXRESUME_URL",
-    schema: z.preprocess(
-      (value) => (value === "" ? null : value),
-      z.string().trim().url().max(2000).nullable(),
-    ),
-  },
-  ukvisajobsEmail: {
-    kind: "string" as const,
-    envKey: "UKVISAJOBS_EMAIL",
-    schema: z.string().trim().max(200),
   },
   adzunaAppId: {
     kind: "string" as const,
@@ -700,35 +504,9 @@ export const settingsRegistry = {
     schema: z.string().trim().max(200),
   },
 
-  // --- Secrets ---
-  llmApiKey: {
-    kind: "secret" as const,
-    envKey: "LLM_API_KEY",
-    schema: z.string().trim().max(2000),
-  },
-  // API key for the per-task tailoring provider override (see providerTailoring).
-  apiKeyTailoring: {
-    kind: "secret" as const,
-    schema: z.string().trim().max(2000),
-  },
-  rxresumeApiKey: {
-    kind: "secret" as const,
-    envKey: "RXRESUME_API_KEY",
-    schema: z.string().trim().max(2000),
-  },
-  ukvisajobsPassword: {
-    kind: "secret" as const,
-    envKey: "UKVISAJOBS_PASSWORD",
-    schema: z.string().trim().max(2000),
-  },
   adzunaAppKey: {
     kind: "secret" as const,
     envKey: "ADZUNA_APP_KEY",
-    schema: z.string().trim().max(2000),
-  },
-  apifyToken: {
-    kind: "secret" as const,
-    envKey: "APIFY_TOKEN",
     schema: z.string().trim().max(2000),
   },
   basicAuthPassword: {

@@ -188,9 +188,3 @@ export async function verifyToken(token: string): Promise<{
 export async function blacklistToken(jti: string): Promise<void> {
   await authSessionsRepo.revokeAuthSession(jti);
 }
-
-/** Test-only: clear persisted auth sessions. */
-export async function __resetBlacklistForTests(): Promise<void> {
-  cachedJwtSecret = null;
-  await authSessionsRepo.deleteAllAuthSessions();
-}

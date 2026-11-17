@@ -16,11 +16,6 @@ export function getRetryDelayMs(baseDelayMs: number, attempt: number): number {
   return baseDelayMs * attempt;
 }
 
-/** Rate-limit waits beyond this are not worth blocking a request for. */
-export const MAX_RATE_LIMIT_WAIT_MS = 60_000;
-/** Rate-limited requests are retried at most this many extra times. */
-export const MAX_RATE_LIMIT_RETRIES = 2;
-
 function durationToMs(value: string): number | null {
   let total = 0;
   let matched = false;

@@ -1,15 +1,23 @@
 import { createJob } from "@shared/testing/factories";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./design-resume", () => ({
+  getCurrentDesignResumeOrNullOnLegacy: vi.fn(),
+}));
+
+import { getCurrentDesignResumeOrNullOnLegacy } from "./design-resume";
 import type { PdfFingerprintContext } from "./pdf-fingerprint";
-import { createJobPdfFingerprint, getJobPdfFreshness } from "./pdf-fingerprint";
+import {
+  createJobPdfFingerprint,
+  getJobPdfFreshness,
+  resolvePdfFingerprintContext,
+} from "./pdf-fingerprint";
 
 const context: PdfFingerprintContext = {
-  version: "v1",
+  version: "v2",
   designResumeDocumentId: "design-resume-1",
   designResumeRevision: 2,
   designResumeUpdatedAt: "2026-05-01T10:00:00.000Z",
-  pdfRenderer: "latex",
-  rxresumeBaseResumeId: "rxresume-base-1",
 };
 
 describe("PDF freshness", () => {
@@ -79,5 +87,48 @@ describe("PDF freshness", () => {
         context,
       ),
     ).toBe("stale");
+  });
+
+  it("marks generated PDFs stale once the CV in the editor changes", () => {
+    const job = createJob({
+      pdfPath: "data/pdfs/generated.pdf",
+      pdfSource: "generated",
+      tailoredSummary: "Summary",
+    });
+    const pdfFingerprint = createJobPdfFingerprint(job, context);
+
+    expect(
+      getJobPdfFreshness(
+        { ...job, pdfFingerprint },
+        {
+          ...context,
+          designResumeRevision: 3,
+          designResumeUpdatedAt: "2026-05-02T10:00:00.000Z",
+        },
+      ),
+    ).toBe("stale");
+  });
+});
+
+describe("resolvePdfFingerprintContext", () => {
+  it("fingerprints against the current CV editor document", async () => {
+    vi.mocked(getCurrentDesignResumeOrNullOnLegacy).mockResolvedValue({
+      id: "design-resume-1",
+      revision: 2,
+      updatedAt: "2026-05-01T10:00:00.000Z",
+    } as never);
+
+    await expect(resolvePdfFingerprintContext()).resolves.toEqual(context);
+  });
+
+  it("uses empty CV fields when the editor has no CV yet", async () => {
+    vi.mocked(getCurrentDesignResumeOrNullOnLegacy).mockResolvedValue(null);
+
+    await expect(resolvePdfFingerprintContext()).resolves.toEqual({
+      version: "v2",
+      designResumeDocumentId: null,
+      designResumeRevision: null,
+      designResumeUpdatedAt: null,
+    });
   });
 });

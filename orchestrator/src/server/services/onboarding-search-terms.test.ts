@@ -12,9 +12,6 @@ vi.mock("./llm/service", () => ({
 }));
 
 vi.mock("@server/services/modelSelection", () => ({
-  createConfiguredLlmService: vi.fn().mockResolvedValue({
-    callJson: callJsonMock,
-  }),
   resolveLlmModel: vi.fn().mockResolvedValue("test-model"),
 }));
 

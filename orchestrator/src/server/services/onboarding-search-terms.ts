@@ -1,9 +1,7 @@
 import { conflict } from "@infra/errors";
 import { logger } from "@infra/logger";
-import {
-  createConfiguredLlmService,
-  resolveLlmModel,
-} from "@server/services/modelSelection";
+import { LlmService } from "@server/services/llm/service";
+import { resolveLlmModel } from "@server/services/modelSelection";
 import type {
   ResumeProfile,
   SearchTermsSuggestionResponse,
@@ -181,8 +179,8 @@ export async function suggestOnboardingSearchTerms(): Promise<SearchTermsSuggest
   const fallback = buildFallbackSearchTerms(profile);
 
   try {
-    const model = await resolveLlmModel("tailoring");
-    const llm = await createConfiguredLlmService();
+    const model = await resolveLlmModel();
+    const llm = new LlmService();
     const result = await llm.callJson<SearchTermSuggestionModelResponse>({
       model,
       messages: [{ role: "user", content: buildPrompt(context) }],

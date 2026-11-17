@@ -9,11 +9,11 @@ vi.mock("../services/settings", () => ({
 function makeSettings() {
   return {
     jobspyCountryIndeed: {
-      value: "united kingdom",
+      value: "france",
       default: "",
       override: null,
     },
-    searchCities: { value: "London", default: "London", override: null },
+    searchCities: { value: "Paris", default: "Paris", override: null },
     searchTerms: { value: ["backend engineer"], default: [], override: null },
     workplaceTypes: { value: ["hybrid"], default: [], override: null },
     locationSearchScope: {
@@ -31,18 +31,11 @@ function makeSettings() {
       default: [],
       override: null,
     },
-    ukvisajobsMaxJobs: { value: 50, default: 50, override: null },
-    adzunaMaxJobsPerTerm: { value: 50, default: 50, override: null },
-    gradcrackerMaxJobsPerTerm: { value: 50, default: 50, override: null },
-    naukriMaxJobsPerTerm: { value: 50, default: 50, override: null },
+    adzunaMaxJobsPerTerm: { value: 40, default: 50, override: 40 },
     startupjobsMaxJobsPerTerm: { value: 50, default: 50, override: null },
-    jobindexMaxJobsPerTerm: { value: 50, default: 50, override: null },
     jobspyResultsWanted: { value: 20, default: 20, override: null },
     autoSkipScoreThreshold: { value: 65, default: 65, override: null },
-    pdfRenderer: { value: "rxresume", default: "rxresume", override: null },
-    modelScorer: { value: "model-scorer", override: null },
-    modelTailoring: { value: "model-tailoring", override: null },
-    modelProjectSelection: { value: "model-project-selection", override: null },
+    model: { value: "opus:medium", default: "opus:medium", override: null },
     resumeProjects: {
       value: {
         maxProjects: 3,
@@ -69,12 +62,12 @@ describe("buildPipelineRunSavedDetails", () => {
     const savedDetails = await buildPipelineRunSavedDetails({
       topN: 5,
       minSuitabilityScore: 60,
-      sources: ["gradcracker", "linkedin", "seek"],
+      sources: ["glassdoor", "linkedin", "adzuna"],
       outputDir: "/tmp",
       locationIntent: {
-        selectedCountry: "united states",
-        country: "united states",
-        cityLocations: ["New York"],
+        selectedCountry: "japan",
+        country: "japan",
+        cityLocations: ["Tokyo"],
         workplaceTypes: ["remote"],
         geoScope: "selected_only",
         searchScope: "selected_only",
@@ -82,9 +75,9 @@ describe("buildPipelineRunSavedDetails", () => {
       },
     } as never);
 
-    expect(savedDetails.effectiveConfig.country).toBe("united states");
-    expect(savedDetails.effectiveConfig.countryLabel).toBe("United States");
-    expect(savedDetails.effectiveConfig.searchCities).toEqual(["New York"]);
+    expect(savedDetails.effectiveConfig.country).toBe("japan");
+    expect(savedDetails.effectiveConfig.countryLabel).toBe("Japan");
+    expect(savedDetails.effectiveConfig.searchCities).toEqual(["Tokyo"]);
     expect(savedDetails.effectiveConfig.workplaceTypes).toEqual(["remote"]);
     expect(savedDetails.effectiveConfig.locationSearchScope).toBe(
       "selected_only",
@@ -97,11 +90,75 @@ describe("buildPipelineRunSavedDetails", () => {
     ]);
     expect(savedDetails.effectiveConfig.skippedSources).toEqual([
       expect.objectContaining({
-        source: "gradcracker",
+        source: "glassdoor",
+        reason: expect.stringContaining("Japan is not supported"),
       }),
       expect.objectContaining({
-        source: "seek",
+        source: "adzuna",
       }),
     ]);
+  });
+
+  it("falls back to the saved French search when the request has no location", async () => {
+    const savedDetails = await buildPipelineRunSavedDetails({
+      topN: 5,
+      minSuitabilityScore: 60,
+      sources: ["wttj", "companyats", "linkedin", "indeed", "glassdoor"],
+      outputDir: "/tmp",
+    } as never);
+
+    expect(savedDetails.requestedConfig).toEqual({
+      topN: 5,
+      minSuitabilityScore: 60,
+      sources: ["wttj", "companyats", "linkedin", "indeed", "glassdoor"],
+      enableCrawling: true,
+      enableScoring: true,
+      enableImporting: true,
+      enableAutoTailoring: true,
+    });
+    expect(savedDetails.effectiveConfig).toMatchObject({
+      country: "france",
+      countryLabel: "France",
+      searchCities: ["Paris"],
+      searchTermsCount: 1,
+      workplaceTypes: ["hybrid"],
+      compatibleSources: [
+        "wttj",
+        "companyats",
+        "linkedin",
+        "indeed",
+        "glassdoor",
+      ],
+      skippedSources: [],
+      blockedCompanyKeywordsCount: 1,
+      autoSkipScoreThreshold: 65,
+    });
+  });
+
+  it("records the source limits and the single Claude model", async () => {
+    const savedDetails = await buildPipelineRunSavedDetails({
+      topN: 5,
+      minSuitabilityScore: 60,
+      sources: ["adzuna"],
+      outputDir: "/tmp",
+    } as never);
+
+    expect(savedDetails.effectiveConfig.sourceLimits).toEqual({
+      adzunaMaxJobsPerTerm: 40,
+      startupjobsMaxJobsPerTerm: 50,
+      jobspyResultsWanted: 20,
+    });
+    expect(savedDetails.effectiveConfig.model).toBe("opus:medium");
+    expect(savedDetails.effectiveConfig.resumeProjects).toEqual({
+      maxProjects: 3,
+      lockedProjectCount: 1,
+      aiSelectableProjectCount: 2,
+    });
+    expect(savedDetails.resultSummary).toEqual({
+      stage: "started",
+      jobsScored: null,
+      jobsSelected: null,
+      sourceErrors: [],
+    });
   });
 });

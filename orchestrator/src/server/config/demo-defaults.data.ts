@@ -13,15 +13,12 @@ export const DEMO_BASELINE_NAME = "Public Demo Baseline";
 export type DemoDefaultSettings = Partial<Record<SettingKey, string>>;
 
 export const DEMO_DEFAULT_SETTINGS: DemoDefaultSettings = {
-  llmProvider: "openrouter",
-  model: "google/gemini-3-flash-preview",
-  pdfRenderer: "latex",
+  model: "opus:medium",
   searchTerms: JSON.stringify([
     "software engineer",
     "backend engineer",
     "full stack engineer",
   ]),
-  showSponsorInfo: "1",
   renderMarkdownInJobDescriptions: "1",
   backupEnabled: "0",
   backupHour: "2",
@@ -252,20 +249,11 @@ export const DEMO_SOURCE_BASE_URLS: Record<JobSource, string> = {
   linkedin: "https://www.linkedin.com",
   indeed: "https://www.indeed.com",
   glassdoor: "https://www.glassdoor.com",
-  gradcracker: "https://www.gradcracker.com",
-  ukvisajobs: "https://www.ukvisajobs.com",
   adzuna: "https://www.adzuna.com",
   hiringcafe: "https://hiring.cafe",
   startupjobs: "https://startup.jobs",
-  workingnomads: "https://www.workingnomads.com",
-  golangjobs: "https://www.golangjobs.tech",
-  jobindex: "https://www.jobindex.dk",
-  seek: "https://www.seek.com.au",
-  naukri: "https://www.naukri.com",
   wttj: "https://www.welcometothejungle.com",
   wellfound: "https://wellfound.com",
-  remoteco: "https://remote.co",
-  weworkremotely: "https://weworkremotely.com",
   bravesearch: "https://search.brave.com",
   companyats: "https://boards.greenhouse.io",
   manual: "https://example.com",
@@ -387,12 +375,12 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
   },
   {
     id: "demo-job-discovered-2",
-    source: "gradcracker",
-    title: "Graduate Software Developer",
+    source: "wttj",
+    title: "Junior Software Developer",
     employer: "Orbital Labs",
-    jobUrl: "https://www.gradcracker.com",
-    applicationLink: "https://www.gradcracker.com",
-    location: "London, UK",
+    jobUrl: "https://www.welcometothejungle.com",
+    applicationLink: "https://www.welcometothejungle.com",
+    location: "Paris, France",
     salary: "GBP 42,000",
     deadline: "2026-03-20",
     jobDescription:
@@ -423,12 +411,12 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
   },
   {
     id: "demo-job-discovered-4",
-    source: "ukvisajobs",
-    title: "Software Engineer (Visa Sponsorship)",
+    source: "companyats",
+    title: "Software Engineer",
     employer: "BluePeak Commerce",
-    jobUrl: "https://www.ukvisajobs.com",
-    applicationLink: "https://www.ukvisajobs.com",
-    location: "Birmingham, UK",
+    jobUrl: "https://boards.greenhouse.io",
+    applicationLink: "https://boards.greenhouse.io",
+    location: "Lyon, France",
     salary: "GBP 60,000",
     deadline: "2026-03-24",
     jobDescription:
@@ -516,12 +504,12 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
   },
   {
     id: "demo-job-applied-4",
-    source: "gradcracker",
+    source: "wttj",
     title: "Software Engineer",
     employer: "Crestwave Labs",
-    jobUrl: "https://www.gradcracker.com",
-    applicationLink: "https://www.gradcracker.com",
-    location: "Cambridge, UK",
+    jobUrl: "https://www.welcometothejungle.com",
+    applicationLink: "https://www.welcometothejungle.com",
+    location: "Grenoble, France",
     salary: "GBP 58,000",
     deadline: "2026-03-14",
     jobDescription:
@@ -541,12 +529,12 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
   },
   {
     id: "demo-job-applied-5",
-    source: "ukvisajobs",
+    source: "companyats",
     title: "Senior Backend Engineer",
     employer: "Lattice Retail",
-    jobUrl: "https://www.ukvisajobs.com",
-    applicationLink: "https://www.ukvisajobs.com",
-    location: "London, UK",
+    jobUrl: "https://boards.greenhouse.io",
+    applicationLink: "https://boards.greenhouse.io",
+    location: "Paris, France",
     salary: "GBP 92,000",
     deadline: "2026-03-09",
     jobDescription:
@@ -566,12 +554,12 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
   },
   {
     id: "demo-job-skipped-1",
-    source: "ukvisajobs",
+    source: "wttj",
     title: "Full Stack Engineer",
     employer: "Cloudbridge",
-    jobUrl: "https://www.ukvisajobs.com",
-    applicationLink: "https://www.ukvisajobs.com",
-    location: "Manchester, UK",
+    jobUrl: "https://www.welcometothejungle.com",
+    applicationLink: "https://www.welcometothejungle.com",
+    location: "Lille, France",
     salary: "GBP 55,000",
     deadline: "2026-03-02",
     jobDescription:
@@ -601,8 +589,6 @@ export const DEMO_BASE_JOBS: DemoDefaultJob[] = [
       "Deliberately skipped: role is frontend-heavy and below desired seniority target for this search profile.",
   },
 ];
-
-export const DEMO_GENERATED_APPLIED_JOB_COUNT = 48;
 
 export interface DemoDefaultStageEvent {
   id: string;

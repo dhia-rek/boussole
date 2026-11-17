@@ -10,7 +10,7 @@ import { MOCK_INTERVIEW_ROUND_LABELS } from "@shared/types";
 import { buildJobChatPromptContext } from "./ghostwriter-context";
 import { LlmService } from "./llm/service";
 import type { JsonSchemaDefinition, LlmMessage } from "./llm/types";
-import { resolveLlmRuntimeSettings } from "./modelSelection";
+import { resolveLlmModel } from "./modelSelection";
 
 const TURN_SCHEMA: JsonSchemaDefinition = {
   name: "mock_interview_turn",
@@ -119,13 +119,8 @@ export async function generateInterviewerTurn(input: {
   signal?: AbortSignal;
 }): Promise<MockInterviewNextTurn> {
   const context = await buildJobChatPromptContext(input.jobId);
-  const llmConfig = await resolveLlmRuntimeSettings("tailoring");
-
-  const llm = new LlmService({
-    provider: llmConfig.provider,
-    baseUrl: llmConfig.baseUrl,
-    apiKey: llmConfig.apiKey,
-  });
+  const model = await resolveLlmModel();
+  const llm = new LlmService();
 
   const messages: LlmMessage[] = [
     { role: "system", content: interviewerSystemPrompt(input.round) },
@@ -138,7 +133,7 @@ export async function generateInterviewerTurn(input: {
   ];
 
   const result = await llm.callJson<{ message: string; ended: boolean }>({
-    model: llmConfig.model,
+    model,
     messages,
     jsonSchema: TURN_SCHEMA,
     maxRetries: 1,
@@ -189,13 +184,8 @@ export async function generateReport(input: {
   }
 
   const context = await buildJobChatPromptContext(input.jobId);
-  const llmConfig = await resolveLlmRuntimeSettings("tailoring");
-
-  const llm = new LlmService({
-    provider: llmConfig.provider,
-    baseUrl: llmConfig.baseUrl,
-    apiKey: llmConfig.apiKey,
-  });
+  const model = await resolveLlmModel();
+  const llm = new LlmService();
 
   const transcriptText = input.transcript
     .map(
@@ -213,7 +203,7 @@ export async function generateReport(input: {
   ].join("\n");
 
   const result = await llm.callJson<MockInterviewReport>({
-    model: llmConfig.model,
+    model,
     messages: [
       { role: "system", content: systemPrompt },
       {

@@ -10,12 +10,10 @@ vi.mock("./services/pdf");
 vi.mock("./services/pdf-fingerprint", () => ({
   createJobPdfFingerprint: vi.fn().mockReturnValue("test-pdf-fingerprint"),
   resolvePdfFingerprintContext: vi.fn().mockResolvedValue({
-    version: "v1",
+    version: "v2",
     designResumeDocumentId: null,
     designResumeRevision: null,
     designResumeUpdatedAt: null,
-    pdfRenderer: "latex",
-    rxresumeBaseResumeId: null,
   }),
 }));
 
@@ -26,12 +24,10 @@ describe("Tailoring Flow", () => {
       "test-pdf-fingerprint",
     );
     vi.mocked(pdfFingerprint.resolvePdfFingerprintContext).mockResolvedValue({
-      version: "v1",
+      version: "v2",
       designResumeDocumentId: null,
       designResumeRevision: null,
       designResumeUpdatedAt: null,
-      pdfRenderer: "latex",
-      rxresumeBaseResumeId: null,
     });
     vi.mocked(jobsRepo.finalizeGeneratedPdfIfCurrent).mockResolvedValue(
       {} as any,
@@ -201,7 +197,7 @@ describe("Tailoring Flow", () => {
     vi.mocked(jobsRepo.getJobById).mockResolvedValue(readyJob as any);
     vi.mocked(pdfService.generatePdf).mockResolvedValue({
       success: false,
-      error: "Reactive Resume API error (500): Failed to generate PDF",
+      error: "Tectonic failed with exit code 1.",
       errorCode: "UPSTREAM_ERROR",
     });
 
@@ -210,7 +206,7 @@ describe("Tailoring Flow", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "PDF generation failed. Your previous resume PDF is still available. Reactive Resume API error (500): Failed to generate PDF",
+        "PDF generation failed. Your previous resume PDF is still available. Tectonic failed with exit code 1.",
       errorCode: "UPSTREAM_ERROR",
     });
     expect(jobsRepo.updateJob).toHaveBeenCalledTimes(2);

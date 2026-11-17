@@ -87,7 +87,6 @@ vi.mock("../api", () => ({
   skipJob: vi.fn(),
   rescoreJob: vi.fn(),
   generateJobPdf: vi.fn(),
-  checkSponsor: vi.fn(),
 }));
 
 vi.mock("../components/JobHeader", () => ({
@@ -496,7 +495,7 @@ describe("JobPage back navigation", () => {
   it("preserves the entry page state across internal job view links", async () => {
     renderJobPage({
       pathname: "/job/job-1",
-      state: { jobPageBackTo: "/jobs/ready?source=naukri" },
+      state: { jobPageBackTo: "/jobs/ready?source=linkedin" },
     });
 
     await screen.findByRole("heading", { name: "Acme Labs" });
@@ -513,7 +512,7 @@ describe("JobPage back navigation", () => {
 
     await waitFor(() =>
       expect(screen.getByTestId("location-probe")).toHaveTextContent(
-        "/jobs/ready?source=naukri",
+        "/jobs/ready?source=linkedin",
       ),
     );
   });

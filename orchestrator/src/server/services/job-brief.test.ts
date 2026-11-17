@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { callJsonMock, createConfiguredLlmServiceMock, resolveLlmModelMock } =
-  vi.hoisted(() => ({
-    callJsonMock: vi.fn(),
-    createConfiguredLlmServiceMock: vi.fn(),
-    resolveLlmModelMock: vi.fn(),
-  }));
+const { callJsonMock, resolveLlmModelMock } = vi.hoisted(() => ({
+  callJsonMock: vi.fn(),
+  resolveLlmModelMock: vi.fn(),
+}));
 
 vi.mock("@infra/logger", () => ({
   logger: {
@@ -14,8 +12,13 @@ vi.mock("@infra/logger", () => ({
 }));
 
 vi.mock("./modelSelection", () => ({
-  createConfiguredLlmService: createConfiguredLlmServiceMock,
   resolveLlmModel: resolveLlmModelMock,
+}));
+
+vi.mock("./llm/service", () => ({
+  LlmService: class {
+    callJson = callJsonMock;
+  },
 }));
 
 import { logger } from "@infra/logger";
@@ -24,10 +27,7 @@ import { generateJobBrief } from "./job-brief";
 describe("generateJobBrief", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveLlmModelMock.mockResolvedValue("gemini-flash");
-    createConfiguredLlmServiceMock.mockResolvedValue({
-      callJson: callJsonMock,
-    });
+    resolveLlmModelMock.mockResolvedValue("opus:medium");
   });
 
   it("extracts and serializes a UI-ready job brief", async () => {
@@ -48,10 +48,10 @@ describe("generateJobBrief", () => {
       jobId: "job-1",
     });
 
-    expect(resolveLlmModelMock).toHaveBeenCalledWith("scoring");
+    expect(resolveLlmModelMock).toHaveBeenCalledWith();
     expect(callJsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "gemini-flash",
+        model: "opus:medium",
         jobId: "job-1",
         messages: [
           expect.objectContaining({

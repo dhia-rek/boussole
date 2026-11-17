@@ -2,29 +2,20 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
-import { JAKE_BOLD_END, JAKE_BOLD_START } from "@shared/design-resume-jake";
-import { getLatexResumeSectionTitles } from "./document";
-import type {
-  LatexResumeContactItem,
-  LatexResumeDocument,
-  LatexResumeEntry,
-  ResumeRenderer,
-} from "./types";
+import { buildResumeLatex } from "./layout";
+import type { LatexResumeDocument, ResumeRenderer } from "./types";
 
-function resolveTemplatePath(): string {
+const TEMPLATE_FILE = "resume.tex";
+
+function resolveTemplatePath(fileName: string): string {
   try {
     if (import.meta.url.startsWith("file:")) {
       const modulePath = fileURLToPath(import.meta.url);
-      const moduleRelativePath = join(
-        modulePath,
-        "..",
-        "templates",
-        "jake-resume.tex",
-      );
+      const moduleRelativePath = join(modulePath, "..", "templates", fileName);
       if (existsSync(moduleRelativePath)) {
         return moduleRelativePath;
       }
@@ -35,299 +26,20 @@ function resolveTemplatePath(): string {
 
   const cwd = process.cwd();
   if (cwd.endsWith("/orchestrator")) {
-    return join(
-      cwd,
-      "src/server/services/resume-renderer/templates/jake-resume.tex",
-    );
+    return join(cwd, "src/server/services/resume-renderer/templates", fileName);
   }
   return join(
     cwd,
-    "orchestrator/src/server/services/resume-renderer/templates/jake-resume.tex",
+    "orchestrator/src/server/services/resume-renderer/templates",
+    fileName,
   );
 }
 
-const TEMPLATE_PATH = resolveTemplatePath();
+const TEMPLATE_PATH = resolveTemplatePath(TEMPLATE_FILE);
+
+/** Image types Tectonic can embed in the header. */
+const PHOTO_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".pdf"]);
 const TECTONIC_TIMEOUT_MS = 120_000;
-
-/** Bold runs from the CV arrive wrapped in these markers (see design-resume-jake). */
-const BOLD_RUN = new RegExp(
-  `${JAKE_BOLD_START}([^${JAKE_BOLD_START}${JAKE_BOLD_END}]*)${JAKE_BOLD_END}`,
-  "g",
-);
-const BOLD_MARKERS = new RegExp(`[${JAKE_BOLD_START}${JAKE_BOLD_END}]`, "g");
-
-function normalizeText(value: string): string {
-  return (
-    value
-      // Typographic dashes → TeX ligatures (en dash "--", em dash "---").
-      .replace(/\u2014/g, "---")
-      .replace(/\u2013/g, "--")
-      .replace(/\u2010|\u2011|\u2012/g, "-")
-      .replace(/\u2022/g, "-")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
-}
-
-function escapeLatexText(value: string): string {
-  return normalizeText(value)
-    .replace(/\\/g, "\\textbackslash{}")
-    .replace(/([#$%&_{}])/g, "\\$1")
-    .replace(/~/g, "\\textasciitilde{}")
-    .replace(/\^/g, "\\textasciicircum{}");
-}
-
-function escapeLatexUrl(value: string): string {
-  return value
-    .trim()
-    .replace(/\\/g, "\\textbackslash{}")
-    .replace(/([#$%&_{}])/g, "\\$1")
-    .replace(/~/g, "\\textasciitilde{}")
-    .replace(/\^/g, "\\textasciicircum{}");
-}
-
-function escapeKeepingBold(value: string): string {
-  return escapeLatexText(value).replace(/\|/g, "{\\textbar}");
-}
-
-function escapeForCommand(value: string): string {
-  return escapeKeepingBold(value).replace(BOLD_MARKERS, "");
-}
-
-/** Escapes text and restores bold runs from the CV as `\textbf{…}`. */
-function renderRichText(value: string): string {
-  return escapeKeepingBold(value)
-    .replace(BOLD_RUN, (_match, inner: string) =>
-      inner.trim() ? `\\textbf{${inner}}` : inner,
-    )
-    .replace(BOLD_MARKERS, "");
-}
-
-function renderLink(label: string, url?: string | null): string {
-  if (!url) return escapeForCommand(label);
-  return `\\href{${escapeLatexUrl(url)}}{\\underline{${escapeForCommand(label)}}}`;
-}
-
-/** Editor icon names (Phosphor/Iconify style) → FontAwesome 4 commands. */
-const NAMED_CONTACT_ICONS: Array<[RegExp, string]> = [
-  [/calendar|date|clock/, "\\faCalendar"],
-  [/map|pin|location|home|house|address/, "\\faMapMarker"],
-  [/phone|mobile/, "\\faPhone"],
-  [/envelope|mail|email/, "\\faEnvelope"],
-  [/linkedin/, "\\faLinkedin"],
-  [/github/, "\\faGithub"],
-  [/briefcase|work|job/, "\\faBriefcase"],
-  [/graduation|school|student/, "\\faGraduationCap"],
-  [/car|driving/, "\\faCar"],
-  [/globe|web|link|site/, "\\faGlobe"],
-];
-
-/** Uses the icon chosen in the editor when it is recognised; otherwise infers
- *  one from the contact value (email/phone/social/site). */
-function contactIcon(item: LatexResumeContactItem): string {
-  const named = item.icon?.trim().toLowerCase();
-  if (named) {
-    const match = NAMED_CONTACT_ICONS.find(([pattern]) => pattern.test(named));
-    if (match) return match[1];
-  }
-  const hay = `${item.text} ${item.url ?? ""}`.toLowerCase();
-  if (hay.includes("@") && !hay.includes("http")) return "\\faEnvelope";
-  if (/^[+\d][\d\s().-]{5,}$/.test(item.text.trim())) return "\\faPhone";
-  if (hay.includes("linkedin.")) return "\\faLinkedin";
-  if (hay.includes("github.")) return "\\faGithub";
-  if (hay.includes("@")) return "\\faEnvelope";
-  return "\\faGlobe";
-}
-
-function renderContactItems(items: LatexResumeContactItem[]): string {
-  return items
-    .map((item) => `${contactIcon(item)}\\ ${renderLink(item.text, item.url)}`)
-    .join(" \\quad ");
-}
-
-function renderBullets(items: string[]): string {
-  if (items.length === 0) return "";
-  return [
-    "      \\resumeItemListStart",
-    ...items.map((item) => `        \\resumeItem{${renderRichText(item)}}`),
-    "      \\resumeItemListEnd",
-  ].join("\n");
-}
-
-function renderSubheadingEntry(entry: LatexResumeEntry): string {
-  const title = renderLink(entry.title, entry.url);
-  const subtitle = entry.subtitle ? escapeForCommand(entry.subtitle) : "";
-  const secondaryTitle = entry.secondaryTitle
-    ? escapeForCommand(entry.secondaryTitle)
-    : "";
-  const secondarySubtitle = entry.secondarySubtitle
-    ? escapeForCommand(entry.secondarySubtitle)
-    : "";
-  const date = entry.date ? escapeForCommand(entry.date) : "";
-
-  const lines = [
-    "    \\resumeSubheading",
-    `      {${title}}{${date}}`,
-    `      {${subtitle || secondaryTitle}}{${secondarySubtitle || ""}}`,
-  ];
-
-  const bullets = renderBullets(entry.bullets);
-  if (bullets) lines.push(bullets);
-  return lines.join("\n");
-}
-
-function renderProjectEntry(entry: LatexResumeEntry): string {
-  const title = renderLink(entry.title, entry.url);
-  const subtitle = entry.subtitle
-    ? ` $|$ \\emph{${escapeForCommand(entry.subtitle)}}`
-    : "";
-  const date = entry.date ? escapeForCommand(entry.date) : "";
-  const lines = [
-    "      \\resumeProjectHeading",
-    `          {\\textbf{${title}}${subtitle}}{${date}}`,
-  ];
-  const bullets = renderBullets(entry.bullets);
-  if (bullets) lines.push(bullets);
-  return lines.join("\n");
-}
-
-function renderSummarySection(document: LatexResumeDocument): string {
-  if (!document.summary) return "";
-  const titles = document.sectionTitles ?? getLatexResumeSectionTitles();
-  return [
-    `\\section{${escapeForCommand(titles.summary)}}`,
-    " \\begin{itemize}[leftmargin=0.15in, label={}]",
-    `    \\small{\\item{${renderRichText(document.summary)}}}`,
-    " \\end{itemize}",
-    "",
-  ].join("\n");
-}
-
-function renderEntrySection(args: {
-  title: string;
-  entries: LatexResumeEntry[];
-  kind: "subheading" | "project";
-}): string {
-  if (args.entries.length === 0) return "";
-  const body = args.entries
-    .map((entry) =>
-      args.kind === "project"
-        ? renderProjectEntry(entry)
-        : renderSubheadingEntry(entry),
-    )
-    .join("\n\n");
-  return [
-    `\\section{${escapeForCommand(args.title)}}`,
-    "  \\resumeSubHeadingListStart",
-    body,
-    "  \\resumeSubHeadingListEnd",
-    "",
-  ].join("\n");
-}
-
-function renderSkillsSection(document: LatexResumeDocument): string {
-  if (document.skillGroups.length === 0) return "";
-  const titles = document.sectionTitles ?? getLatexResumeSectionTitles();
-  const items = document.skillGroups
-    .map((group) => {
-      const keywords = group.keywords.map((keyword) =>
-        escapeForCommand(keyword),
-      );
-      const keywordsText = keywords.join(", ");
-      return `     \\textbf{${escapeForCommand(group.name)}}{: ${keywordsText}} \\\\`;
-    })
-    .join("\n");
-  return [
-    `\\section{${escapeForCommand(titles.skills)}}`,
-    " \\begin{itemize}[leftmargin=0.15in, label={}]",
-    "    \\small{\\item{",
-    items,
-    "    }}",
-    " \\end{itemize}",
-    "",
-  ].join("\n");
-}
-
-function formatExtraEntry(entry: LatexResumeEntry): string {
-  const meta = [entry.subtitle, entry.date]
-    .map((v) => (v ? v.trim() : ""))
-    .filter(Boolean)
-    .join(", ");
-  const base = escapeForCommand(entry.title);
-  return meta ? `${base} (${escapeForCommand(meta)})` : base;
-}
-
-/**
- * Certifications + a combined "Other" section, matching the user's own CV:
- *  - Certifications: a single inline pipe-separated line
- *  - "Other": bold-labelled lines (Volunteering / Awards / Languages /
- *    Interests …) instead of separate sparse sections
- */
-function renderCertificationsAndOther(document: LatexResumeDocument): string {
-  const sections = document.extraSections ?? [];
-  const out: string[] = [];
-
-  const titles = document.sectionTitles ?? getLatexResumeSectionTitles();
-  const certs = sections.find(
-    (s) =>
-      s.kind === "certifications" ||
-      (!s.kind && s.title.toLowerCase().startsWith("certification")),
-  );
-  if (certs && certs.entries.length > 0) {
-    const inline = certs.entries.map(formatExtraEntry).join(" \\;$|$\\; ");
-    out.push(
-      [
-        `\\section{${escapeForCommand(certs.title || titles.certifications)}}`,
-        " \\begin{itemize}[leftmargin=0.15in, label={}]",
-        `    \\small{\\item{ ${inline} }}`,
-        " \\end{itemize}",
-        "",
-      ].join("\n"),
-    );
-  }
-
-  const otherLines: string[] = [];
-  for (const section of sections) {
-    if (section === certs || section.entries.length === 0) continue;
-    const value = section.entries.map(formatExtraEntry).join(", ");
-    otherLines.push(
-      `    \\textbf{${escapeForCommand(section.title)}}{ : ${value}} \\\\`,
-    );
-  }
-  if ((document.languages ?? []).length > 0) {
-    otherLines.push(
-      `    \\textbf{${escapeForCommand(titles.languages)}}{ : ${(
-        document.languages ?? []
-      )
-        .map((l) => escapeForCommand(l))
-        .join(", ")}} \\\\`,
-    );
-  }
-  if ((document.interests ?? []).length > 0) {
-    otherLines.push(
-      `    \\textbf{${escapeForCommand(titles.interests)}}{ : ${(
-        document.interests ?? []
-      )
-        .map((i) => escapeForCommand(i))
-        .join(", ")}}`,
-    );
-  }
-  if (otherLines.length > 0) {
-    out.push(
-      [
-        `\\section{${escapeForCommand(titles.other)}}`,
-        " \\begin{itemize}[leftmargin=0.15in, label={}]",
-        "    \\small{\\item{",
-        otherLines.join("\n"),
-        "    }}",
-        " \\end{itemize}",
-        "",
-      ].join("\n"),
-    );
-  }
-
-  return out.join("\n");
-}
 
 async function loadTemplate(): Promise<string> {
   return await readFile(TEMPLATE_PATH, "utf8");
@@ -395,57 +107,16 @@ export function parseLatexPageCount(log: string): number {
 export function buildLatexDocument(
   document: LatexResumeDocument,
   template: string,
-  options: { fitLevel?: number } = {},
+  options: {
+    fitLevel?: number;
+    /** File name of the header photo inside the compile directory. */
+    photoFileName?: string | null;
+  } = {},
 ): string {
-  const titles = document.sectionTitles ?? getLatexResumeSectionTitles();
-  const headlineBlock = document.headline
-    ? `    \\small ${escapeForCommand(document.headline)} \\\\ \\vspace{1pt}\n`
-    : "";
-  // Text-only custom fields (e.g. availability) read as a tagline under the
-  // headline; real contact details and links stay on the contact line.
-  const taglineItems = document.contactItems.filter(
-    (item) => item.kind === "custom" && !item.url,
-  );
-  const contactItems = document.contactItems.filter(
-    (item) => !taglineItems.includes(item),
-  );
-  const taglineBlock =
-    taglineItems.length > 0
-      ? `    \\small ${renderContactItems(taglineItems)} \\\\ \\vspace{2pt}\n`
-      : "";
-  const contactBlock =
-    contactItems.length > 0
-      ? `    \\small ${renderContactItems(contactItems)}\n`
-      : "";
-  const body = [
-    renderSummarySection(document),
-    renderEntrySection({
-      title: titles.experience,
-      entries: document.experience,
-      kind: "subheading",
-    }),
-    renderEntrySection({
-      title: titles.education,
-      entries: document.education,
-      kind: "subheading",
-    }),
-    renderEntrySection({
-      title: titles.projects,
-      entries: document.projects,
-      kind: "project",
-    }),
-    renderSkillsSection(document),
-    renderCertificationsAndOther(document),
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return template
-    .replace("__FIT__", LATEX_FIT_LEVELS[options.fitLevel ?? 0] ?? "")
-    .replace("__NAME__", escapeForCommand(document.name))
-    .replace("__HEADLINE_BLOCK__", `${headlineBlock}${taglineBlock}`)
-    .replace("__CONTACT_BLOCK__", contactBlock)
-    .replace("__BODY__", body);
+  return buildResumeLatex(document, template, {
+    fitSnippet: LATEX_FIT_LEVELS[options.fitLevel ?? 0] ?? "",
+    photoFileName: options.photoFileName ?? null,
+  });
 }
 
 function truncateOutput(value: string): string {
@@ -532,6 +203,26 @@ async function runTectonic(args: {
   });
 }
 
+/** Copies the header photo next to the .tex file; null when unusable. */
+async function stagePhoto(
+  photoPath: string | null | undefined,
+  tempDir: string,
+  jobId: string,
+): Promise<string | null> {
+  if (!photoPath) return null;
+  const extension = extname(photoPath).toLowerCase();
+  if (!PHOTO_EXTENSIONS.has(extension) || !existsSync(photoPath)) {
+    logger.warn("CV photo skipped: missing file or unsupported type", {
+      jobId,
+      extension,
+    });
+    return null;
+  }
+  const fileName = `photo${extension === ".jpeg" ? ".jpg" : extension}`;
+  await copyFile(photoPath, join(tempDir, fileName));
+  return fileName;
+}
+
 export const latexResumeRenderer: ResumeRenderer = {
   async render({ document, outputPath, jobId }) {
     const tempDir = await mkdtemp(
@@ -540,12 +231,17 @@ export const latexResumeRenderer: ResumeRenderer = {
 
     try {
       const template = await loadTemplate();
+      const photoFileName = await stagePhoto(
+        document.photoPath,
+        tempDir,
+        jobId,
+      );
       const compile = async (fitLevel: number) => {
         const stem = `resume-fit${fitLevel}`;
         const texPath = join(tempDir, `${stem}.tex`);
         await writeFile(
           texPath,
-          buildLatexDocument(document, template, { fitLevel }),
+          buildLatexDocument(document, template, { fitLevel, photoFileName }),
           "utf8",
         );
         await runTectonic({ cwd: tempDir, texPath, jobId });
@@ -565,6 +261,7 @@ export const latexResumeRenderer: ResumeRenderer = {
       logger.info("Rendered LaTeX resume PDF", {
         jobId,
         outputPath,
+        withPhoto: Boolean(photoFileName),
         pages: chosen.pages,
         fitLevel: chosen.fitLevel,
       });

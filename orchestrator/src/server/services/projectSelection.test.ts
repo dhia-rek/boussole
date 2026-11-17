@@ -5,9 +5,12 @@ const callJsonMock = vi.fn();
 
 vi.mock("./modelSelection", () => ({
   resolveLlmModel: vi.fn().mockResolvedValue("test-model"),
-  createConfiguredLlmService: vi.fn().mockResolvedValue({
-    callJson: (...args: unknown[]) => callJsonMock(...args),
-  }),
+}));
+
+vi.mock("./llm/service", () => ({
+  LlmService: class {
+    callJson = (...args: unknown[]) => callJsonMock(...args);
+  },
 }));
 
 import { selectProjectIdsForJob } from "./projectSelection";
@@ -142,6 +145,7 @@ describe("selectProjectIdsForJob", () => {
     });
 
     expect(ids).toEqual(["p1", "p2"]);
+    expect(callJsonMock.mock.calls[0]?.[0]?.model).toBe("test-model");
     const prompt = callJsonMock.mock.calls[0]?.[0]?.messages?.[0]?.content;
     expect(prompt).toContain("Flagship GenAI project");
     expect(prompt).toContain("Prefer GenAI work");

@@ -95,7 +95,7 @@ export const jobs = sqliteTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
 
     // From crawler
-    source: text("source").notNull().default("gradcracker"),
+    source: text("source").notNull().default("manual"),
     sourceJobId: text("source_job_id"),
     jobUrlDirect: text("job_url_direct"),
     datePosted: text("date_posted"),
@@ -172,8 +172,6 @@ export const jobs = sqliteTable(
     tracerLinksEnabled: integer("tracer_links_enabled", { mode: "boolean" })
       .notNull()
       .default(false),
-    sponsorMatchScore: real("sponsor_match_score"),
-    sponsorMatchNames: text("sponsor_match_names"),
 
     // Timestamps
     discoveredAt: text("discovered_at")
