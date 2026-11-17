@@ -14,6 +14,7 @@ ENV CODEX_HOME=/app/codex-home
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PATH=/root/.local/bin:${PATH}
 ARG CODEX_CLI_VERSION=0.120.0
+ARG CLAUDE_CODE_VERSION=2.1.318
 
 # Install runtime dependencies shared by build and production stages.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,6 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Codex CLI for local app-server based inference.
 RUN npm install -g @openai/codex@${CODEX_CLI_VERSION}
+
+# Install the Claude Code CLI for the claude_cli provider. On a server it signs
+# in with CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`).
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 WORKDIR /app
 
