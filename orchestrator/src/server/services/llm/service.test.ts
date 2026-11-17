@@ -40,16 +40,43 @@ function createClient() {
   return { client, callJson, validateCredentials };
 }
 
+/** A ChatGPT client stub; only used when a test picks ChatGPT. */
+function createCodexClient() {
+  return {
+    callJson: vi.fn(async () => ({ text: '{"value":"from-chatgpt"}' })),
+    validateCredentials: vi.fn(async () => ({ valid: true, message: null })),
+  };
+}
+
+function makeService(
+  client: ClaudeCliClient = createClient().client,
+  provider: "claude" | "chatgpt" = "claude",
+  codex = createCodexClient(),
+) {
+  return new LlmService(client, codex, async () => provider);
+}
+
 describe("LlmService (Claude CLI)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("always reports the Claude CLI provider", () => {
-    expect(new LlmService().getProvider()).toBe("claude_cli");
-    expect(new LlmService(createClient().client).getProvider()).toBe(
-      "claude_cli",
-    );
+  it("reports the provider the workspace picked", async () => {
+    await expect(makeService().getProvider()).resolves.toBe("claude_cli");
+    await expect(
+      makeService(createClient().client, "chatgpt").getProvider(),
+    ).resolves.toBe("codex_cli");
+  });
+
+  it("sends JSON calls to ChatGPT when the workspace picked it", async () => {
+    const { client, callJson } = createClient();
+    const codex = createCodexClient();
+    const result = await makeService(client, "chatgpt", codex).callJson<{
+      value: string;
+    }>(request({ model: "gpt-6.1-sol:low", bypassCache: true }));
+    expect(result).toEqual({ success: true, data: { value: "from-chatgpt" } });
+    expect(codex.callJson).toHaveBeenCalledTimes(1);
+    expect(callJson).not.toHaveBeenCalled();
   });
 
   it("delegates JSON calls to the Claude CLI client and parses the answer", async () => {
@@ -57,7 +84,7 @@ describe("LlmService (Claude CLI)", () => {
     callJson.mockResolvedValue({ text: '{"value":"ok"}' });
     const controller = new AbortController();
 
-    const result = await new LlmService(client).callJson<{ value: string }>(
+    const result = await makeService(client).callJson<{ value: string }>(
       request({ jobId: "job-1", signal: controller.signal }),
     );
 
@@ -81,7 +108,7 @@ describe("LlmService (Claude CLI)", () => {
       .mockResolvedValueOnce({
         text: 'Here is the answer: {"value":"inline"} as requested.',
       });
-    const llm = new LlmService(client);
+    const llm = makeService(client);
 
     await expect(llm.callJson<{ value: string }>(request())).resolves.toEqual({
       success: true,
@@ -97,7 +124,7 @@ describe("LlmService (Claude CLI)", () => {
     const { client, callJson } = createClient();
     callJson.mockResolvedValue({ text: "not json at all" });
 
-    const result = await new LlmService(client).callJson(request());
+    const result = await makeService(client).callJson(request());
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -113,7 +140,7 @@ describe("LlmService (Claude CLI)", () => {
       .mockResolvedValueOnce({ text: "still not json" })
       .mockResolvedValueOnce({ text: '{"value":"ok"}' });
 
-    const result = await new LlmService(client).callJson<{ value: string }>(
+    const result = await makeService(client).callJson<{ value: string }>(
       request({ maxRetries: 2, retryDelayMs: 1 }),
     );
 
@@ -127,7 +154,7 @@ describe("LlmService (Claude CLI)", () => {
       .mockRejectedValueOnce(new Error("Claude CLI timed out after 180000ms."))
       .mockResolvedValueOnce({ text: '{"value":"after-timeout"}' });
 
-    const result = await new LlmService(client).callJson<{ value: string }>(
+    const result = await makeService(client).callJson<{ value: string }>(
       request({ maxRetries: 1, retryDelayMs: 1 }),
     );
 
@@ -139,7 +166,7 @@ describe("LlmService (Claude CLI)", () => {
     const { client, callJson } = createClient();
     callJson.mockResolvedValue({ text: "never json" });
 
-    const result = await new LlmService(client).callJson(
+    const result = await makeService(client).callJson(
       request({ maxRetries: 1, retryDelayMs: 1 }),
     );
 
@@ -156,7 +183,7 @@ describe("LlmService (Claude CLI)", () => {
       new Error("Claude CLI exited with code 1: not logged in"),
     );
 
-    const result = await new LlmService(client).callJson(
+    const result = await makeService(client).callJson(
       request({ maxRetries: 3, retryDelayMs: 1 }),
     );
 
@@ -171,7 +198,7 @@ describe("LlmService (Claude CLI)", () => {
     const { client, callJson } = createClient();
     callJson.mockRejectedValue("spawn failed");
 
-    const result = await new LlmService(client).callJson(request());
+    const result = await makeService(client).callJson(request());
 
     expect(result).toEqual({ success: false, error: "spawn failed" });
   });
@@ -184,7 +211,7 @@ describe("LlmService (Claude CLI)", () => {
       username: null,
     });
 
-    const result = await new LlmService(client).validateCredentials();
+    const result = await makeService(client).validateCredentials();
 
     expect(result).toEqual({
       valid: false,
@@ -196,7 +223,7 @@ describe("LlmService (Claude CLI)", () => {
 
   it("lists the Claude model aliases without calling the CLI", async () => {
     const { client, callJson } = createClient();
-    const llm = new LlmService(client);
+    const llm = makeService(client);
 
     const models = await llm.listModels();
 

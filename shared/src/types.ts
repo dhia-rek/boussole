@@ -6,6 +6,7 @@
  */
 
 export * from "./types/agents";
+export * from "./types/ai-account";
 export * from "./types/api";
 export * from "./types/chat";
 export * from "./types/design-resume";

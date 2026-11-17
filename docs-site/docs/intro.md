@@ -62,7 +62,7 @@ Welcome to Boussole documentation. This site contains guides for setup, configur
   - Keyboard support for select, clear, and fast bulk move-to-ready
 
 - **[Settings](/docs/features/settings)**
-  - The Claude model every AI step runs on
+  - Your AI account (Claude or ChatGPT) and model
   - Webhooks, service accounts, and basic auth controls
   - Backup scheduling, scoring thresholds, and danger-zone cleanup tools
 

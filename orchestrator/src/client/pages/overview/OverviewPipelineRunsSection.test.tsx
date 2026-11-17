@@ -143,7 +143,7 @@ describe("OverviewPipelineRunsSection", () => {
     expect(screen.getByText("Saved settings")).toBeInTheDocument();
     expect(screen.getByText("Requested run")).toBeInTheDocument();
     expect(screen.getByText("Effective settings")).toBeInTheDocument();
-    expect(screen.getByText("Claude model")).toBeInTheDocument();
+    expect(screen.getByText("AI model")).toBeInTheDocument();
     expect(screen.getByText("opus:medium")).toBeInTheDocument();
     expect(screen.getByText("Saved execution summary")).toBeInTheDocument();
     expect(screen.getByText("What changed")).toBeInTheDocument();

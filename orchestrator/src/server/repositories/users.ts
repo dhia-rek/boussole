@@ -4,7 +4,7 @@ import {
   DEFAULT_TENANT_ID,
   DEFAULT_TENANT_NAME,
 } from "@server/tenancy/constants";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, schema } from "../db";
 
 const { tenantMemberships, tenants, users } = schema;

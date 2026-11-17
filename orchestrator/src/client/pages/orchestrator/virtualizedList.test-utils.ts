@@ -1,8 +1,3 @@
-type VirtualElementSize = {
-  height?: number;
-  width?: number;
-};
-
 const DEFAULT_RECT = {
   height: 0,
   width: 0,

@@ -1,7 +1,7 @@
 ---
 id: settings
 title: Settings
-description: Configure the Claude model, writing style, webhooks, workspaces, backups, scoring, and safety controls.
+description: Configure your AI account and model, writing style, webhooks, workspaces, backups, scoring, and safety controls.
 sidebar_position: 2
 ---
 
@@ -13,7 +13,7 @@ The Settings page is the control center for app-wide behavior.
 
 It lets you configure:
 
-- The Claude model every AI step uses
+- Your AI account (Claude or ChatGPT) and the model every AI step uses
 - Webhook destinations and secret
 - Display and writing-style defaults
 - Editable prompt templates for core AI workflows
@@ -37,15 +37,15 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 
 ## Section-by-section guide
 
-### AI model
+### AI account
 
-Every AI step (scoring, CV tailoring, cover letters, Ghostwriter, agents) runs on Claude through the Claude Code CLI, with your Claude subscription. There is no API key to enter.
+Every AI step (scoring, CV tailoring, cover letters, Ghostwriter, agents) runs on your own AI account: **Claude** (a Claude plan or an Anthropic Console account) or **ChatGPT** (your ChatGPT plan).
 
-- Set the **Claude model**: a model alias with an optional effort, for example `opus:medium` (the default), `opus:high`, `sonnet` or `haiku`.
-- Effort levels: `low`, `medium`, `high`, `xhigh`, `max`. Without a suffix, `CLAUDE_CLI_EFFORT` or the CLI default applies.
-- Leave the field empty to use the default (`MODEL` from the environment, else `opus:medium`).
-- Boussole runs headless `claude -p` on the host with every tool denied, so the model can only answer.
-- Sign in once by running `claude` in a terminal on the host. On a server, run `claude setup-token` and set `CLAUDE_CODE_OAUTH_TOKEN` (see [Run Boussole 24/7 on Your Server](/docs/getting-started/deploy-server)).
+- Sign in on Anthropic's or OpenAI's own page, choose which account Boussole uses, and pick the model and effort for each.
+- Model and account choices save immediately, separately from the **Save** button.
+- The owner's workspace can keep using the server's own Claude login.
+
+See [AI Account](/docs/features/ai-account) for the full guide.
 
 ### Webhooks
 
@@ -218,7 +218,7 @@ curl -X POST "http://localhost:3001/api/backups"
 
 - Some settings apply only to new runs/actions after save.
 - Re-run scoring/tailoring/pipeline to validate effect.
-- A new **AI model** only applies to future actions after you click **Save**.
+- A new AI account or model choice applies to the next AI action; it saves as soon as you pick it.
 - Prompt-template changes only affect new Ghostwriter runs, new tailoring generations, and new scoring runs after you save.
 
 ### I do not see workspace user controls
@@ -238,7 +238,7 @@ curl -X POST "http://localhost:3001/api/backups"
 
 - Run `claude` once in a terminal on the host to sign in, then retry.
 - On a server, refresh the token: run `claude setup-token` and update `CLAUDE_CODE_OAUTH_TOKEN`.
-- Check the model value in **Settings → AI model**: an unknown alias fails every call. Clear the field to use the default.
+- Check **Settings → AI account**: the chosen account must show as signed in. Pick another model if the current one keeps failing.
 
 ### Resume tailoring used English instead of my resume language
 

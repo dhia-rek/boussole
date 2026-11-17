@@ -27,9 +27,9 @@ npm --workspace docs-site run build
 
 ## No job scoring or AI inference
 
-- Check that Claude is signed in on the host: run `claude` once in a terminal, then retry.
-- On a server or in Docker, refresh the token with `claude setup-token` and update `CLAUDE_CODE_OAUTH_TOKEN`.
-- Check **Settings → AI model**: an unknown model alias fails every call. Clear the field to use the default (`opus:medium`).
+- Open **Settings → AI account**: the account Boussole uses must show as signed in. Sign in again if it expired.
+- The owner's workspace may use the server's Claude login: run `claude` once on the host, or on a server refresh it with `claude setup-token` and `CLAUDE_CODE_OAUTH_TOKEN`.
+- If one model keeps failing, pick another one (or the default) in **Settings → AI account**.
 
 ## Older jobs look expired or stale
 

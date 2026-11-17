@@ -108,8 +108,6 @@ export const OnboardingPage: React.FC = () => {
                     basicAuthPassword={flow.watch("basicAuthPassword")}
                     basicAuthUser={flow.watch("basicAuthUser")}
                     currentStep={flow.currentStep}
-                    defaultModel={flow.settings?.model?.default}
-                    effectiveModel={flow.settings?.model?.value}
                     hasSavedSearchTermsInSession={
                       flow.hasSavedSearchTermsInSession
                     }
@@ -117,14 +115,11 @@ export const OnboardingPage: React.FC = () => {
                     isGeneratingSearchTerms={flow.isGeneratingSearchTerms}
                     isImportingResume={flow.isImportingResume}
                     llmValidation={flow.llmValidation}
-                    model={flow.watch("model")}
                     searchTermDraft={flow.watch("searchTermDraft")}
                     searchTerms={flow.watch("searchTerms")}
                     searchTermsSource={flow.searchTermsSource}
                     searchTermsStale={flow.searchTermsStale}
-                    onLlmModelChange={(value) =>
-                      flow.setValue("model", value, { shouldDirty: true })
-                    }
+                    onAiAccountChange={flow.handleAiAccountChange}
                     onBasicAuthChoiceChange={flow.setBasicAuthChoice}
                     onBasicAuthPasswordChange={(value) =>
                       flow.setValue("basicAuthPassword", value)
