@@ -323,7 +323,8 @@ function toCustomSections(
     .filter((section) => !toBoolean(section.hidden, false))
     .map((section, index) => ({
       kind: "custom" as const,
-      title: toText(section.name, `Section ${index + 1}`),
+      title:
+        toText(section.title) || toText(section.name, `Section ${index + 1}`),
       entries: asArray(section.items)
         .map((value) => asRecord(value) ?? {})
         .filter((item) => !toBoolean(item.hidden, false))
