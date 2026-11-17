@@ -22,8 +22,11 @@ export function useOnboardingRequirement() {
   );
   const validationInputsKeyRef = useRef<string | null>(null);
 
+  // Re-check when the person switches AI account or model.
   const validationInputsKey = JSON.stringify({
+    aiProvider: settings?.aiProvider?.value || null,
     model: settings?.model?.value || null,
+    chatgptModel: settings?.chatgptModel?.value || null,
   });
 
   useEffect(() => {

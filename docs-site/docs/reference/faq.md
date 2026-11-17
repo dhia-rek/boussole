@@ -25,11 +25,11 @@ Edit files under `docs-site/docs` for latest docs.
 
 ## What does this cost in practice?
 
-Boussole runs every AI step on Claude through the Claude Code CLI, so it uses your Claude subscription instead of per-call API billing. There is no extra cost per job.
+Boussole runs every AI step on your own AI account, Claude or ChatGPT, so it uses your subscription instead of per-call API billing. There is no extra cost per job.
 
 What matters instead is your subscription's usage limits:
 
 - scoring is one Claude call per new job, and responses are cached, so re-runs over unchanged jobs cost nothing
 - tailoring a CV and writing a cover letter take a few calls per job
 - the agent team (analyst, CV tailor, letter writer, critic) takes several calls per job, so keep it for the jobs you will really apply to
-- a lighter model (`sonnet`, `haiku`) or a lower effort (`opus:low`) in **Settings → AI model** stretches the limits further
+- a lighter model (`sonnet`, `haiku`) or a lower effort (`opus:low`) in **Settings → AI account** stretches the limits further

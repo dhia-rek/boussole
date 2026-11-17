@@ -84,7 +84,7 @@ describe.sequential("Onboarding API routes", () => {
   });
 
   describe("POST /api/onboarding/validate/llm", () => {
-    it("checks the Claude CLI and reports when it is not installed", async () => {
+    it("reports when the chosen AI account cannot be used (Claude not installed)", async () => {
       // The route tests point CLAUDE_CLI_BIN at a binary that does not exist.
       const res = await fetch(`${baseUrl}/api/onboarding/validate/llm`, {
         method: "POST",
@@ -96,8 +96,7 @@ describe.sequential("Onboarding API routes", () => {
         ok: true,
         data: {
           valid: false,
-          message:
-            "Claude CLI was not found in PATH. Install Claude Code or set CLAUDE_CLI_BIN.",
+          message: "Claude Code is not installed on this server.",
         },
         meta: { requestId: expect.any(String) },
       });

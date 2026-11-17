@@ -3,10 +3,11 @@ import { useDemoInfo } from "@client/hooks/useDemoInfo";
 import { useOnboardingRequirement } from "@client/hooks/useOnboardingRequirement";
 import { useSettings } from "@client/hooks/useSettings";
 import { createDesignResumeDocument } from "@shared/testing/factories";
+import type { AiAccountOverview, AiAccountStatus } from "@shared/types";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithQueryClient } from "../test/renderWithQueryClient";
 import { OnboardingPage } from "./OnboardingPage";
 
@@ -16,6 +17,11 @@ vi.mock("@client/api", () => ({
   validateLlm: vi.fn(),
   validateResumeConfig: vi.fn(),
   updateSettings: vi.fn(),
+  getAiAccountOverview: vi.fn(),
+  startAiSignIn: vi.fn(),
+  submitAiSignInCode: vi.fn(),
+  cancelAiSignIn: vi.fn(),
+  signOutAiAccount: vi.fn(),
 }));
 
 vi.mock("@client/hooks/useDemoInfo", () => ({
@@ -40,6 +46,61 @@ vi.mock("sonner", () => ({
 
 const NO_CV_MESSAGE =
   "No CV yet. Upload a PDF or DOCX CV, or create one in the CV editor.";
+const NOT_SIGNED_IN_MESSAGE =
+  "Sign in with your Claude account to use the AI features.";
+
+function aiAccount(
+  provider: AiAccountStatus["provider"],
+  overrides: Partial<AiAccountStatus> = {},
+): AiAccountStatus {
+  return {
+    provider,
+    available: true,
+    signedIn: false,
+    accountLabel: null,
+    planLabel: null,
+    usesServerLogin: false,
+    message: null,
+    ...overrides,
+  };
+}
+
+function aiOverview(
+  overrides: Partial<AiAccountOverview> = {},
+): AiAccountOverview {
+  const efforts = [{ id: "medium", description: null }];
+  return {
+    activeProvider: "claude",
+    accounts: {
+      claude: aiAccount("claude", { signedIn: true }),
+      chatgpt: aiAccount("chatgpt"),
+    },
+    models: {
+      claude: [
+        {
+          id: "opus",
+          label: "Claude Opus",
+          description: null,
+          efforts,
+          defaultEffort: "medium",
+        },
+        {
+          id: "sonnet",
+          label: "Claude Sonnet",
+          description: null,
+          efforts,
+          defaultEffort: "medium",
+        },
+      ],
+      chatgpt: [],
+    },
+    selectedModels: { claude: "opus:medium", chatgpt: "" },
+    signIn: null,
+    ...overrides,
+  };
+}
+
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
 const baseSettings = {
   model: { value: "opus:medium", default: "opus:medium", override: null },
@@ -66,8 +127,9 @@ function getStepButton(label: RegExp) {
   return button;
 }
 
-async function waitForClaudeStep() {
-  return await screen.findByLabelText("Claude model");
+/** The first step shows the AI account panel. */
+async function waitForAiStep() {
+  return await screen.findByRole("region", { name: "Claude account" });
 }
 
 function getResumeUploadInput(container: HTMLElement) {
@@ -92,10 +154,22 @@ function renderPage() {
 }
 
 describe("OnboardingPage", () => {
+  afterAll(() => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: originalScrollIntoView,
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
     currentSettings = { ...baseSettings };
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    vi.mocked(api.getAiAccountOverview).mockResolvedValue(aiOverview());
 
     vi.mocked(useDemoInfo).mockReturnValue({
       demoMode: false,
@@ -129,10 +203,10 @@ describe("OnboardingPage", () => {
     });
   });
 
-  it("shows the Claude model field on the Claude step", async () => {
+  it("shows the AI account panel on the first step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "Claude is not signed in",
+      message: NOT_SIGNED_IN_MESSAGE,
     });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
@@ -143,17 +217,21 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => expect(api.validateLlm).toHaveBeenCalledWith());
 
-    const modelInput = await waitForClaudeStep();
-    expect(modelInput).toHaveValue("");
-    expect(modelInput).toHaveAttribute("placeholder", "opus:medium");
-    expect(screen.getByText("In use: opus:medium")).toBeInTheDocument();
-    expect(getStepButton(/^Claude$/)).toHaveTextContent(
-      "Check that Claude is connected",
+    await waitForAiStep();
+    expect(screen.getByText("Connect your AI")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "ChatGPT account" }),
+    ).toBeInTheDocument();
+    expect(getStepButton(/^AI account$/)).toHaveTextContent(
+      "Sign in with Claude or ChatGPT",
     );
     expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /check connection/i }),
+    ).toBeInTheDocument();
   });
 
-  it("saves the chosen Claude model from onboarding", async () => {
+  it("saves the chosen model from the first step", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
@@ -166,25 +244,28 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    const modelInput = await waitForClaudeStep();
-    const revalidateButton = await screen.findByRole("button", {
-      name: /revalidate connection/i,
-    });
-
-    fireEvent.change(modelInput, {
-      target: { value: "sonnet" },
-    });
-    fireEvent.click(revalidateButton);
+    const claude = await waitForAiStep();
+    fireEvent.click(
+      within(claude).getByRole("combobox", { name: "Claude model" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Claude Sonnet" }),
+    );
 
     await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalledWith({ model: "sonnet" });
+      expect(api.updateSettings).toHaveBeenCalledWith({
+        model: "sonnet:medium",
+      });
     });
+    // Picking a model does not submit the step.
+    expect(api.validateLlm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Connect your AI")).toBeInTheDocument();
   });
 
-  it("does not treat Claude as connected before the connection check passes", async () => {
+  it("does not treat the AI account as connected before the check passes", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "Claude is not signed in",
+      message: NOT_SIGNED_IN_MESSAGE,
     });
     vi.mocked(api.validateResumeConfig).mockResolvedValue({
       valid: true,
@@ -195,27 +276,25 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /save connection/i }),
+        screen.getByRole("button", { name: /check connection/i }),
       ).toBeEnabled();
     });
     expect(
-      screen.queryByRole("button", { name: /revalidate connection/i }),
+      screen.queryByRole("button", { name: /^continue/i }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Claude is not signed in"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(NOT_SIGNED_IN_MESSAGE)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /save connection/i }));
+    fireEvent.click(screen.getByRole("button", { name: /check connection/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Claude is not signed in")).toBeInTheDocument();
+      expect(screen.getByText(NOT_SIGNED_IN_MESSAGE)).toBeInTheDocument();
     });
     expect(api.validateLlm).toHaveBeenCalledTimes(2);
-    expect(toast.error).toHaveBeenCalledWith("Claude is not signed in");
+    expect(toast.error).toHaveBeenCalledWith(NOT_SIGNED_IN_MESSAGE);
     expect(api.updateSettings).not.toHaveBeenCalled();
   });
 
-  it("shows the Claude connection success state in the detail panel", async () => {
+  it("shows the AI account success state in the detail panel", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
@@ -228,8 +307,60 @@ describe("OnboardingPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Claude is connected.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Your AI account is connected."),
+      ).toBeInTheDocument();
     });
+  });
+
+  it("re-checks the first step when the panel switches to a signed-in account", async () => {
+    vi.mocked(api.getAiAccountOverview).mockResolvedValue(
+      aiOverview({
+        accounts: {
+          claude: aiAccount("claude"),
+          chatgpt: aiAccount("chatgpt", {
+            signedIn: true,
+            planLabel: "ChatGPT plan",
+          }),
+        },
+      }),
+    );
+    vi.mocked(api.validateLlm)
+      .mockResolvedValueOnce({ valid: false, message: NOT_SIGNED_IN_MESSAGE })
+      .mockResolvedValue({ valid: true, message: null });
+    vi.mocked(api.validateResumeConfig).mockResolvedValue({
+      valid: true,
+      message: null,
+    });
+    vi.mocked(api.updateSettings).mockResolvedValue(baseSettings as any);
+
+    renderPage();
+
+    const chatgpt = await screen.findByRole("region", {
+      name: "ChatGPT account",
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /check connection/i }),
+      ).toBeEnabled();
+    });
+
+    fireEvent.click(
+      within(chatgpt).getByRole("button", { name: "Use ChatGPT" }),
+    );
+
+    await waitFor(() => {
+      expect(api.updateSettings).toHaveBeenCalledWith({
+        aiProvider: "chatgpt",
+      });
+    });
+    await waitFor(() => expect(api.validateLlm).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByRole("button", { name: /^continue/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Your AI account is connected."),
+    ).toBeInTheDocument();
   });
 
   it("defaults the authentication step to lock it down", async () => {
@@ -244,7 +375,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -440,7 +571,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -489,7 +620,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -559,7 +690,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     fireEvent.click(screen.getByRole("button", { name: /search terms/i }));
 
@@ -593,7 +724,7 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     fireEvent.click(screen.getByRole("button", { name: /basic auth/i }));
 
@@ -636,13 +767,47 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
-    await waitForClaudeStep();
+    await waitForAiStep();
 
     expect(screen.queryByText("ready page")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Claude model")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Claude account" }),
+    ).toBeInTheDocument();
   });
 
-  it("does not auto-advance after saving the Claude step", async () => {
+  it("continues to the CV step once the AI account is connected", async () => {
+    vi.mocked(api.validateLlm).mockResolvedValue({
+      valid: true,
+      message: null,
+    });
+    vi.mocked(api.validateResumeConfig).mockResolvedValue({
+      valid: false,
+      message: NO_CV_MESSAGE,
+    });
+
+    renderPage();
+
+    await waitForAiStep();
+    expect(
+      screen.queryByRole("button", { name: /revalidate connection/i }),
+    ).not.toBeInTheDocument();
+    const continueButton = await screen.findByRole("button", {
+      name: /^continue/i,
+    });
+    await waitFor(() => expect(continueButton).toBeEnabled());
+
+    fireEvent.click(continueButton);
+
+    expect(
+      await screen.findByRole("button", { name: /upload cv file/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Import your current CV.")).toBeInTheDocument();
+    expect(api.validateLlm).toHaveBeenCalledTimes(1);
+    expect(api.updateSettings).not.toHaveBeenCalled();
+    expect(screen.queryByText("ready page")).not.toBeInTheDocument();
+  });
+
+  it("continues from the CV step when the CV is already loaded", async () => {
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: true,
       message: null,
@@ -651,25 +816,25 @@ describe("OnboardingPage", () => {
       valid: true,
       message: null,
     });
-    vi.mocked(api.updateSettings).mockResolvedValue(baseSettings as any);
 
     renderPage();
 
-    await waitForClaudeStep();
+    fireEvent.click(getStepButton(/^CV$/i));
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: /revalidate connection/i }),
-    );
-
-    await waitFor(() => {
-      expect(api.updateSettings).toHaveBeenCalled();
+    const continueButton = await screen.findByRole("button", {
+      name: /^continue/i,
     });
-    expect(api.updateSettings).toHaveBeenCalledWith({ model: null });
-
-    expect(screen.getByLabelText("Claude model")).toBeInTheDocument();
+    await waitFor(() => expect(continueButton).toBeEnabled());
     expect(
-      screen.queryByRole("button", { name: /upload cv file/i }),
+      screen.queryByRole("button", { name: /recheck cv/i }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(continueButton);
+
+    expect(
+      await screen.findByText("Choose the job titles to search for."),
+    ).toBeInTheDocument();
+    expect(api.validateResumeConfig).toHaveBeenCalledTimes(1);
   });
 
   it("does not show CV errors before the user checks the step", async () => {

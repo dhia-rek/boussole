@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process";
 import { logger } from "@infra/logger";
 import {
+  AiAccountNotSignedInError,
+  resolveClaudeRuntime,
+} from "../../ai-accounts/runtime";
+import {
   getLlmMessageText,
   type JsonSchemaDefinition,
   type LlmRequestOptions,
@@ -137,6 +141,8 @@ async function runClaudeCliOnce(args: {
   effort?: ClaudeCliEffort | null;
   timeoutMs: number;
   signal?: AbortSignal;
+  /** Environment for this workspace's Claude login (see ai-accounts/runtime). */
+  env: NodeJS.ProcessEnv;
 }): Promise<{ stdout: string; stderr: string }> {
   const bin = process.env.CLAUDE_CLI_BIN?.trim() || "claude";
   const spec = parseClaudeCliModelSpec(args.model);
@@ -166,7 +172,7 @@ async function runClaudeCliOnce(args: {
 
     const child = args.spawnFn(bin, procArgs, {
       stdio: ["pipe", "pipe", "pipe"],
-      env: buildClaudeCliEnv(),
+      env: args.env,
       windowsHide: true,
     });
 
@@ -251,13 +257,20 @@ async function runClaudeCliOnce(args: {
 
 export type ClaudeCliClientOptions = {
   spawnFn?: ClaudeCliSpawnFn;
+  /** Environment of the active workspace's Claude login; injectable for tests. */
+  resolveEnv?: () => Promise<NodeJS.ProcessEnv>;
 };
+
+const resolveActiveClaudeEnv = async (): Promise<NodeJS.ProcessEnv> =>
+  (await resolveClaudeRuntime()).env;
 
 export class ClaudeCliClient {
   private readonly spawnFn: ClaudeCliSpawnFn;
+  private readonly resolveEnv: () => Promise<NodeJS.ProcessEnv>;
 
   constructor(options: ClaudeCliClientOptions = {}) {
     this.spawnFn = options.spawnFn ?? spawn;
+    this.resolveEnv = options.resolveEnv ?? resolveActiveClaudeEnv;
   }
 
   async validateCredentials(signal?: AbortSignal): Promise<{
@@ -270,8 +283,10 @@ export class ClaudeCliClient {
       DEFAULT_VALIDATION_TIMEOUT_MS,
     );
     try {
+      const env = await this.resolveEnv();
       const { stdout } = await runClaudeCliOnce({
         spawnFn: this.spawnFn,
+        env,
         prompt:
           'Return only valid JSON with no markdown or explanation: {"ok":true}',
         model: null,
@@ -290,6 +305,9 @@ export class ClaudeCliClient {
       }
       return { valid: true, message: null, username: null };
     } catch (error) {
+      if (error instanceof AiAccountNotSignedInError) {
+        return { valid: false, message: error.message, username: null };
+      }
       if (error instanceof Error && error.message.includes("aborted")) {
         return {
           valid: false,
@@ -327,6 +345,7 @@ export class ClaudeCliClient {
       );
     const { stdout } = await runClaudeCliOnce({
       spawnFn: this.spawnFn,
+      env: await this.resolveEnv(),
       prompt: options.prompt,
       model: options.model?.trim() || null,
       timeoutMs,
@@ -352,6 +371,7 @@ export class ClaudeCliClient {
     const model = options.model?.trim() || null;
     const { stdout } = await runClaudeCliOnce({
       spawnFn: this.spawnFn,
+      env: await this.resolveEnv(),
       prompt,
       model,
       timeoutMs,

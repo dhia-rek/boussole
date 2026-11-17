@@ -1,6 +1,7 @@
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
 import { createAppSettings } from "@shared/testing/factories.js";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import type { AiAccountOverview } from "@shared/types.js";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,6 +18,11 @@ const render = (ui: Parameters<typeof renderWithQueryClient>[0]) =>
 vi.mock("../api", () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
+  getAiAccountOverview: vi.fn(),
+  startAiSignIn: vi.fn(),
+  submitAiSignInCode: vi.fn(),
+  cancelAiSignIn: vi.fn(),
+  signOutAiAccount: vi.fn(),
   clearDatabase: vi.fn(),
   deleteJobsByStatus: vi.fn(),
   getTracerReadiness: vi.fn(),
@@ -68,6 +74,50 @@ const baseSettings = createAppSettings({
   ],
 });
 
+const signedOutAccount = {
+  available: true,
+  signedIn: false,
+  accountLabel: null,
+  planLabel: null,
+  usesServerLogin: false,
+  message: null,
+};
+
+const aiOverview: AiAccountOverview = {
+  activeProvider: "claude",
+  accounts: {
+    claude: {
+      ...signedOutAccount,
+      provider: "claude",
+      signedIn: true,
+      accountLabel: "nora@example.com",
+      planLabel: "Claude Max",
+    },
+    chatgpt: { ...signedOutAccount, provider: "chatgpt" },
+  },
+  models: {
+    claude: [
+      {
+        id: "opus",
+        label: "Claude Opus",
+        description: null,
+        efforts: [{ id: "medium", description: null }],
+        defaultEffort: "medium",
+      },
+      {
+        id: "sonnet",
+        label: "Claude Sonnet",
+        description: null,
+        efforts: [{ id: "medium", description: null }],
+        defaultEffort: "medium",
+      },
+    ],
+    chatgpt: [],
+  },
+  selectedModels: { claude: "opus:medium", chatgpt: "" },
+  signIn: null,
+};
+
 const renderPage = () => {
   return render(
     <MemoryRouter initialEntries={["/settings"]}>
@@ -91,12 +141,10 @@ const clickLastButtonByName = async (name: RegExp) => {
   fireEvent.click(target as HTMLElement);
 };
 
-const openModelSection = async () => {
+const openAiAccountSection = async () => {
   await openNavGroup(/^ai$/i);
-  await clickLastButtonByName(/ai model/i);
+  await clickLastButtonByName(/^ai account$/i);
 };
-
-const getModelInput = () => screen.getByLabelText(/claude model/i);
 
 const openWritingStyleSection = async () => {
   await openNavGroup(/^ai$/i);
@@ -136,6 +184,7 @@ describe("SettingsPage", () => {
       value: vi.fn(),
     });
     _resetTracerReadinessCache();
+    vi.mocked(api.getAiAccountOverview).mockResolvedValue(aiOverview);
     vi.mocked(api.getTracerReadiness).mockResolvedValue({
       status: "ready",
       isPubliclyAvailable: true,
@@ -155,60 +204,46 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("saves trimmed model overrides", async () => {
+  it("opens on the AI account section with the account in use", async () => {
     vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
-    vi.mocked(api.updateSettings).mockResolvedValue({
-      ...baseSettings,
-      model: {
-        value: "sonnet",
-        default: baseSettings.model.default,
-        override: "sonnet",
+
+    renderPage();
+
+    const heading = await screen.findByRole("heading", { name: "AI account" });
+    const claude = await screen.findByRole("region", {
+      name: "Claude account",
+    });
+    expect(
+      within(claude).getByText("Signed in as nora@example.com"),
+    ).toBeInTheDocument();
+    expect(heading.parentElement).toHaveTextContent("Using Claude");
+    expect(
+      screen.getByRole("region", { name: "ChatGPT account" }),
+    ).toBeInTheDocument();
+    expect(getSaveButton()).toBeDisabled();
+  });
+
+  it("flags the AI account section when the chosen account is signed out", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+    vi.mocked(api.getAiAccountOverview).mockResolvedValue({
+      ...aiOverview,
+      accounts: {
+        claude: { ...signedOutAccount, provider: "claude" },
+        chatgpt: { ...signedOutAccount, provider: "chatgpt" },
       },
     });
 
     renderPage();
-    await openModelSection();
 
-    const modelInput = getModelInput();
-    await waitFor(() => expect(modelInput).toBeEnabled());
-    fireEvent.change(modelInput, { target: { value: "  sonnet  " } });
-
-    const saveButton = getSaveButton();
-    await waitFor(() => expect(saveButton).toBeEnabled());
-
-    fireEvent.click(saveButton);
-
-    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
-    expect(api.updateSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: "sonnet",
-      }),
+    const heading = await screen.findByRole("heading", { name: "AI account" });
+    await waitFor(() =>
+      expect(heading.parentElement).toHaveTextContent("Not signed in"),
     );
-    expect(toast.success).toHaveBeenCalledWith("Settings saved");
-  });
-
-  it("shows validation error for too long model override", async () => {
-    vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
-
-    renderPage();
-    await openModelSection();
-
-    const modelInput = getModelInput();
-    await waitFor(() => expect(modelInput).toBeEnabled());
-
-    // Change to > 200 chars
-    fireEvent.change(modelInput, { target: { value: "a".repeat(201) } });
-
-    // Should see error message
     expect(
-      await screen.findByText(
-        /String must contain at most 200 character\(s\)/i,
-      ),
+      within(
+        await screen.findByRole("region", { name: "Claude account" }),
+      ).getByText("Not signed in"),
     ).toBeInTheDocument();
-
-    // Save button should be disabled due to validation error (isValid will be false)
-    const saveButton = getSaveButton();
-    expect(saveButton).toBeDisabled();
   });
 
   it("clears jobs by status and summarizes results", async () => {
@@ -243,48 +278,33 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("enables save button when model is changed", async () => {
+  it("saves the model straight away, outside the settings form", async () => {
     vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
+    vi.mocked(api.updateSettings).mockResolvedValue(baseSettings);
+
     renderPage();
-    const saveButton = getSaveButton();
-    expect(saveButton).toBeDisabled();
-    await openModelSection();
+    await openAiAccountSection();
 
-    const modelInput = getModelInput();
-    // Wait for the query to resolve and input to be enabled
-    await waitFor(() => expect(modelInput).toBeEnabled());
-
-    fireEvent.change(modelInput, { target: { value: "haiku" } });
-    await waitFor(() => expect(saveButton).toBeEnabled());
-  });
-
-  it("does not mark the AI model section dirty on initial load", async () => {
-    vi.mocked(api.getSettings).mockResolvedValue(
-      createAppSettings({
-        model: {
-          value: "sonnet",
-          default: "opus:medium",
-          override: "sonnet",
-        },
-      }),
+    const claude = await screen.findByRole("region", {
+      name: "Claude account",
+    });
+    fireEvent.click(
+      within(claude).getByRole("combobox", { name: "Claude model" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Claude Sonnet" }),
     );
 
-    renderPage();
-    await openModelSection();
-
-    expect(
-      screen.getByRole("heading", { name: "AI model" }),
-    ).toBeInTheDocument();
-    const modelInput = getModelInput();
-    await waitFor(() => expect(modelInput).toHaveValue("sonnet"));
-    expect(modelInput).toHaveAttribute("placeholder", "opus:medium");
-    expect(screen.getByText("In use: sonnet")).toBeInTheDocument();
-
-    const saveButton = getSaveButton();
-    await waitFor(() => expect(saveButton).toBeDisabled());
+    await waitFor(() =>
+      expect(api.updateSettings).toHaveBeenCalledWith({
+        model: "sonnet:medium",
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith("Model saved");
+    expect(getSaveButton()).toBeDisabled();
   });
 
-  it("does not clear the model override when saving an unrelated setting", async () => {
+  it("does not send the AI model when saving an unrelated setting", async () => {
     vi.mocked(api.getSettings).mockResolvedValue(
       createAppSettings({
         model: {
@@ -323,17 +343,21 @@ describe("SettingsPage", () => {
     await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
     expect(api.updateSettings).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "sonnet",
         renderMarkdownInJobDescriptions: false,
       }),
     );
+    // The AI account section saves the model itself.
+    const payload = vi.mocked(api.updateSettings).mock.calls[0]?.[0];
+    expect(payload).not.toHaveProperty("model");
+    expect(payload).not.toHaveProperty("chatgptModel");
+    expect(payload).not.toHaveProperty("aiProvider");
   });
 
   it("hides pipeline tuning sections that moved to run modal", async () => {
     vi.mocked(api.getSettings).mockResolvedValue(baseSettings);
     renderPage();
 
-    await openModelSection();
+    await openAiAccountSection();
     expect(
       screen.queryByRole("button", { name: /search terms/i }),
     ).not.toBeInTheDocument();
@@ -560,7 +584,16 @@ describe("SettingsPage", () => {
       expect.objectContaining({
         chatStyleSummaryMaxWords: null,
         chatStyleMaxKeywordsPerSkill: null,
+        model: null,
+        chatgptModel: null,
       }),
+    );
+    // The account choice is kept; the panel re-reads the reset models.
+    expect(api.updateSettings).not.toHaveBeenCalledWith(
+      expect.objectContaining({ aiProvider: expect.anything() }),
+    );
+    await waitFor(() =>
+      expect(api.getAiAccountOverview).toHaveBeenCalledTimes(2),
     );
   });
 

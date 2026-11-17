@@ -1,8 +1,11 @@
 import { asyncRoute, ok, okWithMeta } from "@infra/http";
 import { isDemoMode } from "@server/config/demo";
+import { getAiAccountStatus } from "@server/services/ai-accounts/status";
 import { getDesignResumeStatus } from "@server/services/design-resume";
-import { LlmService } from "@server/services/llm/service";
+import { resolveActiveAiProvider } from "@server/services/modelSelection";
 import { suggestOnboardingSearchTerms } from "@server/services/onboarding-search-terms";
+import { getActiveTenantId } from "@server/tenancy/context";
+import { AI_PROVIDER_LABELS } from "@shared/types";
 import { type Request, type Response, Router } from "express";
 
 export const onboardingRouter = Router();
@@ -14,8 +17,19 @@ type ValidationResponse = {
 };
 
 /** Claude Code CLI is installed and signed in (runs a tiny prompt). */
+/** The workspace's chosen AI account (Claude or ChatGPT) is signed in. */
 async function validateLlm(): Promise<ValidationResponse> {
-  return new LlmService().validateCredentials();
+  const provider = await resolveActiveAiProvider();
+  const status = await getAiAccountStatus(getActiveTenantId(), provider, {
+    fresh: true,
+  });
+  if (status.signedIn) return { valid: true, message: null };
+  return {
+    valid: false,
+    message:
+      status.message ??
+      `Sign in with your ${AI_PROVIDER_LABELS[provider]} account to use the AI features.`,
+  };
 }
 
 /** The CV editor holds a CV (uploaded, imported or created). */
