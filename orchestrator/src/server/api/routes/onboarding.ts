@@ -202,7 +202,7 @@ async function validateRxresume(options?: {
     return {
       valid: false,
       status: result.status,
-      message: `Forsa could not verify Reactive Resume because the instance at ${resolvedBaseUrl} is unavailable right now.`,
+      message: `Boussole could not verify Reactive Resume because the instance at ${resolvedBaseUrl} is unavailable right now.`,
     };
   }
 

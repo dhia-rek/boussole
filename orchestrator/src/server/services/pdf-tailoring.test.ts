@@ -622,7 +622,7 @@ describe("PDF Service Tailoring Logic", () => {
 
       expect(mockResumeRenderer.renderResumePdf).not.toHaveBeenCalled();
       expect(rxresume.importResume).toHaveBeenCalledWith({
-        name: "Forsa Tailored Resume job-rxresume",
+        name: "Boussole Tailored Resume job-rxresume",
         data: expect.any(Object),
       });
       expect(rxresume.exportResumePdf).toHaveBeenCalledWith("temp-resume-id");

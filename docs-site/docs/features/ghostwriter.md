@@ -7,7 +7,7 @@ sidebar_position: 2
 
 ## What it is
 
-Ghostwriter is the per-job AI chat assistant in Forsa.
+Ghostwriter is the per-job AI chat assistant in Boussole.
 
 Ghostwriter uses:
 
@@ -130,7 +130,7 @@ Compatibility thread endpoints remain, but UI behavior is one thread per job.
 - On desktop, switch Ghostwriter to pop-up mode with the header expand button.
 - Use restore when you want to return to the right-side drawer layout.
 
-### I need to reuse a reply outside Forsa
+### I need to reuse a reply outside Boussole
 
 - Use the `Copy` button shown on each completed Ghostwriter response.
 - If the button changes to `Copied`, the full reply is already on your clipboard.

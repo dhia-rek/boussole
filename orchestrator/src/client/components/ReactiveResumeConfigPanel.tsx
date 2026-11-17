@@ -180,7 +180,7 @@ export const ReactiveResumeConfigPanel: React.FC<
         ) : null}
         <p className="text-xs text-muted-foreground">
           {latexSelected
-            ? "LaTeX renders PDFs locally with Jake's template and requires tectonic on the Forsa host."
+            ? "LaTeX renders PDFs locally with Jake's template and requires tectonic on the Boussole host."
             : "RxResume export uses the upstream print/export endpoint for the final PDF."}
         </p>
       </div>

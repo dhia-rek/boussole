@@ -1,18 +1,18 @@
 ---
 id: reactive-resume
 title: Reactive Resume
-description: Configure Reactive Resume as an optional import/export and PDF backend for Forsa.
+description: Configure Reactive Resume as an optional import/export and PDF backend for Boussole.
 sidebar_position: 4
 ---
 
 ## What it is
 
-Reactive Resume is now an optional integration in Forsa.
+Reactive Resume is now an optional integration in Boussole.
 
-The primary editing surface is **Design Resume**, which stores a local resume document inside Forsa. Reactive Resume is used for:
+The primary editing surface is **Design Resume**, which stores a local resume document inside Boussole. Reactive Resume is used for:
 
 - importing an existing resume into Design Resume
-- exporting Forsa resume JSON back out
+- exporting Boussole resume JSON back out
 - optional upstream PDF export when the `rxresume` PDF renderer is selected
 
 ## Why it exists
@@ -23,7 +23,7 @@ Most users need a repeatable resume pipeline:
 - controlled project inclusion rules
 - per-job tailored output without manual copy/paste
 
-Reactive Resume still matters because many users already maintain a strong resume there, and its JSON model is compatible with Forsa. Importing that data into Design Resume avoids re-entry while reducing day-to-day dependence on the upstream service.
+Reactive Resume still matters because many users already maintain a strong resume there, and its JSON model is compatible with Boussole. Importing that data into Design Resume avoids re-entry while reducing day-to-day dependence on the upstream service.
 
 ### Where it fits now
 
@@ -33,9 +33,9 @@ Key reasons:
 
 - It is a convenient migration/import source.
 - It can still power PDF export if you prefer the upstream renderer.
-- Its JSON schema remains a stable interchange format for Forsa.
+- Its JSON schema remains a stable interchange format for Boussole.
 
-For everyday editing inside Forsa, use [Design Resume](./design-resume).
+For everyday editing inside Boussole, use [Design Resume](./design-resume).
 
 ## Core concepts
 
@@ -43,7 +43,7 @@ For everyday editing inside Forsa, use [Design Resume](./design-resume).
 
 Your configured **base resume** in Reactive Resume is used as the import source for Design Resume when you choose **Import from Reactive Resume**.
 
-After import, Forsa uses the local Design Resume for:
+After import, Boussole uses the local Design Resume for:
 
 - profile extraction
 - project catalog extraction
@@ -51,11 +51,11 @@ After import, Forsa uses the local Design Resume for:
 - local PDF generation
 - future in-app resume design work
 
-If you use the `rxresume` PDF renderer, Forsa can still send the tailored JSON through Reactive Resume at export time.
+If you use the `rxresume` PDF renderer, Boussole can still send the tailored JSON through Reactive Resume at export time.
 
 ### Project catalog
 
-Forsa reads projects from `sections.projects.items` in the local Design Resume document.
+Boussole reads projects from `sections.projects.items` in the local Design Resume document.
 
 Each project is identified by:
 
@@ -83,7 +83,7 @@ At generation time:
 
 ### Account requirements (important)
 
-Before connecting Reactive Resume to Forsa:
+Before connecting Reactive Resume to Boussole:
 
 1. Generate an API key in your Reactive Resume account.
 2. Configure `rxresumeApiKey` in **Settings → Reactive Resume** (or set `RXRESUME_API_KEY` in your environment).
@@ -101,13 +101,13 @@ Or via environment variables:
 - `RXRESUME_API_KEY`
 - optional `RXRESUME_URL`
 
-If you leave the URL blank in the dashboard, Forsa uses `RXRESUME_URL` when it is set; if not set, it falls back to the public cloud default (https://rxresu.me).
+If you leave the URL blank in the dashboard, Boussole uses `RXRESUME_URL` when it is set; if not set, it falls back to the public cloud default (https://rxresu.me).
 
 ### Save-time validation
 
 When you save Reactive Resume credentials or the shared URL in Settings:
 
-1. Forsa validates your API key.
+1. Boussole validates your API key.
 2. Invalid credentials or other `4xx` configuration failures block the save and show a persistent inline error.
 3. Temporary network failures, timeouts, or upstream `5xx` errors show a persistent inline warning, but the save still succeeds.
 
@@ -123,9 +123,9 @@ In **Settings → Reactive Resume**:
 
 1. Open **Design Resume** in the left navigation.
 2. Click **Import from Reactive Resume**.
-3. Wait for Forsa to create the local Design Resume document.
+3. Wait for Boussole to create the local Design Resume document.
 
-After that import, Forsa reads resume context locally by default.
+After that import, Boussole reads resume context locally by default.
 
 ### 4) Configure project behavior
 
@@ -146,14 +146,14 @@ High-level flow:
 2. Apply tailored summary/headline/skills.
 3. Compute final visible projects from your selection rules.
 4. Optionally rewrite outbound links to tracer links (per-job toggle).
-5. Normalize the tailored resume data into Forsa' renderer document model.
+5. Normalize the tailored resume data into Boussole' renderer document model.
 6. Render the PDF with the configured renderer:
    - RxResume export
    - Local LaTeX with `tectonic`
 
 ### Resume-data caching
 
-Forsa caches successful Reactive Resume resume fetches in memory for 5 minutes when upstream access is needed.
+Boussole caches successful Reactive Resume resume fetches in memory for 5 minutes when upstream access is needed.
 
 This now mainly affects import/export operations, settings resume lookup, and the optional upstream PDF renderer.
 
@@ -174,7 +174,7 @@ Important:
 - if public host verification fails, enable is blocked until host health is restored
 - toggle changes apply on next PDF generation only
 
-### What Forsa changes with AI
+### What Boussole changes with AI
 
 Current AI-driven edits are intentionally scoped:
 
@@ -185,7 +185,7 @@ Current AI-driven edits are intentionally scoped:
 
 ### Local renderer dependency
 
-Forsa can generate the final PDF in 2 ways:
+Boussole can generate the final PDF in 2 ways:
 
 - `rxresume`: use the upstream RxResume print/export endpoint
 - `latex`: render locally with the Jake Gutierrez-based LaTeX template
@@ -206,7 +206,7 @@ Notes:
 - PDF export still calls Reactive Resume:
   Switch the PDF renderer to `latex` if you want the full flow to stay local.
 - Project lists look stale:
-  Re-import from Reactive Resume if you intentionally changed the upstream base resume and want those changes copied into Forsa.
+  Re-import from Reactive Resume if you intentionally changed the upstream base resume and want those changes copied into Boussole.
 
 ## Related pages
 
@@ -268,7 +268,7 @@ curl -X POST "http://localhost:3001/api/jobs/<jobId>/generate-pdf"
 
 - Root cause is usually the source resume on [rxresu.me](https://rxresu.me) having an empty **Projects** section.
 - Add projects directly in RxResume first.
-- Re-select/refresh the base resume in Forsa and regenerate the PDF.
+- Re-select/refresh the base resume in Boussole and regenerate the PDF.
 
 ### Project checkboxes look wrong after changing base resume
 
@@ -283,7 +283,7 @@ curl -X POST "http://localhost:3001/api/jobs/<jobId>/generate-pdf"
 
 ### PDF generation fails because the renderer is unavailable
 
-- Ensure `tectonic` is installed on the machine running Forsa.
+- Ensure `tectonic` is installed on the machine running Boussole.
 - If the binary is installed outside your normal shell `PATH`, set `TECTONIC_BIN` to the executable path.
 - Re-run PDF generation after fixing the local renderer dependency.
 

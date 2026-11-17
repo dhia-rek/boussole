@@ -1,15 +1,15 @@
 ---
 id: codex-auth
 title: Codex Authentication
-description: Authenticate Codex in Forsa with the built-in device-code sign-in flow.
+description: Authenticate Codex in Boussole with the built-in device-code sign-in flow.
 sidebar_position: 3
 ---
 
 ## What it is
 
-This page explains how to authenticate the `codex` provider in Forsa.
+This page explains how to authenticate the `codex` provider in Boussole.
 
-Use the device-code sign-in flow from the Forsa UI.
+Use the device-code sign-in flow from the Boussole UI.
 
 ## Why it exists
 
@@ -21,9 +21,9 @@ When that happens, complete the ChatGPT security setting first, then retry sign-
 
 ## How to use it
 
-### Device-code sign-in in Forsa
+### Device-code sign-in in Boussole
 
-1. In Forsa, set **Provider** to `Codex` in onboarding or settings.
+1. In Boussole, set **Provider** to `Codex` in onboarding or settings.
 2. Click **Start Sign-In**.
 3. Open the verification URL shown in the UI.
 4. Enter the one-time code shown in the UI.

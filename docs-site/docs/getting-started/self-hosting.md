@@ -1,11 +1,11 @@
 ---
 id: self-hosting
 title: Self-Hosting (Docker Compose)
-description: Deploy Forsa with Docker Compose and configure onboarding integrations.
+description: Deploy Boussole with Docker Compose and configure onboarding integrations.
 sidebar_position: 1
 ---
 
-The easiest way to run Forsa is via Docker Compose. The app is self-configuring and guides you through setup on first launch.
+The easiest way to run Boussole is via Docker Compose. The app is self-configuring and guides you through setup on first launch.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ echo "GITHUB_TOKEN=ghp_your_token_here" >> .env
 docker compose up -d --build
 ```
 
-Forsa passes this token to the Docker build as a BuildKit secret only for the
+Boussole passes this token to the Docker build as a BuildKit secret only for the
 Camoufox download step. It is not stored in the runtime container
 environment.
 
@@ -48,11 +48,11 @@ Open:
 The onboarding wizard helps you validate and save:
 
 1. **LLM Provider**: OpenRouter by default (or OpenAI/Gemini/local URL).
-2. **Import your current resume**: Either upload a PDF/DOCX into Forsa or choose the Reactive Resume option and connect with your v5 API key.
-3. **Search terms**: Forsa generates a first list of job-title search terms from your selected resume. Edit or regenerate them before saving.
+2. **Import your current resume**: Either upload a PDF/DOCX into Boussole or choose the Reactive Resume option and connect with your v5 API key.
+3. **Search terms**: Boussole generates a first list of job-title search terms from your selected resume. Edit or regenerate them before saving.
 4. **First-run account**: Create the first username/password account. This account becomes the system admin and owns the initial private workspace.
 
-Settings and user accounts are saved to the local database. If you are upgrading an older single-user install, Forsa migrates existing rows into one default private workspace. When `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are present during that migration, they seed the first system admin account; otherwise the sign-in screen requires first-run setup before private APIs are usable.
+Settings and user accounts are saved to the local database. If you are upgrading an older single-user install, Boussole migrates existing rows into one default private workspace. When `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are present during that migration, they seed the first system admin account; otherwise the sign-in screen requires first-run setup before private APIs are usable.
 
 System admins can create more users from **Settings → Environment & Workspaces**. Each created user receives a separate private workspace with isolated jobs, settings, resumes, integrations, PDFs, pipeline runs, chat, analytics, and post-application data.
 
@@ -148,13 +148,13 @@ docker compose up -d
 If you self-host Reactive Resume, set:
 
 - `RXRESUME_URL=http://rxresume.local.net`
-- `RXRESUME_API_KEY=...` (or configure `rxresumeApiKey` in Forsa Settings)
+- `RXRESUME_API_KEY=...` (or configure `rxresumeApiKey` in Boussole Settings)
 
 
 
 ## Local LaTeX PDF rendering
 
-Forsa supports 2 PDF renderers:
+Boussole supports 2 PDF renderers:
 
 - `rxresume`: export the final PDF through RxResume
 - `latex`: render locally from tailored resume data using LaTeX and `tectonic`

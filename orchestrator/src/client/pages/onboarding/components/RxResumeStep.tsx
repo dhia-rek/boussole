@@ -36,7 +36,7 @@ export const RxResumeStep: React.FC<{
     <div className="space-y-5">
       <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
         Use Reactive Resume if your current resume already lives there. Once
-        connected, choose one of your existing resumes to import into Forsa.
+        connected, choose one of your existing resumes to import into Boussole.
       </div>
 
       <SettingsInput
@@ -100,8 +100,8 @@ export const RxResumeStep: React.FC<{
           <div className="space-y-1">
             <div className="text-sm font-medium">Template resume</div>
             <p className="text-xs text-muted-foreground">
-              Choose the resume Forsa should treat as your imported base resume
-              for this onboarding step.
+              Choose the resume Boussole should treat as your imported base
+              resume for this onboarding step.
             </p>
           </div>
           <BaseResumeSelection

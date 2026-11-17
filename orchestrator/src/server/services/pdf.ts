@@ -177,7 +177,7 @@ async function renderRxResumePdf(args: {
 
   try {
     importedResumeId = await importRxResume({
-      name: args.name?.trim() || `Forsa Tailored Resume ${jobId}`,
+      name: args.name?.trim() || `Boussole Tailored Resume ${jobId}`,
       data: importData,
     });
 

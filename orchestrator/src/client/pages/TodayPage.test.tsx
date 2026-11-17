@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../api";
 import { renderWithQueryClient } from "../test/renderWithQueryClient";
-import { pickTopMatches, TodayPage } from "./TodayPage";
+import { firstNameOf, pickTopMatches, TodayPage } from "./TodayPage";
 
 vi.mock("../api", () => ({
   getJobs: vi.fn(),
@@ -16,6 +16,7 @@ vi.mock("../api", () => ({
   getPipelineProgressSnapshot: vi.fn(),
   getPipelineRunInsights: vi.fn(),
   getSettings: vi.fn(),
+  getProfile: vi.fn(),
 }));
 
 const BY_STATUS = {
@@ -91,8 +92,20 @@ describe("pickTopMatches", () => {
   });
 });
 
+describe("firstNameOf", () => {
+  it("takes the first word of the CV name and ignores the placeholder", () => {
+    expect(firstNameOf("Dhia Rekik")).toBe("Dhia");
+    expect(firstNameOf("Resume")).toBeNull();
+    expect(firstNameOf("  ")).toBeNull();
+    expect(firstNameOf(undefined)).toBeNull();
+  });
+});
+
 describe("TodayPage", () => {
   beforeEach(() => {
+    vi.mocked(api.getProfile).mockResolvedValue({
+      basics: { name: "Dhia Rekik" },
+    } as never);
     vi.mocked(api.getJobs).mockResolvedValue({
       jobs: READY_JOBS,
       total: READY_JOBS.length,
@@ -136,6 +149,11 @@ describe("TodayPage", () => {
     renderToday();
 
     expect(await screen.findByText("Data Quality Analyst")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", {
+        name: /, Dhia\. 3 jobs are ready for you\./,
+      }),
+    ).toBeInTheDocument();
     const nextActions = screen.getByRole("heading", { name: "Next actions" })
       .parentElement?.parentElement as HTMLElement;
     expect(

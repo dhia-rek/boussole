@@ -65,6 +65,11 @@ export function createAuthGuard() {
 
     // Explicitly allowed public API routes
     if (normalizedPath === "/api/profile/status") return true;
+    // Only says whether this instance is the public demo (the landing page
+    // shows "Voir la démo" before anyone signs in).
+    if (normalizedMethod === "GET" && normalizedPath === "/api/demo/info") {
+      return true;
+    }
     if (
       normalizedMethod === "POST" &&
       normalizedPath === "/api/visa-sponsors/search"

@@ -1,7 +1,7 @@
 ---
 id: today
 title: Today, Navigation and Live Status
-description: The Today home page, the grouped sidebar and the live pipeline bar that show what Forsa is doing and what to do next.
+description: The Today home page, the grouped sidebar and the live pipeline bar that show what Boussole is doing and what to do next.
 sidebar_position: 0
 ---
 
@@ -21,7 +21,7 @@ Earlier versions hid navigation behind a menu button and showed nothing about th
 
 ### Today
 
-Open Forsa. `/` now redirects to **Today** (the jobs list stays at `/jobs/ready`).
+Open Boussole. `/` now redirects to **Today** (the jobs list stays at `/jobs/ready`).
 
 - **Next actions**: counts for *Ready to apply*, *New to review*, *In progress* and *Applied*. Click a row to open that list.
 - **Pipeline**: status of the last run (completed, failed or cancelled), when it ran, how long it took, jobs found and tailored, the sources it used, and which sources had problems. Runs started before per-source results were recorded show "Per-source results weren't recorded for this run." **Run pipeline** opens the run dialog on the Jobs page.
@@ -41,7 +41,7 @@ On screens 1024 px and wider, the sidebar is always visible:
 | Insights | Analytics, Tracer links, Visa sponsors |
 | *(bottom)* | Settings, Account (switch account, documentation, version, sign out) |
 
-Click **Collapse** at the bottom to shrink the sidebar to icons; hover an icon to see its name. Forsa remembers the choice in this browser.
+Click **Collapse** at the bottom to shrink the sidebar to icons; hover an icon to see its name. Boussole remembers the choice in this browser.
 
 On phones, a bottom bar shows **Today**, **Jobs**, **Applications** and **CV**. **More** opens every other page plus Settings and Account.
 

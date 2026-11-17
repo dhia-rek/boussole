@@ -1,17 +1,17 @@
 ---
 id: gmail-oauth-setup
 title: Gmail OAuth Setup
-description: Step-by-step Google Cloud setup for Forsa Gmail tracking, with exact scopes and callback configuration.
+description: Step-by-step Google Cloud setup for Boussole Gmail tracking, with exact scopes and callback configuration.
 sidebar_position: 2
 ---
 
 ## What it is
 
-This guide configures Google OAuth so Forsa can read recruitment emails from Gmail for the Tracking Inbox.
+This guide configures Google OAuth so Boussole can read recruitment emails from Gmail for the Tracking Inbox.
 
 ## Why it exists
 
-Gmail OAuth setup is easy to misconfigure (wrong redirect URI, missing refresh token, or unnecessary scopes). This page documents the exact defaults Forsa expects.
+Gmail OAuth setup is easy to misconfigure (wrong redirect URI, missing refresh token, or unnecessary scopes). This page documents the exact defaults Boussole expects.
 
 ## How to use it
 
@@ -31,7 +31,7 @@ In [Google Cloud Console](https://console.cloud.google.com/):
 Notes:
 
 - If you set `GMAIL_OAUTH_REDIRECT_URI`, it must exactly match a redirect URI in Google Cloud.
-- Forsa does not require JavaScript origins for this flow.
+- Boussole does not require JavaScript origins for this flow.
 
 ### 2) Set environment variables
 
@@ -46,13 +46,13 @@ GMAIL_OAUTH_REDIRECT_URI=https://your-domain.com/oauth/gmail/callback
 
 Then restart the container/app.
 
-### 3) Connect Gmail in Forsa
+### 3) Connect Gmail in Boussole
 
 1. Open **Tracking Inbox**.
 2. Click **Connect Gmail**.
 3. Complete Google consent.
 
-Forsa starts OAuth with:
+Boussole starts OAuth with:
 
 - Scope: `https://www.googleapis.com/auth/gmail.readonly`
 - `access_type=offline` (requests refresh token)
@@ -60,11 +60,11 @@ Forsa starts OAuth with:
 
 ### 4) Scope reference (required vs not required)
 
-Required by Forsa:
+Required by Boussole:
 
 - `https://www.googleapis.com/auth/gmail.readonly`
 
-Not required for Forsa Gmail ingestion:
+Not required for Boussole Gmail ingestion:
 
 - `https://www.googleapis.com/auth/gmail.modify`
 - `openid`

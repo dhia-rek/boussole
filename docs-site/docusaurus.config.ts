@@ -16,7 +16,7 @@ const siteBaseUrl = normalizedBaseUrl.endsWith("/")
   : `${normalizedBaseUrl}/`;
 
 const config: Config = {
-  title: "Forsa — Docs",
+  title: "Boussole — Docs",
   tagline: "Your job search, supercharged",
   favicon: "img/favicon.png",
   future: {
@@ -72,9 +72,9 @@ const config: Config = {
   ],
   themeConfig: {
     navbar: {
-      title: "Forsa Docs",
+      title: "Boussole Docs",
       logo: {
-        alt: "Forsa",
+        alt: "Boussole",
         src: "img/favicon.png",
       },
       items: [
@@ -122,7 +122,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `© ${new Date().getFullYear()} Dhia Rekik — Forsa`,
+      copyright: `© ${new Date().getFullYear()} Dhia Rekik — Boussole`,
     },
     prism: {
       theme: prismThemes.github,

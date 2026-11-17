@@ -128,7 +128,7 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
     key: "projects",
     title: "Projects",
     singularTitle: "Project",
-    description: "The projects Forsa will use for tailoring.",
+    description: "The projects Boussole will use for tailoring.",
     primaryField: "name",
     secondaryField: "period",
     fields: [

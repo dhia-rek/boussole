@@ -96,7 +96,7 @@ export function PictureSection({
         <Alert>
           <AlertDescription>
             {pictureDisabledReason ??
-              "Pictures require Forsa to be reachable at a public URL."}
+              "Pictures require Boussole to be reachable at a public URL."}
           </AlertDescription>
         </Alert>
       ) : null}

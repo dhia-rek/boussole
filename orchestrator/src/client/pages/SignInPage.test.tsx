@@ -16,7 +16,7 @@ vi.mock("@client/api", () => ({
     isSystemAdmin: true,
     isDisabled: false,
     workspaceId: "tenant_default",
-    workspaceName: "Forsa",
+    workspaceName: "Boussole",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   })),
@@ -47,7 +47,7 @@ describe("SignInPage", () => {
       isSystemAdmin: true,
       isDisabled: false,
       workspaceId: "tenant_default",
-      workspaceName: "Forsa",
+      workspaceName: "Boussole",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
