@@ -56,7 +56,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/dhia-rek/forsa/tree/main/docs-site/",
+          editUrl: "https://github.com/dhia-rek/boussole/tree/main/docs-site/",
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
           // Single living doc, no versioned snapshots committed.
@@ -93,7 +93,7 @@ const config: Config = {
         {
           type: "html",
           value:
-            '<a class="navbar__item navbar__link" href="https://github.com/dhia-rek/forsa">GitHub</a>',
+            '<a class="navbar__item navbar__link" href="https://github.com/dhia-rek/boussole">GitHub</a>',
           position: "right",
         },
       ],
@@ -113,11 +113,11 @@ const config: Config = {
           items: [
             {
               label: "Repository",
-              href: "https://github.com/dhia-rek/forsa",
+              href: "https://github.com/dhia-rek/boussole",
             },
             {
               label: "Issues",
-              href: "https://github.com/dhia-rek/forsa/issues",
+              href: "https://github.com/dhia-rek/boussole/issues",
             },
           ],
         },

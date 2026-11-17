@@ -5,13 +5,13 @@
   "description": "Forsa — one search across every job board, one click to tailor your CV, one place to track every application.",
   "author": "Dhia Rekik (https://dhiarekik.me)",
   "license": "MIT",
-  "homepage": "https://github.com/dhia-rek/forsa#readme",
+  "homepage": "https://github.com/dhia-rek/boussole#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dhia-rek/forsa.git"
+    "url": "https://github.com/dhia-rek/boussole.git"
   },
   "bugs": {
-    "url": "https://github.com/dhia-rek/forsa/issues"
+    "url": "https://github.com/dhia-rek/boussole/issues"
   },
   "workspaces": [
     "orchestrator",
