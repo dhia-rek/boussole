@@ -7,6 +7,12 @@ import {
 } from "@infra/errors";
 import { fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
+import {
+  fetchPublicUrl,
+  ResponseTooLargeError,
+  readTextWithLimit,
+  UnsafeUrlError,
+} from "@infra/public-url";
 import { processJob } from "@server/pipeline/index";
 import * as jobsRepo from "@server/repositories/jobs";
 import { generateJobBrief } from "@server/services/job-brief";
@@ -95,8 +101,12 @@ function buildFetchFailureMessage(status: number): string {
   return "Couldn't fetch this URL automatically. Paste the job description manually.";
 }
 
+/** Job pages above this size are refused instead of read into memory. */
+const MAX_PAGE_BYTES = 5_000_000;
+
 /**
- * POST /api/manual-jobs/fetch - Fetch and extract job content from a URL
+ * POST /api/manual-jobs/fetch - Fetch and extract job content from a URL.
+ * Only public websites: the server's own network is refused (see public-url).
  */
 manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
   const controller = new AbortController();
@@ -116,7 +126,7 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
       );
     }
 
-    const response = await fetch(input.url, {
+    const response = await fetchPublicUrl(input.url, {
       signal: controller.signal,
       headers: {
         "User-Agent":
@@ -138,7 +148,7 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
       );
     }
 
-    const html = await response.text();
+    const html = await readTextWithLimit(response, MAX_PAGE_BYTES);
     const dom = new JSDOM(html);
     const document = dom.window.document;
 
@@ -226,6 +236,37 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
     }
     if (error instanceof Error && error.name === "AbortError") {
       return fail(res, requestTimeout());
+    }
+    if (error instanceof UnsafeUrlError) {
+      return fail(
+        res,
+        new AppError({
+          status: 422,
+          code: "UNPROCESSABLE_ENTITY",
+          message: `${error.message} Paste the job description manually.`,
+        }),
+      );
+    }
+    if (error instanceof ResponseTooLargeError) {
+      return fail(
+        res,
+        new AppError({
+          status: 422,
+          code: "UNPROCESSABLE_ENTITY",
+          message: `${error.message} Paste the job description manually.`,
+        }),
+      );
+    }
+    if (error instanceof TypeError && error.message === "fetch failed") {
+      return fail(
+        res,
+        new AppError({
+          status: 502,
+          code: "UPSTREAM_ERROR",
+          message:
+            "Couldn't reach this website. Check the link or paste the job description manually.",
+        }),
+      );
     }
     fail(res, toAppError(error));
   } finally {
