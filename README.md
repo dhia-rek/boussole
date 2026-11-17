@@ -33,7 +33,7 @@ A self-hosted, AI-powered job-search workbench: it searches the job boards for y
 
 ## What is Boussole?
 
-*Boussole* is French for *compass*. It is a job-search workbench you run on your own machine (the codebase's internal name is Boussole, which is why commands and environment variables say `boussole`).
+*Boussole* is French for *compass*. It is a job-search workbench you run on your own machine (it started life as Boussole, which is why some environment variables and package names still say `boussole`).
 
 Every day it:
 
@@ -77,7 +77,7 @@ Kanban board for applications, a Gmail tracking inbox, AI video mock interviews 
 ## Architecture
 
 ```
-boussole/  (repo: boussole)
+boussole/
 ├── orchestrator/            # Express API + React/Vite client + SQLite (Drizzle)
 │   └── src/server/services/agents/   # LangChain Deep Agents layer
 ├── shared/                  # Types, settings registry, shared helpers
@@ -125,7 +125,7 @@ The orchestrator runs each source, reads progress over a `BOUSSOLE_PROGRESS` std
 **Docker:**
 
 ```bash
-git clone https://github.com/dhia-rek/boussole.git boussole
+git clone https://github.com/dhia-rek/boussole.git
 cd boussole
 cp .env.example .env
 docker compose up -d
@@ -136,7 +136,7 @@ Open `http://localhost:3005` and follow the onboarding.
 **Local development:**
 
 ```bash
-git clone https://github.com/dhia-rek/boussole.git boussole
+git clone https://github.com/dhia-rek/boussole.git
 cd boussole
 npm ci
 cp .env.example .env
