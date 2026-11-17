@@ -7,7 +7,7 @@ sidebar_position: 9
 
 ## What it is
 
-Forsa ships a multi-agent layer built with [LangChain Deep Agents](https://docs.langchain.com/oss/javascript/deepagents/overview) (`deepagents`, LangGraph under the hood). It has two parts:
+Boussole ships a multi-agent layer built with [LangChain Deep Agents](https://docs.langchain.com/oss/javascript/deepagents/overview) (`deepagents`, LangGraph under the hood). It has two parts:
 
 - **Application agents**: for one job, an orchestrator agent chains four subagents through the Deep Agents `task` tool:
   1. **job-analyst** reads the posting: must-haves, keywords, seniority, contract type, red flags.
@@ -30,7 +30,7 @@ The regular pipeline (search → score → tailor → export) uses one prompt pe
 
 Requirements:
 
-- Settings → AI provider is **Claude (CLI)**, and the `claude` command is installed and signed in on the machine running Forsa.
+- Settings → AI provider is **Claude (CLI)**, and the `claude` command is installed and signed in on the machine running Boussole.
 - Your CV exists in **Design Resume**. Its AI guidance (locked sections, headline prefix, private sections) is enforced.
 
 API (all routes are scoped to your workspace):
@@ -71,7 +71,7 @@ Defaults and limits:
 
 Switching to an API model later: `ChatClaudeCli` is the only Claude-CLI-specific piece. Replacing it with an API-backed LangChain model (for example `ChatAnthropic` with an API key) where the agents are built leaves the agents, tools, memory and API unchanged.
 
-Personal use only: the Claude CLI runs with **your** Claude login. Keep Forsa's agents for your own job search; anything that other people use needs API-key authentication.
+Personal use only: the Claude CLI runs with **your** Claude login. Keep Boussole's agents for your own job search; anything that other people use needs API-key authentication.
 
 ## Common problems
 
@@ -81,13 +81,13 @@ Settings → AI provider is not **Claude (CLI)**. Switch it, or wait for another
 
 ### `503` "AI agents need a database update"
 
-The database predates the agent tables. Restart Forsa: `npm run dev` (and the Docker image) runs migrations at startup.
+The database predates the agent tables. Restart Boussole: `npm run dev` (and the Docker image) runs migrations at startup.
 
 ### A run fails with "did not follow the agent reply protocol"
 
 The model answered twice without the required JSON. Start the run again. If it keeps happening, check that `claude -p "hello"` works in a terminal.
 
-### The run says "Interrupted: Forsa restarted"
+### The run says "Interrupted: Boussole restarted"
 
 Runs live in the server process. A restart marks unfinished runs as failed. Start them again.
 

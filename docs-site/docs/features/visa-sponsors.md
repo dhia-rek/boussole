@@ -7,7 +7,7 @@ sidebar_position: 4
 
 ## What it is
 
-The Visa Sponsors page lets you search official licensed sponsor registers from inside Forsa.
+The Visa Sponsors page lets you search official licensed sponsor registers from inside Boussole.
 
 Each provider corresponds to a country's official register and is auto-discovered at startup from the `visa-sponsor-providers/` directory.
 

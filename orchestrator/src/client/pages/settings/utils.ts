@@ -64,7 +64,7 @@ const PROVIDER_HINTS: Record<LlmProviderId, string> = {
     "Use a bearer token with any chat-completions-compatible endpoint.",
   gemini: "Gemini uses the native AI Studio API and requires a key.",
   gemini_cli:
-    "Gemini (CLI) runs the official Google Gemini CLI on this host using your OAuth session or CLI API key — no Forsa LLM key.",
+    "Gemini (CLI) runs the official Google Gemini CLI on this host using your OAuth session or CLI API key — no Boussole LLM key.",
   claude_cli:
     'Claude (CLI) runs Claude Code on this host with your Claude subscription — no API key. Add an effort with a suffix, e.g. "opus:medium".',
   codex:

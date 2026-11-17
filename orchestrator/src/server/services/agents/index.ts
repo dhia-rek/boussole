@@ -87,7 +87,7 @@ async function withAgentTables<T>(fn: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (errorText(error).includes("no such table: agent_")) {
       throw serviceUnavailable(
-        "AI agents need a database update. Restart Forsa so its migrations run (`npm run dev` does this automatically).",
+        "AI agents need a database update. Restart Boussole so its migrations run (`npm run dev` does this automatically).",
       );
     }
     throw error;

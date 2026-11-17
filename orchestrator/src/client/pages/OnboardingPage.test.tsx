@@ -212,7 +212,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => expect(api.validateLlm).toHaveBeenCalled());
     expect(
-      screen.getByText("Choose the LLM connection Forsa should use."),
+      screen.getByText("Choose the LLM connection Boussole should use."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("API key")).toBeInTheDocument();
     expect(screen.getByLabelText("Default model")).toBeInTheDocument();
@@ -243,7 +243,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -423,7 +423,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -643,7 +643,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -700,7 +700,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -778,7 +778,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -820,7 +820,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -871,13 +871,13 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
     expect(screen.queryByText("ready page")).not.toBeInTheDocument();
     expect(
-      screen.getByText("Choose the LLM connection Forsa should use."),
+      screen.getByText("Choose the LLM connection Boussole should use."),
     ).toBeInTheDocument();
   });
 
@@ -900,7 +900,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Choose the LLM connection Forsa should use."),
+        screen.getByText("Choose the LLM connection Boussole should use."),
       ).toBeInTheDocument();
     });
 
@@ -918,7 +918,7 @@ describe("OnboardingPage", () => {
     );
 
     expect(
-      screen.getByText("Choose the LLM connection Forsa should use."),
+      screen.getByText("Choose the LLM connection Boussole should use."),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Import your current resume."),

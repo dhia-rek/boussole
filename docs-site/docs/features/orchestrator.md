@@ -7,7 +7,7 @@ sidebar_position: 1
 
 ## What it is
 
-The Orchestrator is the primary jobs workspace in Forsa.
+The Orchestrator is the primary jobs workspace in Boussole.
 
 ![Orchestrator jobs workspace](/img/features/orchestrator-jobs.png)
 
@@ -70,7 +70,7 @@ What the panel includes:
 - date filters
 - sorting controls
 
-Job rows and the detail header can also show a `Previously Applied` warning when Forsa finds a high-confidence fuzzy match against one of your past applied or in-progress jobs using title and company, not just URL dedupe. To avoid flagging genuinely new openings, Forsa only shows this warning when the matched historical application falls within 30 days of the current job's discovery date.
+Job rows and the detail header can also show a `Previously Applied` warning when Boussole finds a high-confidence fuzzy match against one of your past applied or in-progress jobs using title and company, not just URL dedupe. To avoid flagging genuinely new openings, Boussole only shows this warning when the matched historical application falls within 30 days of the current job's discovery date.
 
 Date filters work on every jobs tab:
 
@@ -102,14 +102,14 @@ Use it with:
 - `Most recent`
 - `Least recent`
 
-Date sorting follows the active date-filter context. If multiple date dimensions are enabled, Forsa uses this priority:
+Date sorting follows the active date-filter context. If multiple date dimensions are enabled, Boussole uses this priority:
 
 1. `Ready`
 2. `Applied`
 3. `Closed`
 4. `Discovered`
 
-If a job does not have the first selected timestamp, Forsa falls back to the next available date in that order.
+If a job does not have the first selected timestamp, Boussole falls back to the next available date in that order.
 
 ### Ghostwriter availability
 
@@ -141,7 +141,7 @@ The saved view renders markdown by default, so links, lists, headings, and empha
 
 ### Ready tab search links
 
-In the `ready` view, Forsa can show prebuilt search links based on the current job's employer, title, and skills.
+In the `ready` view, Boussole can show prebuilt search links based on the current job's employer, title, and skills.
 
 This enables you to:
 

@@ -7,7 +7,7 @@ sidebar_position: 1
 
 ## Goal
 
-This guide documents the main intended pre-application workflow in Forsa.
+This guide documents the main intended pre-application workflow in Boussole.
 
 If you follow this order, you get the strongest results from discovery, scoring, tailoring, and tracking.
 
@@ -59,15 +59,15 @@ At this stage:
 
 1. Open job details.
 2. Open the **search links** row when you want quick external research on LinkedIn, GitHub, or the wider web.
-3. If you wrote a resume outside Forsa, use **Upload PDF** in the job detail view to attach that file to the application instead of using the generated version.
+3. If you wrote a resume outside Boussole, use **Upload PDF** in the job detail view to attach that file to the application instead of using the generated version.
 4. Optionally enable tracer links for that specific job.
 5. If the job shows `PDF stale`, wait for the automatic regeneration to finish before using the refreshed PDF. You can still open or download the old PDF while it is labeled as old.
 6. Download the PDF you want to submit.
 7. Submit your application externally.
 
-### 5) Mark jobs as applied in Forsa
+### 5) Mark jobs as applied in Boussole
 
-After submitting, return to Forsa and mark the job as `applied`.
+After submitting, return to Boussole and mark the job as `applied`.
 
 Effects:
 

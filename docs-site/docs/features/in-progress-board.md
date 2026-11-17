@@ -23,7 +23,7 @@ It groups jobs into post-application lanes:
 
 ## Why it exists
 
-Forsa uses two operational modes:
+Boussole uses two operational modes:
 
 - **Pre-application tracking** (`Jobs` page): large volume, pipeline and readiness focused.
 - **Post-application tracking** (`In Progress Board`): smaller volume, higher attention per job.

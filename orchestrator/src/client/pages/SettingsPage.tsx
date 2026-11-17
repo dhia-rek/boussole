@@ -1283,7 +1283,7 @@ export const SettingsPage: React.FC = () => {
           clearErrors(getRxResumeValidationFields());
           if (isRxResumeAvailabilityValidationFailure(validation)) {
             rxResumeSaveWarningMessage =
-              "Settings saved, but Forsa could not verify Reactive Resume because the instance is unavailable.";
+              "Settings saved, but Boussole could not verify Reactive Resume because the instance is unavailable.";
           }
         }
       }

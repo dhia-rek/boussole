@@ -50,8 +50,8 @@ npm --workspace docs-site run build
 - Root cause: the selected provider and model do not match.
 - Open **Settings -> Model** and check both the provider and the current model preview.
 - If you recently switched providers, leave the model fields blank to use the provider default, or select a provider-compatible model and save again.
-- For `openai`, Forsa defaults to `gpt-5.4-mini` when the model field is blank.
-- For `gemini`, Forsa defaults to `google/gemini-3-flash-preview` when the model field is blank.
+- For `openai`, Boussole defaults to `gpt-5.4-mini` when the model field is blank.
+- For `gemini`, Boussole defaults to `google/gemini-3-flash-preview` when the model field is blank.
 
 ## PDF generation fails
 

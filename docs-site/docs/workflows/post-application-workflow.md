@@ -42,7 +42,7 @@ curl -X POST "http://localhost:3001/api/jobs/<jobId>/stages" \
 
 ## Option B: Automatic Gmail syncing
 
-Use this when you want Forsa to ingest recruitment emails and suggest/apply updates.
+Use this when you want Boussole to ingest recruitment emails and suggest/apply updates.
 
 ### High-level flow
 

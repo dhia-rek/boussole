@@ -34,7 +34,7 @@ export const SearchTermsStep: React.FC<{
       <div className="max-w-2xl space-y-1">
         <div className="text-sm font-medium">Titles to search for</div>
         <p className="text-sm leading-6 text-muted-foreground">
-          Pick the job titles Forsa should search for. The first list can be
+          Pick the job titles Boussole should search for. The first list can be
           generated from your resume, and you can edit every item before saving.
         </p>
       </div>
@@ -69,7 +69,7 @@ export const SearchTermsStep: React.FC<{
         <AlertDescription>
           {searchTermsSource === "ai"
             ? "These titles were generated from your current resume. Adjust anything that feels off before saving."
-            : "Forsa used a simpler resume-based fallback list. You can edit or regenerate it before saving."}
+            : "Boussole used a simpler resume-based fallback list. You can edit or regenerate it before saving."}
         </AlertDescription>
       </Alert>
     ) : hasSavedSearchTermsInSession ? (

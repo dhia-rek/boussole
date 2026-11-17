@@ -73,7 +73,7 @@ async function assertPictureSupportEnabled(req: Request): Promise<void> {
 
   throw conflict(
     availability.reason ??
-      "Design Resume pictures require Forsa to be reachable at a public URL.",
+      "Design Resume pictures require Boussole to be reachable at a public URL.",
   );
 }
 

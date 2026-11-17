@@ -206,7 +206,7 @@ export const DesignResumePage: React.FC = () => {
   const pictureEnabled = Boolean(tracerReadiness?.isPubliclyAvailable);
   const pictureDisabledReason =
     tracerReadiness?.reason ??
-    "Pictures require Forsa to be reachable at a public URL.";
+    "Pictures require Boussole to be reachable at a public URL.";
 
   useEffect(() => {
     if (!document) return;
@@ -856,7 +856,7 @@ export const DesignResumePage: React.FC = () => {
                   : "Import your CV to start editing it here"}
               </h2>
               <p className="text-sm leading-7 text-muted-foreground">
-                Upload your CV as a PDF or Word file. Forsa turns it into an
+                Upload your CV as a PDF or Word file. Boussole turns it into an
                 editable CV you can refine, preview, and let the AI tailor for
                 each job — with your rules.
               </p>

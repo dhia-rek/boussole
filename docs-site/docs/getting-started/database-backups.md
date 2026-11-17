@@ -1,7 +1,7 @@
 ---
 id: database-backups
 title: Database Backups
-description: Configure, run, and restore Forsa database backups.
+description: Configure, run, and restore Boussole database backups.
 sidebar_position: 2
 ---
 
@@ -17,7 +17,7 @@ This page is about database backups:
 
 ## Backup behavior
 
-Forsa stores backups in the same data directory as `jobs.db`.
+Boussole stores backups in the same data directory as `jobs.db`.
 
 Two backup types exist:
 
@@ -30,13 +30,13 @@ Two backup types exist:
 - Filename format: `jobs_YYYY_MM_DD.db`
 - Schedule hour is configured in Settings (**UTC hour**).
 - Automatic retention is capped by `backupMaxCount`.
-- If today’s automatic backup already exists, Forsa skips creating a duplicate.
+- If today’s automatic backup already exists, Boussole skips creating a duplicate.
 
 ### Manual backups
 
 - Triggered from Settings or `POST /api/backups`.
 - Filename format: `jobs_manual_YYYY_MM_DD_HH_MM_SS.db`
-- If a filename collision occurs, Forsa appends `_1`, `_2`, etc.
+- If a filename collision occurs, Boussole appends `_1`, `_2`, etc.
 - Manual backups are **not** auto-deleted by automatic retention cleanup.
 
 ## Configure backups
@@ -82,10 +82,10 @@ curl -X PATCH "http://localhost:3001/api/settings" \
 
 To restore from a backup:
 
-1. Stop Forsa.
+1. Stop Boussole.
 2. Locate backup files in your data directory.
 3. Copy the chosen backup over the main DB file (`jobs.db`).
-4. Start Forsa.
+4. Start Boussole.
 5. Verify jobs/runs in the UI.
 
 Example shell flow:

@@ -1,175 +1,168 @@
- <div align="center">
+<div align="center">
 
-<img src="docs-site/static/img/logo.svg" alt="Forsa" width="80" />
+<img src="docs-site/static/img/logo.svg" alt="Boussole" width="84" />
 
-# Forsa
+# Boussole
 
-**One search across every board. One click to tailor your CV. One place to track it all.**
+**Arrêtez de chercher. Commencez à viser.** · *Stop searching. Start aiming.*
 
-Forsa speeds up your job hunt without faking it — you still apply to every role yourself.
+A self-hosted, AI-powered job-search workbench: it searches the job boards for you, scores every offer against your CV, prepares a one-page CV and cover letter for the best ones, and tracks every application. You still apply yourself.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![LangChain](https://img.shields.io/badge/LangChain-Deep%20Agents-1C3C3C?logo=langchain&logoColor=white)](https://docs.langchain.com/oss/javascript/deepagents/overview)
+[![Claude](https://img.shields.io/badge/Claude-Opus-D97757?logo=anthropic&logoColor=white)](https://www.anthropic.com/claude)
 
 </div>
 
 <div align="center">
 
-| Job Search | Analytics | Pipeline Board |
+<img src="docs-site/static/img/readme/landing.png" alt="Boussole landing page: Arrêtez de chercher. Commencez à viser." width="100%" />
+
+| Today | Jobs | CV editor |
 |:---:|:---:|:---:|
-| ![Job Search](docs-site/static/img/features/ui-home.png) | ![Analytics](docs-site/static/img/features/ui-overview.png) | ![Pipeline](docs-site/static/img/features/ui-pipeline.png) |
+| ![Today dashboard](docs-site/static/img/readme/today.png) | ![Jobs list with match scores](docs-site/static/img/readme/jobs.png) | ![CV editor with live LaTeX preview](docs-site/static/img/readme/cv.png) |
+
+<sub>Screenshots from demo mode: every name, company and CV is fictional.</sub>
 
 </div>
 
 ---
 
-## What is Forsa?
+## What is Boussole?
 
-Forsa is a **self-hosted job-search workbench** built for candidates who want speed without shortcuts. It searches 17 job boards from a single screen, scores each role against your profile with an LLM, tailors your CV per job description, checks visa-sponsorship status, and tracks every application through to offer or rejection by watching your Gmail inbox — all running locally on your machine.
+*Boussole* is French for *compass*. It is a job-search workbench you run on your own machine (the codebase's internal name is Forsa, which is why commands and environment variables say `forsa`).
 
-It deliberately **does not auto-apply**. Automated mass-applications get flagged by recruiters and damage your chances. Forsa gives you the leverage; you keep the quality.
+Every day it:
+
+1. **Searches** more than fifteen job boards, Welcome to the Jungle and the career pages of 62 companies hiring in France.
+2. **Scores** each offer from 0 to 100 against your CV and your rules (contract type, location, seniority).
+3. **Prepares** the best matches: a tailored one-page LaTeX CV, a cover letter, and a fact-check by an AI critic so nothing in them is invented.
+4. **Tracks** each application from "applied" to offer, including recruiter emails in Gmail.
+
+It deliberately **does not auto-apply**. Mass automated applications get flagged and hurt candidates; Boussole gives you leverage and leaves the sending to you.
 
 ---
 
 ## Features
 
-### Multi-board job search
-Search 17 sources simultaneously — Adzuna, Hiring Cafe, LinkedIn (via JobSpy), Glassdoor, Indeed, Seek, Gradcracker, Brave Search, and more — from a single query. Results stream in live as each extractor finishes.
+### Today: one screen to see what's going on
+Next actions (ready to apply, new to review, in progress), the last pipeline run with sources that failed, your best matches and your current search. A live bar on every page shows what the pipeline is doing right now.
 
-![Job search interface](docs-site/static/img/features/ui-home.png)
+<img src="docs-site/static/img/readme/today-mobile.png" alt="Today page on a phone" width="260" align="right" />
 
-### LLM-powered scoring & tailoring
-Every result is scored against your CV and target profile using your chosen LLM provider (OpenRouter, Gemini, OpenAI, or local Codex). One click rewrites your CV for the specific job description and exports it via Reactive Resume v5.
+### Job sources built for a French CDI search
+- **Welcome to the Jungle**, read from its published job sitemaps and public job pages (robots.txt respected, no private keys).
+- **Company career pages**: 62 employers across Greenhouse, Lever, Ashby, Workable, SmartRecruiters and Teamtailor (Mistral AI, Pigment, Artefact, Devoteam, Dust, Doctolib…), with a circuit breaker when a platform stops answering.
+- LinkedIn, Indeed and Glassdoor (via JobSpy), Adzuna, startup.jobs, Hiring Cafe, Working Nomads and more.
 
-### Application pipeline board
-Track every application through a Kanban-style board: Saved → Applied → Interview → Offer / Rejected. Outcome transitions fire analytics events so you can see your funnel over time.
+### AI scoring and tailoring
+Scores and tailored content come from Claude through the Claude Code CLI, so a personal install needs **no API key**; OpenRouter, OpenAI, Gemini and Codex are also supported. Responses are cached, and rate limits are retried with backoff.
 
-![In-progress board](docs-site/static/img/features/ui-pipeline.png)
+### LangChain Deep Agents
+An agent team prepares an application pack for any job: a **job analyst**, then a **CV tailor** and a **cover-letter writer** in parallel, then a **critic** that checks every claim against the CV and removes what it can't prove. A **preference learner** turns your apply/skip decisions into long-term memory. It runs on a custom LangChain chat model (`ChatClaudeCli`) with JSON tool calling, and memory is stored per workspace in SQLite.
 
-### Gmail tracking inbox
-Connect your Gmail account via OAuth and Forsa watches for recruiter replies automatically, advancing applications to the correct stage without any manual entry.
+### CV editor with AI guidance
+Edit your CV in the browser with a live PDF preview. Keep language versions (FR/EN/DE/ES); jobs automatically use the matching one. For each section, tell the AI to tailor it or keep it word for word, add notes, and mark sections private so they are never sent to a model.
 
-### AI mock interview (video + voice)
-Practice interviews grounded in the actual job description and your CV. The modal uses the Web Speech API for real-time transcription and synthesis, with your webcam feed for self-review.
+<br clear="right" />
 
-### Analytics dashboard
-See your application funnel, pipeline run history, and per-source discovery rates at a glance.
-
-![Overview dashboard](docs-site/static/img/features/ui-overview.png)
-
-### Visa sponsorship check
-UK-based candidates get automatic sponsorship-status lookups for each result using the official Home Office register data.
+### And also
+Kanban board for applications, a Gmail tracking inbox, AI video mock interviews grounded in the job and your CV, analytics, UK visa-sponsor checks, tracer links, and a French landing page with a demo mode.
 
 ---
 
 ## Architecture
 
-Forsa is an **npm-workspaces monorepo** with a clear separation of concerns:
-
 ```
-forsa/
-├── orchestrator/        # Express API + React/Vite client + SQLite (drizzle-orm)
-├── shared/              # TypeScript types, settings registry, message catalogs
-├── extractors/          # 17 independent job-source scrapers (each is its own workspace)
-│   ├── adzuna/
-│   ├── bravesearch/
-│   ├── golangjobs/
-│   ├── gradcracker/
-│   ├── hiringcafe/
-│   ├── jobindex/
-│   ├── jobspy/          # Wraps LinkedIn, Glassdoor, Indeed
-│   ├── naukri/
-│   ├── remoteco/
-│   ├── seek/
-│   ├── startupjobs/
-│   ├── ukvisajobs/
-│   ├── wellfound/
-│   ├── weworkremotely/
-│   ├── workingnomads/
-│   ├── wttj/
-│   └── ...
-├── visa-sponsor-providers/  # UK Home Office sponsorship register
+boussole/  (repo: forsa)
+├── orchestrator/            # Express API + React/Vite client + SQLite (Drizzle)
+│   └── src/server/services/agents/   # LangChain Deep Agents layer
+├── shared/                  # Types, settings registry, shared helpers
+├── extractors/              # 17 source workspaces covering 19 job sources
+│   ├── companyats/          # Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Teamtailor
+│   ├── wttj/                # Welcome to the Jungle via sitemaps
+│   ├── jobspy/              # LinkedIn, Indeed, Glassdoor
+│   └── …
+├── visa-sponsor-providers/  # UK sponsorship register
 └── docs-site/               # Docusaurus documentation
 ```
 
-**Runtime flow:** the orchestrator spawns extractors as subprocesses, reads their progress over a `FORSA_PROGRESS` stdout protocol, scores and tailors results via the configured LLM, and persists everything to SQLite. The React client communicates with the Express API over a typed REST layer and receives live updates via SSE.
+The orchestrator runs each source, reads progress over a `FORSA_PROGRESS` stdout protocol, scores and tailors with the configured model, and stores everything in SQLite. The React client talks to a typed REST API and receives live updates over Server-Sent Events.
 
-### Design decisions (the *why*)
+### Design decisions
 
-- **No auto-apply — by design.** Forsa never submits applications. Automated submissions get flagged by recruiters/ATS and hurt the candidate. The tool maximizes speed (search, score, tailor, draft) and leaves the actual send to the user, keeping every application authentic.
-
-- **Extractors are isolated subprocesses, not in-process modules.** Each job source is its own workspace spawned as a child process that streams progress over a stdout protocol. This gives fault isolation (one blocked/broken scraper can't crash the run), independent dependencies per source (e.g. JobSpy needs Python), and a uniform contract for adding new sources.
-
-- **Provider-agnostic LLM layer with per-task routing.** The LLM provider is resolved per task, not globally. Scoring (high call volume) and tailoring (heavier prompts, low volume) can run on *different* providers so they draw from independent free-tier quotas and don't starve each other. Adding a provider is a strategy + client, not a rewrite.
-
-- **Persistent LLM response cache.** Every scoring/tailoring call is cached by a hash of (provider, model, prompt, schema) in SQLite. Free-tier LLMs are rate-limited, so the pipeline is designed to be run repeatedly and incrementally — a cache hit costs zero quota, making re-runs lossless and letting a large backlog grind through across many small runs. (Disabled under test to keep tests deterministic.)
-
-- **Resume rendering: structured JSON → LaTeX → PDF.** The base resume is a normalized JSON document, rendered through a LaTeX template compiled by Tectonic (self-contained, auto-fetches packages — no system TeX install). The tailored CV's **language adapts to each job description** (a French posting yields a French CV), and the template is tuned to fit a complete CV on one page.
-
-- **Settings are per-tenant and read fresh per run.** Configuration lives in SQLite keyed by tenant, not in process memory, so changes take effect on the next pipeline run without a restart and the design stays multi-user-ready.
+- **No auto-apply, by design.** Speed for everything except the send.
+- **Sources are isolated.** One broken scraper can't crash a run; each source has its own dependencies and a uniform contract.
+- **Respect the sites.** Welcome to the Jungle's search key only works from its own website and its robots.txt forbids crawling search pages, so Boussole reads the sitemaps it publishes instead, then fetches only matching offers, bounded and spaced out.
+- **Agents where they add value.** The daily pipeline stays deterministic and cheap; the multi-agent chain is reserved for preparing an application, where a critic pass pays for itself.
+- **A CLI-backed LangChain model.** LangChain's Claude integration needs an API key; wrapping the Claude Code CLI as a chat model lets the same agents run on a personal subscription, and swapping in an API model is a one-line change.
+- **Privacy by default.** Models receive an AI view of the CV without email, phone or street address; private sections never leave the machine.
+- **Multi-tenant from the ground up.** Settings, caches, agent memory and runs are scoped per workspace.
+- **Safe to expose.** Sign-in throttling (`429` with `Retry-After`), security headers, closed CORS, and a tunnel launcher that refuses weak passwords.
 
 ---
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | React 19, Vite 6, TailwindCSS v4, TanStack Query, Radix UI |
+| **Frontend** | React 19, Vite, Tailwind CSS v4, TanStack Query, Radix UI |
 | **Backend** | Node.js 22, Express, TypeScript 5 |
-| **Database** | SQLite via better-sqlite3 + Drizzle ORM |
-| **LLM** | OpenRouter / Gemini / OpenAI / local Codex (provider-agnostic) |
-| **Testing** | Vitest (1 300+ tests across all workspaces) |
-| **Linting** | Biome v2 (lint + format), Knip (dead code) |
-| **CI** | GitHub Actions — lint, typecheck, tests, docs build |
+| **AI** | Claude (Claude Code CLI) · LangChain Deep Agents + LangGraph · OpenRouter / OpenAI / Gemini / Codex |
+| **Data** | SQLite via better-sqlite3 + Drizzle ORM |
+| **Documents** | Structured JSON CV → LaTeX (Tectonic) → one-page PDF |
+| **Scraping** | Playwright / Camoufox, public ATS APIs, sitemaps |
+| **Quality** | Vitest (1,600+ tests), Biome, Knip, GitHub Actions |
 | **Packaging** | npm workspaces, Docker + Docker Compose |
 
 ---
 
-## Quick Start
+## Quick start
 
-**Docker (recommended):**
+**Docker:**
 
 ```bash
-git clone https://github.com/dhia-rek/forsa.git
-cd forsa
-cp .env.example .env   # fill in the LLM provider key you want to use
+git clone https://github.com/dhia-rek/forsa.git boussole
+cd boussole
+cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:3005` and follow the onboarding wizard.
+Open `http://localhost:3005` and follow the onboarding.
 
 **Local development:**
 
 ```bash
-git clone https://github.com/dhia-rek/forsa.git
-cd forsa
+git clone https://github.com/dhia-rek/forsa.git boussole
+cd boussole
 npm ci
 cp .env.example .env
-npm --workspace orchestrator run db:migrate
 npm --workspace orchestrator run dev
 ```
 
-API server → `http://localhost:3001` · Vite dev server → `http://localhost:5173`. `dev` re-applies pending migrations on every start, so pulling schema changes never breaks a running workspace.
+API at `http://localhost:3001`, web app at `http://localhost:5173`. `dev` applies pending database migrations on every start.
+
+**Try the demo:** start the server with `DEMO_MODE=true` for a workspace filled with fictional jobs and a fictional CV that resets every few hours.
+
+**Open it from your phone:** `orchestrator/scripts/share.sh` publishes your instance through a Cloudflare tunnel after checking that no account uses an easy password. See *Open Boussole from Anywhere* in the docs.
 
 ---
 
-## Environment Variables
+## Configuration
 
-Copy `.env.example` to `.env` and fill in the values you need. Everything is optional unless a feature you enable requires it.
+Copy `.env.example` to `.env`; everything is optional unless a feature needs it.
 
-| Variable | Required for | Description |
-|----------|--------------|-------------|
-| `MODEL` | LLM features | Model identifier (e.g. `google/gemini-3-flash-preview`). |
-| `LLM_PROVIDER` | LLM features | `openrouter`, `openai`, `gemini`, `gemini_cli`, or `codex`. |
-| `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` | Protected deployments | Enables basic auth; app is open if unset. |
-| `RXRESUME_API_KEY` / `RXRESUME_URL` | Tailored resumes | Reactive Resume v5 API key and optional self-hosted URL. |
-| `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` | Auto tracking | Gmail OAuth credentials for the tracking inbox. |
+| Variable | Used for | Description |
+|----------|----------|-------------|
+| `LLM_PROVIDER` / `MODEL` | AI features | e.g. `claude_cli` with `opus:medium`, or `openrouter`, `openai`, `gemini`, `gemini_cli`, `codex`. |
+| `RXRESUME_API_KEY` / `RXRESUME_URL` | Reactive Resume | Optional; the built-in CV editor and LaTeX renderer need neither. |
+| `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` | Tracking inbox | Gmail OAuth credentials. |
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Adzuna source | Adzuna developer credentials. |
-| `BRAVE_SEARCH_API_KEY` | Brave Search source | Brave Search API key. |
-| `APIFY_TOKEN` | Seek source | Apify API token for the Seek scraper. |
+| `FORSA_CORS_ORIGINS` | Separate front end | Origins allowed to call the API cross-site (closed by default). |
+| `DEMO_MODE` | Public demo | Fictional data, simulated integrations, periodic reset. |
 
 See [`.env.example`](./.env.example) for the full annotated list.
 
@@ -177,21 +170,7 @@ See [`.env.example`](./.env.example) for the full annotated list.
 
 ## Documentation
 
-Run `npm run docs:dev` and browse `http://localhost:3006`, or read the Markdown directly under `docs-site/docs/`.
-
-Topics covered: adding a new extractor, deployment guide, settings reference, Gmail OAuth setup, Reactive Resume integration.
-
----
-
-## Adding a New Extractor
-
-Each extractor is a self-contained workspace under `extractors/` with a `manifest` (declares the source name, supported countries, and required env vars) and a `run` entrypoint (streams results via the `FORSA_PROGRESS` protocol). The full guide is in the docs: **Workflows → Add an Extractor**.
-
----
-
-## Contributing
-
-Issues and pull requests are welcome — code, docs, or new extractors. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) to get started.
+Run `npm run docs:dev` and open `http://localhost:3006`, or read the Markdown under `docs-site/docs/`: Today and navigation, job sources, AI agents, CV editor, settings, sharing online, adding a source.
 
 ---
 
@@ -199,10 +178,8 @@ Issues and pull requests are welcome — code, docs, or new extractors. See [`CO
 
 Released under the [MIT License](./LICENSE).
 
----
-
 <div align="center">
 
-Built by [Dhia Rekik](https://dhiarekik.me) · [GitHub @dhia-rek](https://github.com/dhia-rek)
+Designed and built by [Dhia Rekik](https://dhiarekik.me) · [GitHub @dhia-rek](https://github.com/dhia-rek)
 
 </div>

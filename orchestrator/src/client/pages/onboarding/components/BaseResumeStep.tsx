@@ -77,7 +77,7 @@ export const BaseResumeStep: React.FC<{
             value: "upload",
             title: "Upload a PDF or DOCX",
             description:
-              "Create a local Design Resume directly in Forsa from your existing file.",
+              "Create a local Design Resume directly in Boussole from your existing file.",
           },
           {
             value: "rxresume",
@@ -125,7 +125,7 @@ export const BaseResumeStep: React.FC<{
                 Upload a PDF or DOCX resume
               </div>
               <p className="text-sm text-muted-foreground">
-                Forsa will send the file directly to your configured AI model
+                Boussole will send the file directly to your configured AI model
                 and store the validated structured result as your local Design
                 Resume.
               </p>

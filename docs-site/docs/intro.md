@@ -1,12 +1,12 @@
 ---
 id: intro
-title: Forsa — Documentation
+title: Boussole — Documentation
 description: Documentation index for setup, features, extractors, and common problems.
 sidebar_position: 1
 slug: /
 ---
 
-Welcome to Forsa documentation. This site contains guides for setup, configuration, and day-to-day usage.
+Welcome to Boussole documentation. This site contains guides for setup, configuration, and day-to-day usage.
 
 ## Getting Started
 

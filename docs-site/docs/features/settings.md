@@ -55,9 +55,9 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 - The settings page shows provider-aware model pickers for:
   - `openai`: available text-generation models only
   - `gemini`: available Gemini text-generation models only
-  - `gemini_cli`: a curated list of Gemini model ids the CLI typically supports (install [Gemini CLI](https://www.npmjs.com/package/@google/gemini-cli), run `gemini` and complete Google sign-in, or set `GEMINI_API_KEY` for the CLI; Forsa spawns headless `gemini -p ...` with `--approval-mode plan` and no Forsa API key field). **Resume import** uses the CLI with extracted text: DOCX is parsed locally; PDF uses local text extraction then JSON extraction via the CLI (scanned PDFs without a text layer may not import well).
-  - `claude_cli`: Claude Code model aliases (`opus`, `sonnet`, `haiku`). Forsa runs headless `claude -p` on this host with your Claude subscription (run `claude` once to log in) and denies every tool, so the model can only answer. Append an effort level to the model to control reasoning depth, for example `opus:medium` (`low`, `medium`, `high`, `xhigh`, `max`); without a suffix `CLAUDE_CLI_EFFORT` or the CLI default applies. **Resume import** works like `gemini_cli` (extracted text).
-- `openrouter` and `openai_compatible` stay manual-entry because Forsa cannot safely infer the exact model catalog from those providers
+  - `gemini_cli`: a curated list of Gemini model ids the CLI typically supports (install [Gemini CLI](https://www.npmjs.com/package/@google/gemini-cli), run `gemini` and complete Google sign-in, or set `GEMINI_API_KEY` for the CLI; Boussole spawns headless `gemini -p ...` with `--approval-mode plan` and no Boussole API key field). **Resume import** uses the CLI with extracted text: DOCX is parsed locally; PDF uses local text extraction then JSON extraction via the CLI (scanned PDFs without a text layer may not import well).
+  - `claude_cli`: Claude Code model aliases (`opus`, `sonnet`, `haiku`). Boussole runs headless `claude -p` on this host with your Claude subscription (run `claude` once to log in) and denies every tool, so the model can only answer. Append an effort level to the model to control reasoning depth, for example `opus:medium` (`low`, `medium`, `high`, `xhigh`, `max`); without a suffix `CLAUDE_CLI_EFFORT` or the CLI default applies. **Resume import** works like `gemini_cli` (extracted text).
+- `openrouter` and `openai_compatible` stay manual-entry because Boussole cannot safely infer the exact model catalog from those providers
 - Local model servers (Ollama, LM Studio) are no longer built-in providers; point `openai_compatible` at their OpenAI-compatible endpoint if you need one
 - Changing the provider clears stale model overrides in the form, so inherited fields follow the new provider default unless you explicitly choose a new override
 - The preview under each field and the **Resolved config** block reflect the model currently selected in the form, even before you save
@@ -97,7 +97,7 @@ Settings gives you runtime overrides for the key parts of discovery, scoring, ta
 - Choose how AI output language is resolved:
   - `Manual`: always use the language you select, such as English, German, French, or Spanish
   - `Match Resume`: detect the dominant language from your resume/profile content and use that language for generated output
-- If language detection is unclear or there is not enough resume/profile text, Forsa falls back to English
+- If language detection is unclear or there is not enough resume/profile text, Boussole falls back to English
 - Resume tailoring keeps the exact source wording for ATS-sensitive resume headlines and job titles, even when the rest of the tailored content is generated in the selected language
 - When using the local LaTeX PDF renderer, fixed resume section titles follow the resolved output language
 - Summary max words: optional cap on AI-generated summary length (empty = no limit)
@@ -115,7 +115,7 @@ Use these steps when you want Ghostwriter and resume tailoring to stay in a spec
 3. Choose a preset if you want a starting point for tone and formality.
 4. Under the language control, choose one of these modes:
    - **Manual**: pick the output language directly.
-   - **Match Resume**: let Forsa infer the language from your resume/profile text.
+   - **Match Resume**: let Boussole infer the language from your resume/profile text.
 5. If you chose **Manual**, select the language you want the AI to use.
 6. Review the rest of the writing defaults such as tone, formality, constraints, and do-not-use terms.
 7. Click **Save Changes**.
@@ -125,7 +125,7 @@ Defaults and constraints:
 
 - `Manual` is best when you always want output in one language regardless of the resume source text.
 - `Match Resume` is best when your base resume is already written in the language you want to preserve.
-- If Forsa cannot determine a reliable resume/profile language, it safely uses English.
+- If Boussole cannot determine a reliable resume/profile language, it safely uses English.
 - The generated resume content follows the resolved language, but ATS-sensitive headline and job-title wording stays exact so matching and parsing remain safer.
 - The local LaTeX PDF renderer uses the resolved language for fixed section headings such as Summary, Experience, Education, Projects, and Technical Skills.
 
@@ -153,7 +153,7 @@ Defaults and constraints:
 - Choose the PDF renderer:
   - RxResume export
   - Local LaTeX renderer
-- Forsa uses the selected RxResume resume as the source of truth in both modes
+- Boussole uses the selected RxResume resume as the source of truth in both modes
 - Invalid Reactive Resume credentials or other `4xx` config failures block the save and stay visible as an inline error
 - Temporary Reactive Resume downtime shows an inline warning, but the save still succeeds
 - Changing PDF-affecting settings (`pdfRenderer`, `rxresumeBaseResumeId`, RxResume URL/key) auto-queues regeneration for ready jobs that currently use system-generated PDFs
@@ -162,7 +162,7 @@ Defaults and constraints:
   - Max projects
   - Must-include projects
   - AI-selectable projects
-- Forsa briefly caches successful Reactive Resume resume data to reduce repeated API calls across settings, profile, and PDF flows
+- Boussole briefly caches successful Reactive Resume resume data to reduce repeated API calls across settings, profile, and PDF flows
 
 ### Tracer Links
 
@@ -173,7 +173,7 @@ Defaults and constraints:
 
 Readiness requires:
 
-- a valid public Forsa base URL
+- a valid public Boussole base URL
 - successful reachability of `<public-base-url>/health`
 - non-localhost/non-private host setup for public redirect usage
 
@@ -278,26 +278,26 @@ curl -X POST "http://localhost:3001/api/backups"
 
 - Open **Settings -> Model** and confirm the provider and model belong together.
 - If you switch providers, leave the model fields blank to use the provider default, or pick a new provider-compatible model from the dropdown.
-- Forsa ignores stale Gemini-style overrides under `openai`, and ignores stale OpenAI-style overrides under `gemini`, but you still need to save the current form selection for future runs.
+- Boussole ignores stale Gemini-style overrides under `openai`, and ignores stale OpenAI-style overrides under `gemini`, but you still need to save the current form selection for future runs.
 
 ### Resume tailoring used English instead of my resume language
 
 - Open **Settings → Writing Style & Language** and confirm whether the language mode is set to **Manual** or **Match Resume**.
 - If you want a specific language every time, switch to **Manual** and select that language explicitly.
 - If you use **Match Resume**, make sure your resume/profile text has enough content in the target language for detection.
-- If detection is ambiguous, Forsa falls back to English by design.
+- If detection is ambiguous, Boussole falls back to English by design.
 
 ### My headline or target job title did not get translated
 
 - This is expected during resume tailoring.
-- Forsa intentionally preserves exact headline and job-title wording for ATS safety, even when other tailored sections are generated in another language.
+- Boussole intentionally preserves exact headline and job-title wording for ATS safety, even when other tailored sections are generated in another language.
 - If you need a different headline or target title, change the source resume/profile text first and then re-run tailoring.
 
 ### RxResume controls are disabled
 
-- Forsa resolves the RxResume URL in this order: the value saved in **Settings → Reactive Resume**, then the `RXRESUME_URL` environment variable (if set), and finally the public cloud default.
+- Boussole resolves the RxResume URL in this order: the value saved in **Settings → Reactive Resume**, then the `RXRESUME_URL` environment variable (if set), and finally the public cloud default.
 - Open **Settings → Reactive Resume** and configure the shared RxResume URL if you use a self-hosted instance.
-- If you leave the URL blank, Forsa will fall back to `RXRESUME_URL` when it is configured; otherwise it uses the public cloud default.
+- If you leave the URL blank, Boussole will fall back to `RXRESUME_URL` when it is configured; otherwise it uses the public cloud default.
 - Invalid credentials block the save and remain visible inline until you edit the selected mode's credentials or URL.
 - Temporary instance downtime shows a warning inline, but does not block unrelated settings updates.
 - Then refresh available resumes from the Reactive Resume section.
@@ -306,8 +306,8 @@ curl -X POST "http://localhost:3001/api/backups"
 
 - Root cause: your resume on [rxresu.me](https://rxresu.me) has an empty **Projects** section.
 - Fix in RxResume first: add project entries to the base resume you selected in Settings.
-- Then return to Forsa, refresh/select the same base resume in **Reactive Resume**, and regenerate the PDF.
-- Forsa preserves current visibility state, but it cannot create missing project content if the source resume has no projects.
+- Then return to Boussole, refresh/select the same base resume in **Reactive Resume**, and regenerate the PDF.
+- Boussole preserves current visibility state, but it cannot create missing project content if the source resume has no projects.
 
 ### Webhook calls fail
 

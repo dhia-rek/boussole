@@ -61,7 +61,7 @@ vi.mock("../api", () => ({
     isSystemAdmin: false,
     isDisabled: false,
     workspaceId: "tenant_default",
-    workspaceName: "Forsa",
+    workspaceName: "Boussole",
     createdAt: "2026-04-27T00:00:00.000Z",
     updatedAt: "2026-04-27T00:00:00.000Z",
   }),
@@ -627,7 +627,7 @@ describe("SettingsPage", () => {
     vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: false,
       message:
-        "Forsa could not verify Reactive Resume because the instance is unavailable right now.",
+        "Boussole could not verify Reactive Resume because the instance is unavailable right now.",
       status: 0,
     });
 
@@ -645,7 +645,7 @@ describe("SettingsPage", () => {
     ).toBeInTheDocument();
     expect(toast.success).toHaveBeenCalledWith("Settings saved");
     expect(toast.info).toHaveBeenCalledWith(
-      "Settings saved, but Forsa could not verify Reactive Resume because the instance is unavailable.",
+      "Settings saved, but Boussole could not verify Reactive Resume because the instance is unavailable.",
     );
   });
 
@@ -682,7 +682,7 @@ describe("SettingsPage", () => {
     vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: false,
       message:
-        "Forsa could not verify Reactive Resume because the instance is unavailable right now.",
+        "Boussole could not verify Reactive Resume because the instance is unavailable right now.",
       status: 0,
     });
 
