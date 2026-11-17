@@ -100,8 +100,8 @@ export const RxResumeStep: React.FC<{
           <div className="space-y-1">
             <div className="text-sm font-medium">Template resume</div>
             <p className="text-xs text-muted-foreground">
-              Choose the resume Boussole should treat as your imported base resume
-              for this onboarding step.
+              Choose the resume Boussole should treat as your imported base
+              resume for this onboarding step.
             </p>
           </div>
           <BaseResumeSelection
