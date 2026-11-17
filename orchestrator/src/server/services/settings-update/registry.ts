@@ -1,3 +1,4 @@
+import { hashPassword } from "@server/auth/password";
 import type { SettingKey } from "@server/repositories/settings";
 import * as settingsRepo from "@server/repositories/settings";
 import { normalizeEnvInput } from "@server/services/envSettings";
@@ -75,6 +76,9 @@ export const settingsUpdateRegistry: Partial<{
   [K in keyof UpdateSettingsInput]: SettingUpdateHandler<K>;
 }> = {};
 
+/** Marks a stored basic-auth password as a hash rather than plain text. */
+export const BASIC_AUTH_HASH_PREFIX = "scrypt:";
+
 const RXRESUME_CACHE_INVALIDATION_KEYS = new Set<keyof UpdateSettingsInput>([
   "rxresumeUrl",
   "rxresumeApiKey",
@@ -106,6 +110,28 @@ for (const [key, def] of Object.entries(settingsRegistry)) {
 
       return result({
         actions: [persistAction(targetKey, JSON.stringify(normalized))],
+      });
+    };
+    continue;
+  }
+
+  // The legacy "basic auth" password only records that authentication was set
+  // up (accounts live in the users table with their own hash). Never store it
+  // in plain text: keep a scrypt hash so the flag survives without the secret.
+  if (key === "basicAuthPassword") {
+    settingsUpdateRegistry.basicAuthPassword = async ({ value }) => {
+      const password = normalizeEnvInput(value as string | null | undefined);
+      if (!password) {
+        return result({ actions: [persistAction("basicAuthPassword", null)] });
+      }
+      const { passwordHash, passwordSalt } = await hashPassword(password);
+      return result({
+        actions: [
+          persistAction(
+            "basicAuthPassword",
+            `${BASIC_AUTH_HASH_PREFIX}${passwordSalt}:${passwordHash}`,
+          ),
+        ],
       });
     };
     continue;

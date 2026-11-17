@@ -42,6 +42,49 @@ describe.sequential("Auth routes", () => {
       expect(body.data.expiresIn).toBeGreaterThan(0);
     });
 
+    it("locks sign-in with 429 after repeated failures, even for the right password", async () => {
+      const attempt = (password: string) =>
+        fetch(`${baseUrl}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: "admin", password }),
+        });
+
+      for (let index = 0; index < 10; index += 1) {
+        expect((await attempt(`wrong-${index}`)).status).toBe(401);
+      }
+
+      const locked = await attempt("secret");
+      expect(locked.status).toBe(429);
+      expect(Number(locked.headers.get("retry-after"))).toBeGreaterThan(0);
+      const body = await locked.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe("TOO_MANY_REQUESTS");
+      expect(body.error.message).toMatch(/Too many sign-in attempts/);
+      expect(body.meta.requestId).toBeTruthy();
+    });
+
+    it("sends security headers and no open CORS", async () => {
+      const res = await fetch(`${baseUrl}/health`, {
+        headers: { Origin: "https://evil.example" },
+      });
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(res.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+      expect(res.headers.get("referrer-policy")).toBe(
+        "strict-origin-when-cross-origin",
+      );
+      expect(res.headers.get("permissions-policy")).toContain("camera=(self)");
+      expect(res.headers.get("strict-transport-security")).toBeNull();
+      expect(res.headers.get("access-control-allow-origin")).toBeNull();
+
+      const viaTunnel = await fetch(`${baseUrl}/health`, {
+        headers: { "X-Forwarded-Proto": "https" },
+      });
+      expect(viaTunnel.headers.get("strict-transport-security")).toContain(
+        "max-age=",
+      );
+    });
+
     it("returns 401 for invalid credentials", async () => {
       const res = await fetch(`${baseUrl}/api/auth/login`, {
         method: "POST",

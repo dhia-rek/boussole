@@ -1,0 +1,12 @@
+
+> hiringcafe-extractor@0.0.1 start
+> tsx src/main.ts
+
+BOUSSOLE_PROGRESS {"event":"challenge_required","url":"https://hiring.cafe"}
+Hiring Cafe extractor failed: Cloudflare challenge at https://hiring.cafe could not be passed by the headless browser
+npm error Lifecycle script `start` failed with error:
+npm error code 1
+npm error path /app/extractors/hiringcafe
+npm error workspace hiringcafe-extractor@0.0.1
+npm error command failed
+npm error command sh -c tsx src/main.ts

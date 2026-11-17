@@ -2,10 +2,11 @@ import { useKeyboardAvailability } from "@client/hooks/useKeyboardAvailability";
 import { useSettings } from "@client/hooks/useSettings";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { VirtualListHandle } from "@/client/lib/virtual-list";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
+import { useAppShell } from "../components/app-shell/AppShellContext";
 import { KeyboardShortcutBar } from "../components/KeyboardShortcutBar";
 import { KeyboardShortcutDialog } from "../components/KeyboardShortcutDialog";
 import { useDemoInfo } from "../hooks/useDemoInfo";
@@ -86,7 +87,8 @@ export const OrchestratorPage: React.FC = () => {
     }
   }, [tab, navigate, navigateWithContext]);
 
-  const [navOpen, setNavOpen] = useState(false);
+  // Keyboard shortcuts pause while the phone navigation sheet is open.
+  const { isNavOpen: navOpen } = useAppShell();
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
@@ -144,6 +146,26 @@ export const OrchestratorPage: React.FC = () => {
     loadJobs,
     navigateWithContext,
   });
+
+  // "Run pipeline" elsewhere in the app links here with ?run=automatic.
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("run") !== "automatic") return;
+    params.delete("run");
+    const search = params.toString();
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : "" },
+      { replace: true },
+    );
+    if (!isPipelineRunning) openRunMode("automatic");
+  }, [
+    location.pathname,
+    location.search,
+    navigate,
+    openRunMode,
+    isPipelineRunning,
+  ]);
 
   const activeJobs = useFilteredJobs(
     jobs,
@@ -400,8 +422,6 @@ export const OrchestratorPage: React.FC = () => {
   return (
     <>
       <OrchestratorHeader
-        navOpen={navOpen}
-        onNavOpenChange={setNavOpen}
         isPipelineRunning={isPipelineRunning}
         isCancelling={isCancelling}
         pipelineSources={pipelineSources}

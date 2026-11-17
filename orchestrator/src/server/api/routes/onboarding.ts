@@ -26,8 +26,6 @@ type ValidationResponse = {
 function getDefaultValidationBaseUrl(
   provider: string | undefined,
 ): string | undefined {
-  if (provider === "lmstudio") return "http://localhost:1234";
-  if (provider === "ollama") return "http://localhost:11434";
   if (provider === "openai_compatible") return "https://api.openai.com";
   return undefined;
 }
@@ -46,10 +44,7 @@ async function validateLlm(options: {
   const normalizedProvider = normalizeLlmProviderValue(
     options.provider?.trim() || storedProvider?.trim() || undefined,
   );
-  const shouldUseBaseUrl =
-    normalizedProvider === "lmstudio" ||
-    normalizedProvider === "ollama" ||
-    normalizedProvider === "openai_compatible";
+  const shouldUseBaseUrl = normalizedProvider === "openai_compatible";
   const hasExplicitBaseUrlOverride =
     options.baseUrl !== undefined && options.baseUrl !== null;
   const resolvedBaseUrl = shouldUseBaseUrl

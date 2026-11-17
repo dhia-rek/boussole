@@ -61,7 +61,9 @@ export async function getEnvSettingsData(
   const basicAuthActive = Boolean(basicAuthUser && basicAuthPassword);
 
   values.basicAuthActive = basicAuthActive;
-  values.basicAuthPassword = basicAuthActive ? basicAuthPassword : null;
+  // Never send the login password (or a slice of it) to the browser.
+  values.basicAuthPassword = null;
+  values.basicAuthPasswordHint = basicAuthPassword ? "****" : null;
 
   return values;
 }

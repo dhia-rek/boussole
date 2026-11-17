@@ -265,6 +265,8 @@ const migrations = [
     revision INTEGER NOT NULL DEFAULT 1,
     source_resume_id TEXT,
     source_mode TEXT CHECK(source_mode IN ('v4', 'v5')),
+    language TEXT,
+    ai_guidance TEXT,
     imported_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -514,6 +516,40 @@ const migrations = [
     FOREIGN KEY (tracer_link_id) REFERENCES tracer_links(id) ON DELETE CASCADE
   )`,
 
+  `CREATE TABLE IF NOT EXISTS agent_runs (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    job_id TEXT,
+    kind TEXT NOT NULL CHECK(kind IN ('application', 'learn')),
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
+    model TEXT,
+    events TEXT NOT NULL DEFAULT '[]',
+    output TEXT,
+    error TEXT,
+    model_calls INTEGER NOT NULL DEFAULT 0,
+    tool_calls INTEGER NOT NULL DEFAULT 0,
+    request_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT,
+    finished_at TEXT,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_job ON agent_runs(tenant_id, job_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_status ON agent_runs(tenant_id, status)`,
+
+  `CREATE TABLE IF NOT EXISTS agent_memories (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    namespace TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    UNIQUE(tenant_id, namespace, key)
+  )`,
+
   // Rename settings key: webhookUrl -> pipelineWebhookUrl (safe to re-run)
   `INSERT OR REPLACE INTO settings(key, value, created_at, updated_at)
    SELECT 'pipelineWebhookUrl', value, created_at, updated_at FROM settings WHERE key = 'webhookUrl'`,
@@ -527,6 +563,12 @@ const migrations = [
      'jobspyIsRemote',
      'openrouterApiKey'
    )`,
+
+  // Add language slot to design résumés (safe to skip if already present)
+  `ALTER TABLE design_resume_documents ADD COLUMN language TEXT`,
+
+  // Add candidate-authored AI guidance to design résumés (safe to skip if already present)
+  `ALTER TABLE design_resume_documents ADD COLUMN ai_guidance TEXT`,
 
   // Add source column for existing databases (safe to skip if already present)
   `ALTER TABLE jobs ADD COLUMN source TEXT NOT NULL DEFAULT 'gradcracker'`,
@@ -954,7 +996,10 @@ for (const migration of migrations) {
           .includes("alter table job_chat_threads add column") ||
         migration
           .toLowerCase()
-          .includes("alter table analytics_install_state add column")) &&
+          .includes("alter table analytics_install_state add column") ||
+        migration
+          .toLowerCase()
+          .includes("alter table design_resume_documents add column")) &&
       message.toLowerCase().includes("duplicate column name");
 
     if (isDuplicateColumn) {

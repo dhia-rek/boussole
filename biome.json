@@ -14,7 +14,8 @@
       "!!**/.venv",
       "!!.claude",
       "!!orchestrator/storage",
-      "!!orchestrator/data"
+      "!!orchestrator/data",
+      "!!extractors/*/storage"
     ]
   },
   "css": {

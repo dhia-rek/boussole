@@ -4,6 +4,7 @@ import { useOnboardingRequirement } from "@client/hooks/useOnboardingRequirement
 import { useRxResumeConfigState } from "@client/hooks/useRxResumeConfigState";
 import { useSettings } from "@client/hooks/useSettings";
 import { validateAndMaybePersistRxResumeMode } from "@client/lib/rxresume-config";
+import { createDesignResumeDocument } from "@shared/testing/factories";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -337,7 +338,11 @@ describe("OnboardingPage", () => {
   it("does not treat local providers as validated before the connection check passes", async () => {
     currentSettings = {
       ...baseSettings,
-      llmProvider: { value: "lmstudio", default: "lmstudio", override: null },
+      llmProvider: {
+        value: "openai_compatible",
+        default: "openai_compatible",
+        override: null,
+      },
       llmBaseUrl: {
         value: "http://localhost:1234",
         default: "",
@@ -348,7 +353,7 @@ describe("OnboardingPage", () => {
 
     vi.mocked(api.validateLlm).mockResolvedValue({
       valid: false,
-      message: "LM Studio is unreachable",
+      message: "The AI endpoint is unreachable",
     });
     vi.mocked(api.validateRxresume).mockResolvedValue({
       valid: true,
@@ -363,7 +368,7 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => {
       expect(api.validateLlm).toHaveBeenCalledWith({
-        provider: "lmstudio",
+        provider: "openai_compatible",
         baseUrl: "http://localhost:1234",
         apiKey: undefined,
       });
@@ -1090,18 +1095,9 @@ describe("OnboardingPage", () => {
         valid: true,
         message: null,
       });
-    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue({
-      id: "primary",
-      title: "Taylor Resume",
-      resumeJson: {} as any,
-      revision: 1,
-      sourceResumeId: null,
-      sourceMode: null,
-      importedAt: "2026-04-11T00:00:00.000Z",
-      createdAt: "2026-04-11T00:00:00.000Z",
-      updatedAt: "2026-04-11T00:00:00.000Z",
-      assets: [],
-    });
+    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
+      createDesignResumeDocument(),
+    );
     vi.mocked(api.updateSettings).mockImplementation(async (update) => {
       currentSettings = {
         ...currentSettings,
@@ -1178,18 +1174,9 @@ describe("OnboardingPage", () => {
         valid: true,
         message: null,
       });
-    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue({
-      id: "primary",
-      title: "Taylor Resume",
-      resumeJson: {} as any,
-      revision: 1,
-      sourceResumeId: null,
-      sourceMode: null,
-      importedAt: "2026-04-11T00:00:00.000Z",
-      createdAt: "2026-04-11T00:00:00.000Z",
-      updatedAt: "2026-04-11T00:00:00.000Z",
-      assets: [],
-    });
+    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
+      createDesignResumeDocument(),
+    );
     vi.mocked(api.updateSettings).mockImplementation(async (update) => {
       currentSettings = {
         ...currentSettings,
@@ -1262,18 +1249,9 @@ describe("OnboardingPage", () => {
         valid: true,
         message: null,
       });
-    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue({
-      id: "primary",
-      title: "Taylor Resume",
-      resumeJson: {} as any,
-      revision: 1,
-      sourceResumeId: null,
-      sourceMode: null,
-      importedAt: "2026-04-11T00:00:00.000Z",
-      createdAt: "2026-04-11T00:00:00.000Z",
-      updatedAt: "2026-04-11T00:00:00.000Z",
-      assets: [],
-    });
+    vi.mocked(api.importDesignResumeFromFile).mockResolvedValue(
+      createDesignResumeDocument(),
+    );
     vi.mocked(api.updateSettings).mockImplementation(async (update) => {
       currentSettings = {
         ...currentSettings,

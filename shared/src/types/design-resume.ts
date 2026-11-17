@@ -342,6 +342,82 @@ export interface DesignResumeAsset {
   updatedAt: string;
 }
 
+/**
+ * Sections a candidate can attach AI guidance to. "headline" maps to
+ * `basics.headline`; the rest map to `summary` / `sections.<key>`.
+ */
+export const DESIGN_RESUME_AI_SECTION_KEYS = [
+  "headline",
+  "summary",
+  "skills",
+  "projects",
+  "experience",
+  "education",
+  "languages",
+  "certifications",
+  "awards",
+  "publications",
+  "volunteer",
+  "interests",
+  "references",
+  "profiles",
+] as const;
+
+export type DesignResumeAiSectionKey =
+  (typeof DESIGN_RESUME_AI_SECTION_KEYS)[number];
+
+/**
+ * Sections the tailoring pipeline can change per job. Every other section is
+ * always copied verbatim into tailored CVs.
+ */
+export const DESIGN_RESUME_AI_TAILORABLE_SECTION_KEYS = [
+  "headline",
+  "summary",
+  "skills",
+  "projects",
+] as const;
+
+export type DesignResumeAiTailorableSectionKey =
+  (typeof DESIGN_RESUME_AI_TAILORABLE_SECTION_KEYS)[number];
+
+/**
+ * - `tailor`: the AI adapts this section to each job (rewrite headline/summary,
+ *   reorder skills keywords, pick the most relevant projects).
+ * - `keep`: tailored CVs use this section exactly as written.
+ */
+export type DesignResumeAiMode = "tailor" | "keep";
+
+export interface DesignResumeAiSectionGuidance {
+  /** Only meaningful for tailorable sections; other sections are always kept. */
+  mode: DesignResumeAiMode;
+  /** When false, the section is never sent to an LLM (scoring, tailoring, cover letters). */
+  share: boolean;
+  /** Free-form instructions/context for the AI about this section. */
+  notes: string;
+  /** Headline only: text every tailored headline must start with (e.g. "Stagiaire"). */
+  prefix: string;
+}
+
+/**
+ * Project inclusion when the projects section is tailored per job.
+ * Unset means "follow Settings → Resume projects".
+ */
+export type DesignResumeAiItemInclusion = "always" | "auto" | "never";
+
+export interface DesignResumeAiItemGuidance {
+  /** Projects only. */
+  include?: DesignResumeAiItemInclusion;
+  /** Free-form context for the AI about this entry. */
+  notes?: string;
+}
+
+export interface DesignResumeAiGuidance {
+  version: 1;
+  sections: Record<DesignResumeAiSectionKey, DesignResumeAiSectionGuidance>;
+  /** Keyed by the resume item `id`. Only non-default entries are stored. */
+  items: Record<string, DesignResumeAiItemGuidance>;
+}
+
 export interface DesignResumeDocument {
   id: string;
   title: string;
@@ -349,16 +425,31 @@ export interface DesignResumeDocument {
   revision: number;
   sourceResumeId: string | null;
   sourceMode: "v4" | "v5" | null;
+  /** Language of this CV variant ("fr", "en", …); null for untagged CVs. */
+  language: string | null;
+  /** The primary CV is used for jobs whose language has no dedicated variant. */
+  isPrimary: boolean;
+  aiGuidance: DesignResumeAiGuidance;
   importedAt: string | null;
   createdAt: string;
   updatedAt: string;
   assets: DesignResumeAsset[];
 }
 
+export interface DesignResumeVariantSummary {
+  id: string;
+  title: string;
+  language: string | null;
+  isPrimary: boolean;
+  revision: number;
+  updatedAt: string;
+}
+
 export interface DesignResumeStatusResponse {
   exists: boolean;
   documentId: string | null;
   updatedAt: string | null;
+  variants: DesignResumeVariantSummary[];
 }
 
 export interface DesignResumeImportResult {
@@ -368,12 +459,22 @@ export interface DesignResumeImportResult {
 export interface DesignResumePatchRequest {
   baseRevision: number;
   document?: DesignResumeJson;
+  aiGuidance?: DesignResumeAiGuidanceInput;
   operations?: Array<{
     op: "add" | "remove" | "replace" | "move" | "copy" | "test";
     path: string;
     from?: string;
     value?: unknown;
   }>;
+}
+
+/** Partial guidance accepted by the API; missing fields fall back to defaults. */
+export interface DesignResumeAiGuidanceInput {
+  version?: 1;
+  sections?: Partial<
+    Record<DesignResumeAiSectionKey, Partial<DesignResumeAiSectionGuidance>>
+  >;
+  items?: Record<string, DesignResumeAiItemGuidance>;
 }
 
 export interface DesignResumeExportResponse {

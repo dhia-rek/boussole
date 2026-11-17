@@ -3,6 +3,7 @@ import { getTenantId } from "@infra/request-context";
 import { getActiveTenantId } from "@server/tenancy/context";
 import type { ResumeProfile } from "@shared/types";
 import {
+  designResumeProfileForJob,
   designResumeToProfile,
   isLegacyDesignResumeError,
 } from "./design-resume";
@@ -142,11 +143,24 @@ export async function getProfile(forceRefresh = false): Promise<ResumeProfile> {
 }
 
 /**
- * Get the person's name from the profile.
+ * Profile of the CV a job will be rendered with: the Design Resume variant
+ * written in the job description's language (e.g. the English CV for an
+ * English posting), otherwise the primary profile. Tailoring, project
+ * selection and cover letters use this so their output matches the document
+ * it is applied to.
  */
-export async function getPersonName(): Promise<string> {
-  const profile = await getProfile();
-  return profile?.basics?.name || "Resume";
+export async function getProfileForJob(
+  jobDescription: string | null | undefined,
+): Promise<ResumeProfile> {
+  try {
+    const profile = await designResumeProfileForJob(jobDescription);
+    if (profile) return profile;
+  } catch (error) {
+    if (!isLegacyDesignResumeError(error)) {
+      throw error;
+    }
+  }
+  return getProfile();
 }
 
 /**

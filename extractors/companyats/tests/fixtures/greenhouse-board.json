@@ -1,0 +1,35 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/datadog/jobs/7100001",
+      "company_name": "Datadog",
+      "content": "&lt;p&gt;&lt;strong&gt;The Role&lt;/strong&gt;&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;Join our Machine Learning team as an intern &amp;amp; build anomaly detection models.&amp;nbsp;&lt;/p&gt;",
+      "first_published": "2026-11-02T09:00:00-05:00",
+      "id": 7100001,
+      "location": { "name": "Paris, France" },
+      "title": "Machine Learning Engineer Intern",
+      "updated_at": "2026-11-15T12:00:00-05:00"
+    },
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/datadog/jobs/7100002",
+      "company_name": "Datadog",
+      "content": "&lt;p&gt;Own LLM evaluation pipelines.&lt;/p&gt;",
+      "first_published": "2026-10-20T09:00:00-05:00",
+      "id": 7100002,
+      "location": { "name": "New York, New York, USA" },
+      "title": "Senior AI Engineer",
+      "updated_at": "2026-11-10T12:00:00-05:00"
+    },
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/datadog/jobs/7100003",
+      "company_name": "Datadog",
+      "content": "&lt;p&gt;Manage enterprise accounts.&lt;/p&gt;",
+      "first_published": "2026-10-01T09:00:00-05:00",
+      "id": 7100003,
+      "location": { "name": "Paris, France" },
+      "title": "Account Executive",
+      "updated_at": "2026-11-01T12:00:00-05:00"
+    }
+  ],
+  "meta": { "total": 3 }
+}

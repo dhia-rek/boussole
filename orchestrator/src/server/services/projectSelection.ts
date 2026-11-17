@@ -2,9 +2,16 @@
  * Service for AI-powered project selection for resumes.
  */
 
+import type { DesignResumeAiGuidance } from "@shared/types";
+import { getItemNotes } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
 import { createConfiguredLlmService, resolveLlmModel } from "./modelSelection";
-import type { ResumeProjectSelectionItem } from "./resumeProjects";
+import {
+  type ResumeProjectSelectionItem,
+  resolveProjectSelectionPlan,
+} from "./resumeProjects";
+
+type SelectableProject = ResumeProjectSelectionItem & { aiNotes?: string };
 
 /** JSON schema for project selection response */
 const PROJECT_SELECTION_SCHEMA: JsonSchemaDefinition = {
@@ -23,10 +30,55 @@ const PROJECT_SELECTION_SCHEMA: JsonSchemaDefinition = {
   },
 };
 
+/**
+ * Chooses the projects for one tailored CV: honors the candidate's section
+ * lock and per-project pins, then lets the AI fill the remaining slots.
+ * Returns ids in the CV's own project order.
+ */
+export async function selectProjectIdsForJob(args: {
+  jobDescription: string;
+  selectionItems: ResumeProjectSelectionItem[];
+  overrideRaw: string | null;
+  guidance?: DesignResumeAiGuidance | null;
+}): Promise<string[]> {
+  const plan = resolveProjectSelectionPlan({
+    catalog: args.selectionItems,
+    overrideRaw: args.overrideRaw,
+    guidance: args.guidance,
+  });
+  if (plan.mode === "keep") return plan.selectedIds;
+
+  const eligible = new Set(plan.eligibleIds);
+  const shareProjects = args.guidance?.sections.projects.share !== false;
+  const eligibleProjects: SelectableProject[] = args.selectionItems
+    .filter((project) => eligible.has(project.id))
+    .map((project) => {
+      const aiNotes = shareProjects
+        ? getItemNotes(args.guidance, project.id)
+        : "";
+      return aiNotes ? { ...project, aiNotes } : project;
+    });
+
+  const picked = await pickProjectIdsForJob({
+    jobDescription: args.jobDescription,
+    eligibleProjects,
+    desiredCount: plan.desiredCount,
+    sectionNotes: shareProjects
+      ? (args.guidance?.sections.projects.notes ?? "").trim()
+      : "",
+  });
+
+  const chosen = new Set([...plan.lockedIds, ...picked]);
+  return args.selectionItems
+    .map((project) => project.id)
+    .filter((id) => chosen.has(id));
+}
+
 export async function pickProjectIdsForJob(args: {
   jobDescription: string;
-  eligibleProjects: ResumeProjectSelectionItem[];
+  eligibleProjects: SelectableProject[];
   desiredCount: number;
+  sectionNotes?: string;
 }): Promise<string[]> {
   const desiredCount = Math.max(0, Math.floor(args.desiredCount));
   if (desiredCount === 0) return [];
@@ -40,6 +92,7 @@ export async function pickProjectIdsForJob(args: {
     jobDescription: args.jobDescription,
     projects: args.eligibleProjects,
     desiredCount,
+    sectionNotes: args.sectionNotes ?? "",
   });
 
   const llm = await createConfiguredLlmService();
@@ -88,8 +141,9 @@ export async function pickProjectIdsForJob(args: {
 
 function buildProjectSelectionPrompt(args: {
   jobDescription: string;
-  projects: ResumeProjectSelectionItem[];
+  projects: SelectableProject[];
   desiredCount: number;
+  sectionNotes: string;
 }): string {
   const projects = args.projects.map((p) => ({
     id: p.id,
@@ -97,7 +151,11 @@ function buildProjectSelectionPrompt(args: {
     description: p.description,
     date: p.date,
     summary: truncate(p.summaryText, 500),
+    ...(p.aiNotes ? { candidateNote: truncate(p.aiNotes, 500) } : {}),
   }));
+  const notesLine = args.sectionNotes
+    ? `\n- The candidate's guidance for choosing projects: ${truncate(args.sectionNotes, 1000)}`
+    : "";
 
   return `
 You are selecting which projects to include on a resume for a specific job.
@@ -107,7 +165,8 @@ Rules:
 - Only choose IDs from the provided list.
 - Prefer projects that strongly match the job description keywords/tech stack.
 - Prefer projects that signal impact and real-world engineering.
-- Do NOT invent projects or skills.
+- "candidateNote" fields are the candidate's own hints about a project; weigh them.
+- Do NOT invent projects or skills.${notesLine}
 
 Job description:
 ${args.jobDescription}
@@ -122,49 +181,73 @@ Respond with JSON only, in this exact shape:
 `.trim();
 }
 
+const FALLBACK_STOPWORDS = new Set([
+  "and",
+  "the",
+  "for",
+  "with",
+  "you",
+  "our",
+  "your",
+  "are",
+  "will",
+  "from",
+  "this",
+  "that",
+  "have",
+  "has",
+  "les",
+  "des",
+  "une",
+  "pour",
+  "avec",
+  "dans",
+  "sur",
+  "par",
+  "est",
+  "vous",
+  "nous",
+  "aux",
+  "qui",
+  "que",
+]);
+
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/[^a-z0-9+#.]+/)
+      .map((token) => token.replace(/^\.+|\.+$/g, ""))
+      .filter((token) => token.length >= 2 && !FALLBACK_STOPWORDS.has(token)),
+  );
+}
+
+/**
+ * Deterministic fallback when the LLM is unavailable: rank projects by how
+ * many distinct job-description terms their text (and the candidate's note)
+ * shares. Domain-agnostic, so it works for AI/data roles as well as web ones.
+ */
 function fallbackPickProjectIds(
   jobDescription: string,
-  eligibleProjects: ResumeProjectSelectionItem[],
+  eligibleProjects: SelectableProject[],
   desiredCount: number,
 ): string[] {
-  const jd = (jobDescription || "").toLowerCase();
-
-  const signals = [
-    "react",
-    "typescript",
-    "javascript",
-    "node",
-    "next",
-    "nextjs",
-    "python",
-    "c++",
-    "c#",
-    "java",
-    "kotlin",
-    "sql",
-    "mongodb",
-    "aws",
-    "docker",
-    "graphql",
-    "php",
-    "unity",
-    "tailwind",
-  ];
-
-  const activeSignals = signals.filter((s) => jd.includes(s));
+  const jdTokens = tokenize(jobDescription || "");
 
   const scored = eligibleProjects
-    .map((p) => {
-      const text = `${p.name} ${p.description} ${p.summaryText}`.toLowerCase();
+    .map((p, index) => {
+      const projectTokens = tokenize(
+        `${p.name} ${p.description} ${p.summaryText} ${p.aiNotes ?? ""}`,
+      );
       let score = 0;
-      for (const signal of activeSignals) {
-        if (text.includes(signal)) score += 5;
+      for (const token of projectTokens) {
+        if (jdTokens.has(token)) score += token.length >= 4 ? 2 : 1;
       }
-      if (/\b(open source|oss)\b/.test(text)) score += 2;
-      if (/\b(api|backend|frontend|full[- ]?stack)\b/.test(text)) score += 1;
-      return { id: p.id, score };
+      return { id: p.id, score, index };
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score || a.index - b.index);
 
   return scored.slice(0, desiredCount).map((s) => s.id);
 }

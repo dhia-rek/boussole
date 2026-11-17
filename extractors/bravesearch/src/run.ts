@@ -85,29 +85,239 @@ function looksLikeJobUrl(url: string): boolean {
   return JOB_SITE_PATTERNS.some((re) => re.test(url));
 }
 
-function extractEmployerFromUrl(url: string, hostname?: string): string {
-  try {
-    const h = hostname ?? new URL(url).hostname;
-    return h.replace(/^www\./, "").split(".")[0] ?? "Unknown";
-  } catch {
-    return "Unknown";
+/** ATS hosts where the company slug is the first path segment. */
+const ATS_PATH_HOSTS = [
+  /^jobs\.(eu\.)?lever\.co$/,
+  /^(boards|job-boards)(\.eu)?\.greenhouse\.io$/,
+  /^jobs\.ashbyhq\.com$/,
+  /^apply\.workable\.com$/,
+  /^jobs\.smartrecruiters\.com$/,
+];
+
+/** ATS hosts where the company is the subdomain (acme.teamtailor.com). */
+const ATS_SUBDOMAIN_HOSTS = [
+  /\.recruitee\.com$/,
+  /\.teamtailor\.com$/,
+  /\.bamboohr\.com$/,
+  /\.breezy\.hr$/,
+  /\.workable\.com$/,
+];
+
+/** Job boards/aggregators: their hostname is never the employer. */
+const AGGREGATOR_DOMAINS = new Set([
+  "indeed",
+  "linkedin",
+  "glassdoor",
+  "welcometothejungle",
+  "weworkremotely",
+  "wellfound",
+  "remote",
+  "monster",
+  "hellowork",
+  "apec",
+  "jobteaser",
+  "francetravail",
+  "pole-emploi",
+  "jooble",
+  "simplyhired",
+  "ziprecruiter",
+  "talent",
+  "adzuna",
+  "builtin",
+  "otta",
+]);
+
+/** Leading labels that describe a site section, not the company. */
+const GENERIC_SUBDOMAINS = new Set([
+  "www",
+  "m",
+  "fr",
+  "en",
+  "uk",
+  "de",
+  "es",
+  "it",
+  "nl",
+  "jobs",
+  "job",
+  "careers",
+  "career",
+  "emplois",
+  "carrieres",
+  "recrutement",
+  "apply",
+  "boards",
+  "hiring",
+  "talent",
+  "join",
+  "work",
+]);
+
+const TWO_LEVEL_SUFFIXES = new Set([
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "com.au",
+  "co.nz",
+  "co.in",
+  "com.br",
+  "co.za",
+  "com.sg",
+  "co.jp",
+]);
+
+function registrableLabel(hostname: string): string | undefined {
+  const labels = hostname
+    .toLowerCase()
+    .split(".")
+    .filter(Boolean)
+    .filter((label, index, all) => {
+      // Drop generic leading labels (www., fr., jobs., careers., …).
+      const isLeading = all
+        .slice(0, index)
+        .every((previous) => GENERIC_SUBDOMAINS.has(previous));
+      return !(isLeading && GENERIC_SUBDOMAINS.has(label) && all.length > 2);
+    });
+  if (labels.length < 2) return labels[0];
+  const lastTwo = labels.slice(-2).join(".");
+  if (TWO_LEVEL_SUFFIXES.has(lastTwo) && labels.length >= 3) {
+    return labels[labels.length - 3];
   }
+  return labels[labels.length - 2];
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function humanizeSlug(slug: string): string {
+  return safeDecode(slug)
+    .split(/[-_+]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
+ * Best-effort employer from a result URL. Returns undefined for aggregators
+ * (Indeed, LinkedIn, …) where the host is the job board, not the employer.
+ */
+export function extractEmployerFromUrl(
+  url: string,
+  hostname?: string,
+): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  const host = (hostname ?? parsed.hostname).toLowerCase().replace(/\.$/, "");
+  const segments = parsed.pathname.split("/").filter(Boolean);
+
+  if (ATS_PATH_HOSTS.some((pattern) => pattern.test(host))) {
+    return segments[0] ? humanizeSlug(segments[0]) : undefined;
+  }
+
+  // welcometothejungle.com/<lang>/companies/<company>/jobs/<slug>
+  const companiesIndex = segments.indexOf("companies");
+  if (host.endsWith("welcometothejungle.com") && companiesIndex >= 0) {
+    const slug = segments[companiesIndex + 1];
+    return slug ? humanizeSlug(slug) : undefined;
+  }
+
+  if (ATS_SUBDOMAIN_HOSTS.some((pattern) => pattern.test(host))) {
+    const sub = host.split(".")[0];
+    if (sub && !GENERIC_SUBDOMAINS.has(sub)) return humanizeSlug(sub);
+  }
+
+  const label = registrableLabel(host);
+  if (!label || AGGREGATOR_DOMAINS.has(label)) return undefined;
+  return humanizeSlug(label);
+}
+
+/** "Criteo hiring Data Science Intern in Paris, France | LinkedIn" */
+const LINKEDIN_HIRING_TITLE =
+  /^(.+?)\s+hiring\s+(.+?)(?:\s+in\s+(.+?))?\s*\|\s*LinkedIn\s*$/i;
+
+/**
+ * "<count> [up to 6 words] jobs|emplois|offres|…" — plural nouns only. The
+ * in-between words may not start with a digit, so a year can never swallow
+ * the real count that follows it ("Stage 2027 … - 150 offres").
+ */
+const COUNTED_LISTING_PATTERN =
+  /(\d{1,3}(?:[.,\u00a0\u202f ]\d{3})+|\d+)(\+?)\s+(?:[\p{L}'’&/-][\p{L}\p{N}'’&/-]*\s+){0,6}?(?:jobs|emplois|offres|postes|vacancies|openings|stages)\b/giu;
+
+/**
+ * Search/listing pages ("Stage Data Scientist : plus de 200 emplois | Indeed",
+ * "2,000+ Data Science Intern jobs in France") are not job postings. A count
+ * only marks a listing when it has 2+ digits or a "+", and is not a year, so
+ * "Data Scientist (2 postes)" or "Intern 2027 - Paris - Jobs at X" survive.
+ */
+export function isListingTitle(title: string): boolean {
+  if (/\bplus de\s+\d/i.test(title)) return true;
+  // LinkedIn/Indeed result counters: "(26 nouvelles)", "(95 new)".
+  if (/\(\d[\d.,\s]*\s+(new|nouvelles?|neue|nuevas?|nuove)\)/i.test(title)) {
+    return true;
+  }
+  for (const match of title.matchAll(COUNTED_LISTING_PATTERN)) {
+    const rawCount = match[1] ?? "";
+    const hasPlus = match[2] === "+";
+    if (!hasPlus && /^(19|20)\d\d$/.test(rawCount)) continue; // a year
+    if (hasPlus || rawCount.replace(/\D/g, "").length >= 2) return true;
+  }
+  return false;
+}
+
+const LISTING_URL_PATTERNS = [
+  /indeed\.[^/]+\/(q-|jobs\?|emplois\?|m\/jobs\?)/i,
+  /indeed\.[^/]+\/.*-emplois\.html/i,
+  /indeed\.[^/]+\/[^/?#]*emplois-/i,
+  // LinkedIn postings always live under /jobs/view/; every other /jobs/ path
+  // (search, collections, "<keyword>-jobs", "<keyword>-emplois-paris") lists.
+  /linkedin\.com\/jobs\/(?!view\/)/i,
+  /glassdoor\.[^/]+\/Job\//,
+  /welcometothejungle\.com\/[a-z]{2}\/jobs\/?(\?|$)/i,
+];
+
+export function isListingPage(url: string, title: string): boolean {
+  return (
+    isListingTitle(title) ||
+    LISTING_URL_PATTERNS.some((pattern) => pattern.test(url))
+  );
 }
 
 function mapResult(result: BraveWebResult): CreateJobInput | null {
   const jobUrl = result.url?.trim();
-  const title = result.title?.trim();
-  if (!jobUrl || !title) return null;
+  const rawTitle = result.title?.trim();
+  if (!jobUrl || !rawTitle) return null;
+  if (isListingPage(jobUrl, rawTitle)) return null;
 
-  const employer = extractEmployerFromUrl(jobUrl, result.meta_url?.hostname);
+  let title = rawTitle;
+  let employer = extractEmployerFromUrl(jobUrl, result.meta_url?.hostname);
+  let location: string | undefined;
+
+  const linkedin = /linkedin\.com\/jobs\/view\//i.test(jobUrl)
+    ? LINKEDIN_HIRING_TITLE.exec(rawTitle)
+    : null;
+  if (linkedin) {
+    employer = linkedin[1]?.trim() || employer;
+    title = linkedin[2]?.trim() || title;
+    location = linkedin[3]?.trim() || undefined;
+  }
 
   const description = result.description?.trim();
 
   return {
     source: "bravesearch",
     title,
-    employer,
+    employer: employer ?? "Unknown Employer",
     jobUrl,
+    location,
     jobDescription: description || undefined,
     datePosted: result.age || undefined,
   };

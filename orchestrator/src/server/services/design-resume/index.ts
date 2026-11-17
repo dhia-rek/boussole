@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { AppError, badRequest, conflict, notFound } from "@infra/errors";
@@ -10,6 +10,7 @@ import { getDataDir } from "@server/config/dataDir";
 import * as designResumeRepo from "@server/repositories/design-resume";
 import { getSetting } from "@server/repositories/settings";
 import { getOriginalEnvValue } from "@server/services/envSettings";
+import { detectLanguageFromText } from "@server/services/output-language";
 import { getResume } from "@server/services/rxresume";
 import { getConfiguredRxResumeBaseResumeId } from "@server/services/rxresume/baseResumeId";
 import { getResumeSchemaValidationMessage } from "@server/services/rxresume/schema";
@@ -18,13 +19,24 @@ import {
   safeParseV5ResumeData,
 } from "@server/services/rxresume/schema/v5";
 import { getActiveTenantId } from "@server/tenancy/context";
+import {
+  designResumeAiGuidanceInputSchema,
+  normalizeDesignResumeAiGuidance,
+  pruneDesignResumeAiGuidanceItems,
+} from "@shared/design-resume-ai-guidance";
+import {
+  designResumeLanguageFromDetected,
+  normalizeDesignResumeLanguage,
+} from "@shared/design-resume-variants";
 import type {
+  DesignResumeAiGuidance,
   DesignResumeAsset,
   DesignResumeDocument,
   DesignResumeExportResponse,
   DesignResumeJson,
   DesignResumePatchRequest,
   DesignResumeStatusResponse,
+  DesignResumeVariantSummary,
   ResumeProfile,
 } from "@shared/types";
 
@@ -77,14 +89,67 @@ function formatValidationMessage(prefix: string, error: unknown): string {
   return `${prefix} ${detail}`;
 }
 
+/**
+ * Every list item needs a unique, non-empty id: per-item AI guidance, project
+ * selection and the editor all key off it. File imports used to produce empty
+ * ids, so missing or duplicate ids are replaced with fresh ones.
+ */
+export function ensureDesignResumeItemIds(document: DesignResumeJson): {
+  document: DesignResumeJson;
+  changed: boolean;
+} {
+  const seen = new Set<string>();
+  let changed = false;
+
+  const fixItems = (items: unknown) => {
+    if (!Array.isArray(items)) return;
+    for (const item of items) {
+      const record = asRecord(item);
+      if (!record) continue;
+      const id = typeof record.id === "string" ? record.id.trim() : "";
+      if (!id || seen.has(id)) {
+        record.id = createId();
+        changed = true;
+      } else if (id !== record.id) {
+        record.id = id;
+        changed = true;
+      }
+      seen.add(record.id as string);
+    }
+  };
+
+  for (const section of Object.values(asRecord(document.sections) ?? {})) {
+    fixItems(asRecord(section)?.items);
+  }
+  for (const section of asArray(document.customSections)) {
+    fixItems(asRecord(section)?.items);
+  }
+
+  return { document, changed };
+}
+
 function validateIncomingDesignResumeDocument(
   input: unknown,
 ): DesignResumeJson {
+  let parsed: DesignResumeJson;
   try {
-    return parseV5ResumeData(input) as DesignResumeJson;
+    parsed = parseV5ResumeData(input) as DesignResumeJson;
   } catch (error) {
     throw badRequest(formatValidationMessage(INVALID_V5_PREFIX, error));
   }
+  return ensureDesignResumeItemIds(parsed).document;
+}
+
+function parseAiGuidanceInput(input: unknown): DesignResumeAiGuidance {
+  const parsed = designResumeAiGuidanceInputSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const path = issue?.path.join(".") || "aiGuidance";
+    throw badRequest(
+      `Invalid AI guidance at "${path}": ${issue?.message ?? "invalid value"}`,
+    );
+  }
+  return normalizeDesignResumeAiGuidance(parsed.data);
 }
 
 function validateStoredDesignResumeDocument(input: unknown): DesignResumeJson {
@@ -368,12 +433,19 @@ function toDesignResumeAsset(
   };
 }
 
+type DesignResumeRow = NonNullable<
+  Awaited<ReturnType<typeof designResumeRepo.getPrimaryDesignResumeDocument>>
+>;
+
 async function hydrateDocument(
-  row: Awaited<
-    ReturnType<typeof designResumeRepo.getLatestDesignResumeDocument>
-  >,
+  row: DesignResumeRow | null | undefined,
+  primaryId?: string | null,
 ): Promise<DesignResumeDocument | null> {
   if (!row) return null;
+  const resolvedPrimaryId =
+    primaryId !== undefined
+      ? primaryId
+      : ((await designResumeRepo.getPrimaryDesignResumeDocument())?.id ?? null);
   const assets = await designResumeRepo.listDesignResumeAssets(row.id);
   return {
     id: row.id,
@@ -382,10 +454,27 @@ async function hydrateDocument(
     revision: row.revision,
     sourceResumeId: row.sourceResumeId ?? null,
     sourceMode: (row.sourceMode as "v4" | "v5" | null) ?? null,
+    language: row.language ?? null,
+    isPrimary: row.id === resolvedPrimaryId,
+    aiGuidance: normalizeDesignResumeAiGuidance(row.aiGuidance),
     importedAt: row.importedAt ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     assets: assets.map(toDesignResumeAsset),
+  };
+}
+
+function toVariantSummary(
+  row: DesignResumeRow,
+  primaryId: string | null,
+): DesignResumeVariantSummary {
+  return {
+    id: row.id,
+    title: row.title,
+    language: row.language ?? null,
+    isPrimary: row.id === primaryId,
+    revision: row.revision,
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -605,37 +694,118 @@ async function clearDesignResumeAssetsForDocument(
   );
 }
 
+/** Selects which CV variant a request targets: a language tag, or the primary CV. */
+export type DesignResumeVariantSelector = { language?: string | null };
+
+function resolveSelectorLanguage(
+  selector?: DesignResumeVariantSelector | null,
+): string | null {
+  const raw = selector?.language;
+  if (raw === undefined || raw === null || raw === "") return null;
+  const language = normalizeDesignResumeLanguage(raw);
+  if (!language) {
+    throw badRequest(`Unsupported CV language "${String(raw).slice(0, 20)}".`);
+  }
+  return language;
+}
+
+/**
+ * Normalizes item ids of a stored CV once (older file imports produced empty
+ * ids). Revision and updatedAt are left untouched: ids are not content, so
+ * open editors and ready PDFs stay valid.
+ */
+async function repairStoredItemIds(
+  row: DesignResumeRow | null,
+): Promise<DesignResumeRow | null> {
+  if (!row) return row;
+  const parsed = safeParseV5ResumeData(row.resumeJson ?? {});
+  if (!parsed.success) return row;
+  const { document, changed } = ensureDesignResumeItemIds(
+    parsed.data as DesignResumeJson,
+  );
+  if (!changed) return row;
+  const repaired = await designResumeRepo.upsertDesignResumeDocument({
+    id: row.id,
+    title: row.title,
+    resumeJson: document,
+    revision: row.revision,
+    sourceResumeId: row.sourceResumeId ?? null,
+    sourceMode: row.sourceMode ?? null,
+    importedAt: row.importedAt ?? null,
+    updatedAt: row.updatedAt,
+  });
+  logger.info("Repaired missing Design Resume item ids", {
+    documentId: row.id,
+  });
+  return repaired ?? row;
+}
+
 export async function replaceCurrentDesignResumeDocument(input: {
   importedAt?: string | null;
   resumeJson: DesignResumeJson;
   sourceResumeId: string | null;
   sourceMode: "v4" | "v5" | null;
+  /** When set (e.g. "en"), creates or replaces that language variant instead
+   *  of the primary CV. */
+  language?: string | null;
 }): Promise<DesignResumeDocument> {
-  const existingDocument = await getCurrentDesignResumeOrNullOnLegacy();
+  const language = resolveSelectorLanguage({ language: input.language });
+  // Each language is its own row. The base id is deterministic per tenant, so
+  // a language variant uses `<base>:<lang>`; otherwise importing the English
+  // CV would overwrite the French one.
+  const existingRow = language
+    ? await designResumeRepo.getDesignResumeDocumentByLanguage(language)
+    : await designResumeRepo.getPrimaryDesignResumeDocument();
+  const targetId =
+    existingRow?.id ??
+    (language
+      ? `${buildTenantScopedDesignResumeDocumentId()}:${language}`
+      : buildTenantScopedDesignResumeDocumentId());
+
+  const resumeJson = ensureDesignResumeItemIds(
+    structuredClone(input.resumeJson),
+  ).document;
+  // Re-importing keeps the candidate's section guidance; notes attached to
+  // entries that no longer exist are dropped.
+  const aiGuidance = existingRow
+    ? pruneDesignResumeAiGuidanceItems(
+        normalizeDesignResumeAiGuidance(existingRow.aiGuidance),
+        resumeJson,
+      )
+    : null;
+
   const importedAt = input.importedAt ?? new Date().toISOString();
   const saved = await designResumeRepo.upsertDesignResumeDocument({
-    id: existingDocument?.id ?? buildTenantScopedDesignResumeDocumentId(),
-    title: buildDocumentTitle(input.resumeJson),
-    resumeJson: input.resumeJson,
-    revision: 1,
+    id: targetId,
+    title: buildDocumentTitle(resumeJson),
+    resumeJson,
+    revision: (existingRow?.revision ?? 0) + 1,
     sourceResumeId: input.sourceResumeId,
     sourceMode: input.sourceMode,
+    // Omitted on update so re-importing the primary keeps its language tag.
+    ...(language || !existingRow ? { language } : {}),
+    aiGuidance: aiGuidance as unknown as Record<string, unknown> | null,
     importedAt,
     updatedAt: importedAt,
   });
 
-  if (existingDocument?.id) {
-    await clearDesignResumeAssetsForDocument(existingDocument.id);
+  if (existingRow?.id) {
+    await clearDesignResumeAssetsForDocument(existingRow.id);
   }
 
   return (await hydrateDocument(saved)) as DesignResumeDocument;
 }
 
-export async function getCurrentDesignResume(): Promise<DesignResumeDocument | null> {
+export async function getCurrentDesignResume(
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument | null> {
+  const language = resolveSelectorLanguage(selector);
   try {
-    return hydrateDocument(
-      await designResumeRepo.getLatestDesignResumeDocument(),
-    );
+    const primary = await designResumeRepo.getPrimaryDesignResumeDocument();
+    const row = language
+      ? await designResumeRepo.getDesignResumeDocumentByLanguage(language)
+      : primary;
+    return hydrateDocument(await repairStoredItemIds(row), primary?.id ?? null);
   } catch (error) {
     if (isMissingDesignResumeTableError(error)) {
       return null;
@@ -644,9 +814,36 @@ export async function getCurrentDesignResume(): Promise<DesignResumeDocument | n
   }
 }
 
-export async function getCurrentDesignResumeOrNullOnLegacy(): Promise<DesignResumeDocument | null> {
+/**
+ * Base CV for a job: the variant written in the job description's language
+ * (e.g. the English CV for an English posting), otherwise the primary CV.
+ */
+export async function getDesignResumeForJobLanguage(
+  jobDescription: string | null | undefined,
+): Promise<DesignResumeDocument | null> {
   try {
-    return await getCurrentDesignResume();
+    const language = designResumeLanguageFromDetected(
+      jobDescription ? detectLanguageFromText(jobDescription) : null,
+    );
+    const primary = await designResumeRepo.getPrimaryDesignResumeDocument();
+    const row = await designResumeRepo.resolveDesignResumeForLanguage(language);
+    return hydrateDocument(await repairStoredItemIds(row), primary?.id ?? null);
+  } catch (error) {
+    if (
+      isMissingDesignResumeTableError(error) ||
+      isLegacyDesignResumeError(error)
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function getCurrentDesignResumeOrNullOnLegacy(
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument | null> {
+  try {
+    return await getCurrentDesignResume(selector);
   } catch (error) {
     if (isLegacyDesignResumeError(error)) {
       return null;
@@ -655,12 +852,32 @@ export async function getCurrentDesignResumeOrNullOnLegacy(): Promise<DesignResu
   }
 }
 
-export async function requireCurrentDesignResume(): Promise<DesignResumeDocument> {
-  const document = await getCurrentDesignResume();
+export async function requireCurrentDesignResume(
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument> {
+  const document = await getCurrentDesignResume(selector);
   if (!document) {
-    throw notFound("Design Resume has not been imported yet.");
+    const language = resolveSelectorLanguage(selector);
+    throw notFound(
+      language
+        ? `No "${language}" CV has been imported yet.`
+        : "Design Resume has not been imported yet.",
+    );
   }
   return document;
+}
+
+export async function listDesignResumeVariants(): Promise<
+  DesignResumeVariantSummary[]
+> {
+  try {
+    const rows = await designResumeRepo.listDesignResumeDocuments();
+    const primaryId = rows[0]?.id ?? null;
+    return rows.map((row) => toVariantSummary(row, primaryId));
+  } catch (error) {
+    if (isMissingDesignResumeTableError(error)) return [];
+    throw error;
+  }
 }
 
 export async function getDesignResumeStatus(): Promise<DesignResumeStatusResponse> {
@@ -670,6 +887,7 @@ export async function getDesignResumeStatus(): Promise<DesignResumeStatusRespons
       exists: Boolean(document),
       documentId: document?.id ?? null,
       updatedAt: document?.updatedAt ?? null,
+      variants: document ? await listDesignResumeVariants() : [],
     };
   } catch (error) {
     if (isLegacyDesignResumeError(error)) {
@@ -677,10 +895,37 @@ export async function getDesignResumeStatus(): Promise<DesignResumeStatusRespons
         exists: false,
         documentId: null,
         updatedAt: null,
+        variants: [],
       };
     }
     throw error;
   }
+}
+
+/**
+ * Deletes a language variant (e.g. a wrongly imported English CV). The primary
+ * CV cannot be deleted this way — re-import it instead.
+ */
+export async function deleteDesignResumeVariant(
+  selector: DesignResumeVariantSelector,
+): Promise<void> {
+  const language = resolveSelectorLanguage(selector);
+  if (!language) {
+    throw badRequest("A CV language is required to delete a variant.");
+  }
+  const row =
+    await designResumeRepo.getDesignResumeDocumentByLanguage(language);
+  if (!row) {
+    throw notFound(`No "${language}" CV has been imported yet.`);
+  }
+  const primary = await designResumeRepo.getPrimaryDesignResumeDocument();
+  if (primary?.id === row.id) {
+    throw conflict(
+      "The primary CV cannot be deleted. Import a replacement instead.",
+    );
+  }
+  await clearDesignResumeAssetsForDocument(row.id);
+  await designResumeRepo.deleteDesignResumeDocument(row.id);
 }
 
 export async function importDesignResumeFromReactiveResume(): Promise<DesignResumeDocument> {
@@ -748,10 +993,13 @@ async function localizeImportedDesignResumePicture(
   } as DesignResumeJson["picture"];
 
   try {
-    return await updateCurrentDesignResume({
-      baseRevision: document.revision,
-      document: nextDocument,
-    });
+    return await updateCurrentDesignResume(
+      {
+        baseRevision: document.revision,
+        document: nextDocument,
+      },
+      { language: document.language },
+    );
   } catch (error) {
     await designResumeRepo.deleteDesignResumeAsset(assetId);
     await deleteAssetFile(storagePath);
@@ -761,8 +1009,9 @@ async function localizeImportedDesignResumePicture(
 
 export async function updateCurrentDesignResume(
   input: DesignResumePatchRequest,
+  selector?: DesignResumeVariantSelector | null,
 ): Promise<DesignResumeDocument> {
-  const current = await requireCurrentDesignResume();
+  const current = await requireCurrentDesignResume(selector);
   if (current.revision !== input.baseRevision) {
     throw conflict("Design Resume has changed. Refresh and try again.");
   }
@@ -781,11 +1030,20 @@ export async function updateCurrentDesignResume(
       nextDocumentRecord = applyPatchOperation(nextDocumentRecord, operation);
     }
     nextDocument = validatePatchedDocument(nextDocumentRecord);
+  } else if (input.aiGuidance !== undefined) {
+    nextDocument = current.resumeJson;
   } else {
     throw badRequest(
-      "Design Resume update requires a document or patch operations.",
+      "Design Resume update requires a document, patch operations, or AI guidance.",
     );
   }
+
+  const aiGuidance = pruneDesignResumeAiGuidanceItems(
+    input.aiGuidance !== undefined
+      ? parseAiGuidanceInput(input.aiGuidance)
+      : current.aiGuidance,
+    nextDocument,
+  );
 
   const now = new Date().toISOString();
   const saved = await designResumeRepo.upsertDesignResumeDocument({
@@ -795,6 +1053,7 @@ export async function updateCurrentDesignResume(
     revision: current.revision + 1,
     sourceResumeId: current.sourceResumeId,
     sourceMode: current.sourceMode,
+    aiGuidance: aiGuidance as unknown as Record<string, unknown>,
     importedAt: current.importedAt,
     updatedAt: now,
   });
@@ -802,13 +1061,16 @@ export async function updateCurrentDesignResume(
   return (await hydrateDocument(saved)) as DesignResumeDocument;
 }
 
-export async function uploadDesignResumePicture(input: {
-  fileName: string;
-  dataUrl: string;
-  baseRevision?: number;
-  document?: DesignResumeJson;
-}): Promise<DesignResumeDocument> {
-  const current = await requireCurrentDesignResume();
+export async function uploadDesignResumePicture(
+  input: {
+    fileName: string;
+    dataUrl: string;
+    baseRevision?: number;
+    document?: DesignResumeJson;
+  },
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument> {
+  const current = await requireCurrentDesignResume(selector);
   const parsed = parseDataUrl(input.dataUrl);
   const existingAsset = await designResumeRepo.findDesignResumeAssetForDocument(
     {
@@ -841,10 +1103,13 @@ export async function uploadDesignResumePicture(input: {
 
   let updated: DesignResumeDocument;
   try {
-    updated = await updateCurrentDesignResume({
-      baseRevision: input.baseRevision ?? current.revision,
-      document: nextDocument,
-    });
+    updated = await updateCurrentDesignResume(
+      {
+        baseRevision: input.baseRevision ?? current.revision,
+        document: nextDocument,
+      },
+      selector,
+    );
   } catch (error) {
     await designResumeRepo.deleteDesignResumeAsset(assetId);
     await deleteAssetFile(storagePath);
@@ -867,13 +1132,16 @@ export async function uploadDesignResumePicture(input: {
   return updated;
 }
 
-export async function uploadDesignResumePictureFile(input: {
-  fileName: string;
-  mimeType?: string | null;
-  data: Buffer;
-  baseRevision?: number;
-}): Promise<DesignResumeDocument> {
-  const current = await requireCurrentDesignResume();
+export async function uploadDesignResumePictureFile(
+  input: {
+    fileName: string;
+    mimeType?: string | null;
+    data: Buffer;
+    baseRevision?: number;
+  },
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument> {
+  const current = await requireCurrentDesignResume(selector);
   const mimeType = normalizeImageMimeType({
     mimeType: input.mimeType,
     fileName: input.fileName,
@@ -909,10 +1177,13 @@ export async function uploadDesignResumePictureFile(input: {
 
   let updated: DesignResumeDocument;
   try {
-    updated = await updateCurrentDesignResume({
-      baseRevision: input.baseRevision ?? current.revision,
-      document: nextDocument,
-    });
+    updated = await updateCurrentDesignResume(
+      {
+        baseRevision: input.baseRevision ?? current.revision,
+        document: nextDocument,
+      },
+      selector,
+    );
   } catch (error) {
     await designResumeRepo.deleteDesignResumeAsset(assetId);
     await deleteAssetFile(storagePath);
@@ -935,11 +1206,14 @@ export async function uploadDesignResumePictureFile(input: {
   return updated;
 }
 
-export async function deleteDesignResumePicture(input?: {
-  baseRevision?: number;
-  document?: DesignResumeJson;
-}): Promise<DesignResumeDocument> {
-  const current = await requireCurrentDesignResume();
+export async function deleteDesignResumePicture(
+  input?: {
+    baseRevision?: number;
+    document?: DesignResumeJson;
+  },
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeDocument> {
+  const current = await requireCurrentDesignResume(selector);
   const asset = await designResumeRepo.findDesignResumeAssetForDocument({
     documentId: current.id,
     kind: "picture",
@@ -957,10 +1231,13 @@ export async function deleteDesignResumePicture(input?: {
     url: "",
   } as DesignResumeJson["picture"];
 
-  const updated = await updateCurrentDesignResume({
-    baseRevision: input?.baseRevision ?? current.revision,
-    document: nextDocument,
-  });
+  const updated = await updateCurrentDesignResume(
+    {
+      baseRevision: input?.baseRevision ?? current.revision,
+      document: nextDocument,
+    },
+    selector,
+  );
 
   if (asset) {
     try {
@@ -999,32 +1276,69 @@ export async function readDesignResumeAssetContent(
   };
 }
 
-export async function exportDesignResume(): Promise<DesignResumeExportResponse> {
-  const current = await requireCurrentDesignResume();
+export async function exportDesignResume(
+  selector?: DesignResumeVariantSelector | null,
+): Promise<DesignResumeExportResponse> {
+  const current = await requireCurrentDesignResume(selector);
   const fileStem =
     buildDocumentTitle(current.resumeJson)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "design-resume";
+  const languageSuffix = current.language ? `-${current.language}` : "";
 
   return {
-    fileName: `${fileStem}.json`,
+    fileName: `${fileStem}${languageSuffix}.json`,
     document: current.resumeJson,
   };
 }
 
+type DesignResumeProfileSource = Pick<
+  DesignResumeDocument,
+  "resumeJson" | "aiGuidance"
+> &
+  Partial<Pick<DesignResumeDocument, "id" | "language">>;
+
+function mapProfileSection(
+  sections: Record<string, unknown>,
+  key: string,
+  fallbackName: string,
+  mapItem: (record: Record<string, unknown>) => Record<string, unknown>,
+) {
+  const section = asRecord(sections[key]) ?? {};
+  return {
+    id: key,
+    visible: !toBoolean(section.hidden, false),
+    name: toText(section.title, fallbackName),
+    items: asArray(section.items).map((item) => {
+      const record = asRecord(item) ?? {};
+      return {
+        id: toText(record.id),
+        visible: !toBoolean(record.hidden, false),
+        ...mapItem(record),
+      };
+    }),
+  };
+}
+
+/**
+ * Converts a Design Resume into the provider-neutral `ResumeProfile` used by
+ * scoring, tailoring, project selection and cover letters. The candidate's AI
+ * guidance travels with it (`aiGuidance`); prompt builders must go through
+ * `buildAiProfileView` so sections marked private are never sent to an LLM.
+ */
 export async function designResumeToProfile(
-  document?: DesignResumeJson | null,
+  document?: DesignResumeProfileSource | null,
 ): Promise<ResumeProfile | null> {
-  const source = document ?? (await getCurrentDesignResume())?.resumeJson;
-  if (!source) return null;
+  const resolved = document ?? (await getCurrentDesignResume());
+  if (!resolved) return null;
+  const source = resolved.resumeJson;
 
   const basics = asRecord(source.basics) ?? {};
   const summary = asRecord(source.summary) ?? {};
   const sections = asRecord(source.sections) ?? {};
-  const skills = asRecord(sections.skills) ?? {};
-  const projects = asRecord(sections.projects) ?? {};
-  const experience = asRecord(sections.experience) ?? {};
+  const urlOf = (record: Record<string, unknown>) =>
+    toText(asRecord(record.website)?.url);
 
   return {
     basics: {
@@ -1054,58 +1368,123 @@ export async function designResumeToProfile(
         name: toText(summary.title, "Summary"),
         content: toText(summary.content),
       },
-      skills: {
-        id: "skills",
-        visible: !toBoolean(skills.hidden, false),
-        name: toText(skills.title, "Skills"),
-        items: asArray(skills.items).map((item) => {
-          const record = asRecord(item) ?? {};
-          return {
-            id: toText(record.id, createId()),
-            name: toText(record.name),
-            description: toText(record.proficiency),
-            level: toNumber(record.level, 1),
-            keywords: asArray(record.keywords).map((value) => toText(value)),
-            visible: !toBoolean(record.hidden, false),
-          };
+      skills: mapProfileSection(sections, "skills", "Skills", (record) => ({
+        name: toText(record.name),
+        description: toText(record.proficiency),
+        level: toNumber(record.level, 1),
+        keywords: asArray(record.keywords).map((value) => toText(value)),
+      })) as NonNullable<ResumeProfile["sections"]>["skills"],
+      projects: mapProfileSection(
+        sections,
+        "projects",
+        "Projects",
+        (record) => ({
+          name: toText(record.name),
+          description: toText(record.description),
+          date: toText(record.period),
+          summary: toText(record.description),
+          keywords: asArray(record.keywords).map((value) => toText(value)),
+          url: urlOf(record),
         }),
-      },
-      projects: {
-        id: "projects",
-        visible: !toBoolean(projects.hidden, false),
-        name: toText(projects.title, "Projects"),
-        items: asArray(projects.items).map((item) => {
-          const record = asRecord(item) ?? {};
-          return {
-            id: toText(record.id, createId()),
-            name: toText(record.name),
-            description: toText(record.description),
-            date: toText(record.period),
-            summary: toText(record.description),
-            visible: !toBoolean(record.hidden, false),
-            keywords: asArray(record.keywords).map((value) => toText(value)),
-            url: toText(asRecord(record.website)?.url),
-          };
+      ) as NonNullable<ResumeProfile["sections"]>["projects"],
+      experience: mapProfileSection(
+        sections,
+        "experience",
+        "Experience",
+        (record) => ({
+          company: toText(record.company),
+          position: toText(record.position),
+          location: toText(record.location),
+          date: toText(record.period),
+          summary: toText(record.description),
         }),
-      },
-      experience: {
-        id: "experience",
-        visible: !toBoolean(experience.hidden, false),
-        name: toText(experience.title, "Experience"),
-        items: asArray(experience.items).map((item) => {
-          const record = asRecord(item) ?? {};
-          return {
-            id: toText(record.id, createId()),
-            company: toText(record.company),
-            position: toText(record.position),
-            location: toText(record.location),
-            date: toText(record.period),
-            summary: toText(record.description),
-            visible: !toBoolean(record.hidden, false),
-          };
+      ) as NonNullable<ResumeProfile["sections"]>["experience"],
+      education: mapProfileSection(
+        sections,
+        "education",
+        "Education",
+        (record) => ({
+          institution: toText(record.school),
+          school: toText(record.school),
+          degree: toText(record.degree),
+          area: toText(record.area),
+          grade: toText(record.grade),
+          location: toText(record.location),
+          date: toText(record.period),
+          summary: toText(record.description),
         }),
-      },
+      ),
+      languages: mapProfileSection(
+        sections,
+        "languages",
+        "Languages",
+        (record) => ({
+          language: toText(record.language),
+          fluency: toText(record.fluency),
+          level: toNumber(record.level, 0),
+        }),
+      ),
+      certifications: mapProfileSection(
+        sections,
+        "certifications",
+        "Certifications",
+        (record) => ({
+          title: toText(record.title),
+          issuer: toText(record.issuer),
+          date: toText(record.date),
+          summary: toText(record.description),
+        }),
+      ),
+      awards: mapProfileSection(sections, "awards", "Awards", (record) => ({
+        title: toText(record.title),
+        awarder: toText(record.awarder),
+        date: toText(record.date),
+        summary: toText(record.description),
+      })),
+      publications: mapProfileSection(
+        sections,
+        "publications",
+        "Publications",
+        (record) => ({
+          title: toText(record.title),
+          publisher: toText(record.publisher),
+          date: toText(record.date),
+          summary: toText(record.description),
+        }),
+      ),
+      volunteer: mapProfileSection(
+        sections,
+        "volunteer",
+        "Volunteer",
+        (record) => ({
+          organization: toText(record.organization),
+          location: toText(record.location),
+          date: toText(record.period),
+          summary: toText(record.description),
+        }),
+      ),
+      interests: mapProfileSection(
+        sections,
+        "interests",
+        "Interests",
+        (record) => ({
+          name: toText(record.name),
+          keywords: asArray(record.keywords).map((value) => toText(value)),
+        }),
+      ),
+      references: mapProfileSection(
+        sections,
+        "references",
+        "References",
+        (record) => ({
+          name: toText(record.name),
+          position: toText(record.position),
+          summary: toText(record.description),
+        }),
+      ),
     },
+    aiGuidance: resolved.aiGuidance,
+    ...(resolved.language ? { language: resolved.language } : {}),
   };
 }
 
@@ -1114,13 +1493,15 @@ function profilesSection(source: DesignResumeJson) {
   return asRecord(sections.profiles) ?? {};
 }
 
-export async function getDesignResumeProjectProfile(): Promise<ResumeProfile | null> {
-  return designResumeToProfile();
-}
-
-export async function statDesignResumeAssetFile(assetId: string) {
-  const asset = await designResumeRepo.getDesignResumeAssetById(assetId);
-  if (!asset) throw notFound("Design Resume asset not found.");
-  const info = await stat(asset.storagePath);
-  return { asset: toDesignResumeAsset(asset), info };
+/**
+ * Profile of the CV variant a job will actually be rendered with (matched on
+ * the job description's language). Using the same variant for tailoring,
+ * project selection and PDF rendering keeps skill names and project ids
+ * consistent between the AI output and the document it is applied to.
+ */
+export async function designResumeProfileForJob(
+  jobDescription: string | null | undefined,
+): Promise<ResumeProfile | null> {
+  const document = await getDesignResumeForJobLanguage(jobDescription);
+  return document ? designResumeToProfile(document) : null;
 }

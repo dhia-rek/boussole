@@ -1,0 +1,73 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "042421fd-55af-40f2-85c0-20a2fb354c1e",
+      "title": "Data Associate - Internship (6 months, flexible start)",
+      "department": "Data",
+      "team": "Data",
+      "employmentType": "Intern",
+      "location": "Paris, France",
+      "secondaryLocations": [],
+      "publishedAt": "2026-11-02T14:41:20.216+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/alan/042421fd-55af-40f2-85c0-20a2fb354c1e",
+      "applyUrl": "https://jobs.ashbyhq.com/alan/042421fd-55af-40f2-85c0-20a2fb354c1e/application",
+      "descriptionHtml": "<p>HEALTH CAN’T WAIT. \n\nNot for symptoms to get worse. Not for a six‑month appointment. Not for a system to catch up. But that’s exactly how healthcare works today. You wait, until you can’t.\n\nAlan exist … We mainly use SQL, Python, dbt, Airflow and Metabase, and Claude Code and AI agents are part of our daily workflow.</p>",
+      "descriptionPlain": "HEALTH CAN’T WAIT. \n\nNot for symptoms to get worse. Not for a six‑month appointment. Not for a system to catch up. But that’s exactly how healthcare works today. You wait, until you can’t.\n\nAlan exist … We mainly use SQL, Python, dbt, Airflow and Metabase, and Claude Code and AI agents are part of our daily workflow."
+    },
+    {
+      "id": "4c7e8e0a-0be9-47b8-b962-204a1360f11f",
+      "title": "Founding engineer- Mo team (AI Health Companion)",
+      "department": "Engineering",
+      "team": "Engineering",
+      "employmentType": "FullTime",
+      "location": "Paris, France",
+      "secondaryLocations": [],
+      "publishedAt": "2026-04-21T10:27:02.537+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/alan/4c7e8e0a-0be9-47b8-b962-204a1360f11f",
+      "applyUrl": "https://jobs.ashbyhq.com/alan/4c7e8e0a-0be9-47b8-b962-204a1360f11f/application",
+      "descriptionHtml": "<p>🤖 WHO WE ARE\n\nWe’re building Mo — a health companion for everyone.\n\nWe’re a small team within Alan, on a mission to redefine the future of care by democratizing access to medical expertise. We are bui … We are building Mo, an intelligent, empathetic, multimodal LLM-based conversational AI assistant able to prescribe, triage, and proactively follow up on care. … You’ll work at the intersection of product engineering, ML engineering, and medical expertise.</p>",
+      "descriptionPlain": "🤖 WHO WE ARE\n\nWe’re building Mo — a health companion for everyone.\n\nWe’re a small team within Alan, on a mission to redefine the future of care by democratizing access to medical expertise. We are bui … We are building Mo, an intelligent, empathetic, multimodal LLM-based conversational AI assistant able to prescribe, triage, and proactively follow up on care. … You’ll work at the intersection of product engineering, ML engineering, and medical expertise."
+    },
+    {
+      "id": "40f9c790-bdae-4329-b292-6151862c4b4c",
+      "title": "Freelance Doctor (GP) - Medical Chat & Teleconsultations - Belgium",
+      "department": "Medical Team",
+      "team": "Medical Team",
+      "employmentType": "FullTime",
+      "location": "Anywhere in Belgium",
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-09T13:17:05.420+00:00",
+      "isListed": true,
+      "isRemote": null,
+      "workplaceType": null,
+      "jobUrl": "https://jobs.ashbyhq.com/alan/40f9c790-bdae-4329-b292-6151862c4b4c",
+      "applyUrl": "https://jobs.ashbyhq.com/alan/40f9c790-bdae-4329-b292-6151862c4b4c/application",
+      "descriptionHtml": "<p>Alan is looking for dedicated GPs in Belgium to help transform Healthcare together! 🌟\n\n\n\n\n🐼 WHO WE ARE\n\nAlan is not just a health insurance company; we are the health partner, dedicated to the physica</p>",
+      "descriptionPlain": "Alan is looking for dedicated GPs in Belgium to help transform Healthcare together! 🌟\n\n\n\n\n🐼 WHO WE ARE\n\nAlan is not just a health insurance company; we are the health partner, dedicated to the physica"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "title": "Machine Learning Intern (unlisted)",
+      "department": "Data",
+      "team": "Data",
+      "employmentType": "Intern",
+      "location": "Paris, France",
+      "secondaryLocations": [],
+      "publishedAt": "2026-11-02T14:41:20.216+00:00",
+      "isListed": false,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/alan/00000000-0000-0000-0000-000000000000",
+      "applyUrl": "https://jobs.ashbyhq.com/alan/00000000-0000-0000-0000-000000000000/application",
+      "descriptionHtml": "<p>HEALTH CAN’T WAIT. \n\nNot for symptoms to get worse. Not for a six‑month appointment. Not for a system to catch up. But that’s exactly how healthcare works today. You wait, until you can’t.\n\nAlan exist … We mainly use SQL, Python, dbt, Airflow and Metabase, and Claude Code and AI agents are part of our daily workflow.</p>",
+      "descriptionPlain": "HEALTH CAN’T WAIT. \n\nNot for symptoms to get worse. Not for a six‑month appointment. Not for a system to catch up. But that’s exactly how healthcare works today. You wait, until you can’t.\n\nAlan exist … We mainly use SQL, Python, dbt, Airflow and Metabase, and Claude Code and AI agents are part of our daily workflow."
+    }
+  ]
+}
