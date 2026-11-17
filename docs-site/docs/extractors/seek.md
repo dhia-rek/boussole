@@ -48,6 +48,6 @@ Try increasing `SEEK_MAX_JOBS_PER_TERM` or verify that your search terms are rel
 
 ## Related pages
 
-- [Extractors Overview](/docs/next/extractors/overview)
-- [Add an Extractor](/docs/next/workflows/add-an-extractor)
-- [Adzuna](/docs/next/extractors/adzuna) — another API-based extractor that requires credentials
+- [Extractors Overview](/docs/extractors/overview)
+- [Add an Extractor](/docs/workflows/add-an-extractor)
+- [Adzuna](/docs/extractors/adzuna) — another API-based extractor that requires credentials

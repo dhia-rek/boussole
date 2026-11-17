@@ -75,6 +75,6 @@ Quick-tunnel addresses last only while `share.sh` runs and change on every start
 
 ## Related pages
 
-- [Self-hosting](/docs/next/getting-started/self-hosting)
-- [Database backups](/docs/next/getting-started/database-backups)
-- [Today, navigation and live status](/docs/next/features/today)
+- [Self-hosting](/docs/getting-started/self-hosting)
+- [Database backups](/docs/getting-started/database-backups)
+- [Today, navigation and live status](/docs/features/today)

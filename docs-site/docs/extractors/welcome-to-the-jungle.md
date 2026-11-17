@@ -67,7 +67,7 @@ Every offer request failed (network issue, or WTTJ refusing the requests). Parti
 
 ## Related pages
 
-- [Extractors overview](/docs/next/extractors/overview)
-- [startup.jobs](/docs/next/extractors/startup-jobs)
-- [Pipeline run](/docs/next/features/pipeline-run)
-- [Add an Extractor](/docs/next/workflows/add-an-extractor)
+- [Extractors overview](/docs/extractors/overview)
+- [startup.jobs](/docs/extractors/startup-jobs)
+- [Pipeline run](/docs/features/pipeline-run)
+- [Add an Extractor](/docs/workflows/add-an-extractor)

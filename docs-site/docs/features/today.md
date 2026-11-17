@@ -75,7 +75,7 @@ The run dialog does not open while a run is already active. Use **Cancel run** f
 
 ## Related pages
 
-- [Analytics (Overview)](/docs/next/features/overview)
-- [Jobs (Orchestrator)](/docs/next/features/orchestrator)
-- [Pipeline Run](/docs/next/features/pipeline-run)
-- [Settings](/docs/next/features/settings)
+- [Analytics (Overview)](/docs/features/overview)
+- [Jobs (Orchestrator)](/docs/features/orchestrator)
+- [Pipeline Run](/docs/features/pipeline-run)
+- [Settings](/docs/features/settings)
