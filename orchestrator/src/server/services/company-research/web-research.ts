@@ -11,6 +11,7 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { trackAiCall } from "@server/services/ai-activity";
 import type { AiProvider } from "@shared/types";
 import { type CliSpawnFn, lastLines, runCli } from "../ai-accounts/process";
 import {
@@ -245,7 +246,20 @@ export async function runWebResearch(
   deps: WebResearchDeps = {},
 ): Promise<unknown> {
   const timeoutMs = request.timeoutMs ?? researchTimeoutMs();
-  return request.provider === "chatgpt"
-    ? runCodexResearch(request, deps, timeoutMs)
-    : runClaudeResearch(request, deps, timeoutMs);
+  const { data } = await trackAiCall(
+    {
+      name: "company_research_web",
+      provider: request.provider === "chatgpt" ? "codex" : "claude",
+      model: request.model ?? null,
+      prompt: request.prompt,
+    },
+    async () => {
+      const answer =
+        request.provider === "chatgpt"
+          ? await runCodexResearch(request, deps, timeoutMs)
+          : await runClaudeResearch(request, deps, timeoutMs);
+      return { data: answer, text: JSON.stringify(answer, null, 2) };
+    },
+  );
+  return data;
 }

@@ -118,6 +118,10 @@ export const queryKeys = {
         { runId, provider, accountKey },
       ] as const,
   },
+  aiActivity: {
+    all: ["ai-activity"] as const,
+    list: () => [...queryKeys.aiActivity.all, "list"] as const,
+  },
   backups: {
     all: ["backups"] as const,
     list: () => [...queryKeys.backups.all, "list"] as const,

@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { logger } from "@infra/logger";
+import { trackAiCall } from "@server/services/ai-activity";
 import {
   AiAccountNotSignedInError,
   resolveClaudeRuntime,
@@ -343,18 +344,24 @@ export class ClaudeCliClient {
         "CLAUDE_CLI_REQUEST_TIMEOUT_MS",
         DEFAULT_REQUEST_TIMEOUT_MS,
       );
-    const { stdout } = await runClaudeCliOnce({
-      spawnFn: this.spawnFn,
-      env: await this.resolveEnv(),
-      prompt: options.prompt,
-      model: options.model?.trim() || null,
-      timeoutMs,
-      signal: options.signal,
-    });
-    if (!stdout) {
-      throw new Error("Claude CLI returned an empty response.");
-    }
-    return { text: stdout };
+    const model = options.model?.trim() || null;
+    return trackAiCall(
+      { name: "agent_step", provider: "claude", model, prompt: options.prompt },
+      async () => {
+        const { stdout } = await runClaudeCliOnce({
+          spawnFn: this.spawnFn,
+          env: await this.resolveEnv(),
+          prompt: options.prompt,
+          model,
+          timeoutMs,
+          signal: options.signal,
+        });
+        if (!stdout) {
+          throw new Error("Claude CLI returned an empty response.");
+        }
+        return { text: stdout };
+      },
+    );
   }
 
   async callJson(
@@ -369,17 +376,28 @@ export class ClaudeCliClient {
       jsonSchema: options.jsonSchema,
     });
     const model = options.model?.trim() || null;
-    const { stdout } = await runClaudeCliOnce({
-      spawnFn: this.spawnFn,
-      env: await this.resolveEnv(),
-      prompt,
-      model,
-      timeoutMs,
-      signal: options.signal,
-    });
-    if (!stdout) {
-      throw new Error("Claude CLI returned an empty response.");
-    }
-    return { text: stdout };
+    return trackAiCall(
+      {
+        name: options.jsonSchema.name,
+        provider: "claude",
+        model,
+        prompt,
+        jobId: options.jobId ?? null,
+      },
+      async () => {
+        const { stdout } = await runClaudeCliOnce({
+          spawnFn: this.spawnFn,
+          env: await this.resolveEnv(),
+          prompt,
+          model,
+          timeoutMs,
+          signal: options.signal,
+        });
+        if (!stdout) {
+          throw new Error("Claude CLI returned an empty response.");
+        }
+        return { text: stdout };
+      },
+    );
   }
 }

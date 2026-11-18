@@ -502,6 +502,27 @@ const migrations = [
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_company_research_tenant_job_unique
     ON company_research(tenant_id, job_id)`,
 
+  `CREATE TABLE IF NOT EXISTS ai_activity (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    label TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT,
+    job_id TEXT,
+    status TEXT NOT NULL CHECK(status IN ('running', 'ok', 'error')),
+    prompt_chars INTEGER NOT NULL,
+    response_chars INTEGER,
+    prompt_preview TEXT NOT NULL,
+    response_preview TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    duration_ms INTEGER,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_ai_activity_tenant_started
+    ON ai_activity(tenant_id, started_at)`,
+
   `CREATE TABLE IF NOT EXISTS cv_checks (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL DEFAULT 'tenant_default',

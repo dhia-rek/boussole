@@ -7,6 +7,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { logger } from "@infra/logger";
+import { trackAiCall } from "@server/services/ai-activity";
 import { parseAiModelChoice } from "@shared/types";
 import { type CliSpawnFn, lastLines, runCli } from "../../ai-accounts/process";
 import {
@@ -166,6 +167,23 @@ export class CodexCliClient {
     timeoutMs?: number;
     signal?: AbortSignal;
   }): Promise<{ text: string }> {
+    return trackAiCall(
+      {
+        name: "agent_step",
+        provider: "codex",
+        model: options.model,
+        prompt: options.prompt,
+      },
+      async () => ({ text: await this.completeText(options) }),
+    );
+  }
+
+  private async completeText(options: {
+    prompt: string;
+    model: string | null;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+  }): Promise<string> {
     const text = await this.exec({
       prompt: options.prompt,
       model: options.model,
@@ -177,25 +195,37 @@ export class CodexCliClient {
         ),
       signal: options.signal,
     });
-    return { text };
+    return text;
   }
 
   async callJson(
     options: LlmRequestOptions<unknown>,
   ): Promise<{ text: string }> {
-    const text = await this.exec({
-      prompt: formatCodexStructuredPrompt({
-        messages: options.messages,
-        jsonSchema: options.jsonSchema,
-      }),
-      model: options.model ?? null,
-      timeoutMs: positiveIntEnv(
-        "CODEX_CLI_REQUEST_TIMEOUT_MS",
-        DEFAULT_REQUEST_TIMEOUT_MS,
-      ),
-      signal: options.signal,
+    const prompt = formatCodexStructuredPrompt({
+      messages: options.messages,
+      jsonSchema: options.jsonSchema,
     });
-    return { text };
+    const model = options.model ?? null;
+    return trackAiCall(
+      {
+        name: options.jsonSchema.name,
+        provider: "codex",
+        model,
+        prompt,
+        jobId: options.jobId ?? null,
+      },
+      async () => ({
+        text: await this.exec({
+          prompt,
+          model,
+          timeoutMs: positiveIntEnv(
+            "CODEX_CLI_REQUEST_TIMEOUT_MS",
+            DEFAULT_REQUEST_TIMEOUT_MS,
+          ),
+          signal: options.signal,
+        }),
+      }),
+    );
   }
 
   async validateCredentials(
