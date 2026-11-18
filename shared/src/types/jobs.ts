@@ -269,7 +269,10 @@ export type JobListItem = Pick<
   | "readyAt"
   | "appliedAt"
   | "updatedAt"
->;
+> & {
+  /** The score is a keyword estimate, not an AI score (see @shared/scoring). */
+  scoreIsEstimate?: boolean;
+};
 
 export interface CreateJobInput {
   source: JobSource;

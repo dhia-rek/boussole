@@ -2,10 +2,12 @@
  * Service for scoring job suitability using AI.
  */
 
+import { upstreamError } from "@infra/errors";
 import { logger } from "@infra/logger";
 import { getOriginalEnvValue } from "@server/services/envSettings";
 import { LlmService } from "@server/services/llm/service";
 import { getDefaultPromptTemplate } from "@shared/prompt-template-definitions.js";
+import { KEYWORD_ESTIMATE_REASON } from "@shared/scoring";
 import type { Job, ResumeProfile } from "@shared/types";
 import { buildAiProfileView, formatCandidateNotes } from "./ai-profile-context";
 import type { JsonSchemaDefinition } from "./llm/types";
@@ -100,7 +102,16 @@ function applySalaryPenalty(
 export async function scoreJobSuitability(
   job: Job,
   profile: Record<string, unknown>,
+  options: {
+    /**
+     * Pipeline runs keep a keyword estimate when the AI call fails, so new jobs
+     * still get sorted. An explicit rescore sets this to false: it must give a
+     * real AI score or fail with the reason, never a silent estimate.
+     */
+    allowKeywordFallback?: boolean;
+  } = {},
 ): Promise<SuitabilityResult> {
+  const allowKeywordFallback = options.allowKeywordFallback ?? true;
   const [model, settings] = await Promise.all([
     resolveLlmModel(),
     getEffectiveSettings(),
@@ -151,10 +162,16 @@ export async function scoreJobSuitability(
   });
 
   if (!result.success) {
-    logger.error("Scoring failed, using mock scoring", {
+    logger.error("Scoring failed", {
       jobId: job.id,
       error: result.error,
+      keywordFallback: allowKeywordFallback,
     });
+    if (!allowKeywordFallback) {
+      throw upstreamError(
+        `Your AI account could not score this job: ${result.error.slice(0, 300)}`,
+      );
+    }
     return mockScore(job, {
       penalizeMissingSalary: settings.penalizeMissingSalary.value,
       missingSalaryPenalty: settings.missingSalaryPenalty.value,
@@ -165,9 +182,15 @@ export async function scoreJobSuitability(
 
   // Validate we got a reasonable response
   if (typeof score !== "number" || Number.isNaN(score)) {
-    logger.error("Invalid score in AI response, using mock scoring", {
+    logger.error("Invalid score in AI response", {
       jobId: job.id,
+      keywordFallback: allowKeywordFallback,
     });
+    if (!allowKeywordFallback) {
+      throw upstreamError(
+        "Your AI account returned an invalid score. Try again.",
+      );
+    }
     return mockScore(job, {
       penalizeMissingSalary: settings.penalizeMissingSalary.value,
       missingSalaryPenalty: settings.missingSalaryPenalty.value,
@@ -532,8 +555,7 @@ async function mockScore(
 
   score = Math.min(100, Math.max(0, score));
 
-  const baseReason =
-    "Scored by keyword matching because Claude was unavailable";
+  const baseReason = KEYWORD_ESTIMATE_REASON;
 
   // Apply salary penalty if enabled
   const penaltyResult = applySalaryPenalty(job, score, baseReason, settings);

@@ -224,7 +224,7 @@ export async function executeJobActionForJob(
         })();
 
     const [{ score, reason }, jobBrief] = await Promise.all([
-      scoreJobSuitability(job, profile),
+      scoreJobSuitability(job, profile, { allowKeywordFallback: false }),
       generateJobBrief(job.jobDescription, { jobId: job.id }),
     ]);
 
