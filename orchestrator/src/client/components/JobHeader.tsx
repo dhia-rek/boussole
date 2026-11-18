@@ -1,3 +1,4 @@
+import { isKeywordEstimate } from "@shared/scoring";
 import type { AppliedDuplicateMatch, Job } from "@shared/types.js";
 import { Calendar, DollarSign, MapPin } from "lucide-react";
 import type React from "react";
@@ -120,7 +121,11 @@ export const JobHeader: React.FC<JobHeaderProps> = ({
           </div>
         </div>
 
-        <ScoreRing score={job.suitabilityScore} size="sm" />
+        <ScoreRing
+          score={job.suitabilityScore}
+          size="sm"
+          estimated={isKeywordEstimate(job.suitabilityReason)}
+        />
       </div>
 
       {jobCTA ? (

@@ -84,11 +84,17 @@ export const JobRowContent = ({
             <span
               className={cn(
                 "inline-flex shrink-0 items-center justify-center rounded-md border px-1.5 py-0.5 text-xs font-semibold tabular-nums min-w-[2.25rem]",
-                tokens.shell,
+                job.scoreIsEstimate
+                  ? "border-dashed border-muted-foreground/50 text-muted-foreground"
+                  : tokens.shell,
               )}
-              title={tokens.label}
+              title={
+                job.scoreIsEstimate
+                  ? "Keyword estimate, not an AI score. Rescore to get a real score."
+                  : tokens.label
+              }
             >
-              {tokens.value}
+              {job.scoreIsEstimate ? `≈${job.suitabilityScore}` : tokens.value}
             </span>
           );
         })()}
