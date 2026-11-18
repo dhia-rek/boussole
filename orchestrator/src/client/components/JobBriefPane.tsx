@@ -9,11 +9,14 @@ import { cn } from "@/lib/utils";
 type JobBriefPaneProps = {
   job: Job;
   className?: string;
+  /** Also show the match score and its reason above the brief. */
+  showFit?: boolean;
 };
 
 export const JobBriefPane: React.FC<JobBriefPaneProps> = ({
   job,
   className,
+  showFit = false,
 }) => {
   const brief = parseJobBrief(job.jobBrief);
 
@@ -27,7 +30,7 @@ export const JobBriefPane: React.FC<JobBriefPaneProps> = ({
       >
         <FitLine job={job} />
         <p className="mt-2 text-xs text-muted-foreground">
-          Recalculate match to generate a concise JD brief.
+          Recalculate the match to get a short summary of this job.
         </p>
       </section>
     );
@@ -35,6 +38,7 @@ export const JobBriefPane: React.FC<JobBriefPaneProps> = ({
 
   return (
     <section className={cn("space-y-4", className)}>
+      {showFit ? <FitLine job={job} /> : null}
       <p className="text-lg font-bold leading-7 text-foreground border-border p-4 rounded-lg bg-muted/50 flex items-center gap-2">
         {brief.role_summary}
       </p>

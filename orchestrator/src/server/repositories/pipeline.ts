@@ -136,6 +136,41 @@ export async function updatePipelineRun(
 /**
  * Get the latest pipeline run.
  */
+export const INTERRUPTED_RUN_MESSAGE =
+  "Interrupted: Boussole restarted during this search. Run it again.";
+
+/**
+ * Startup maintenance, intentionally across all workspaces: one server
+ * process runs every search, so at startup any run still marked "running"
+ * was cut off by the restart. Without this it stays "running" forever.
+ */
+export function markInterruptedPipelineRuns(): number {
+  const result = db
+    .update(pipelineRuns)
+    // No completedAt: when the run actually stopped is unknown.
+    .set({ status: "failed", errorMessage: INTERRUPTED_RUN_MESSAGE })
+    .where(eq(pipelineRuns.status, "running"))
+    .run();
+  return result.changes;
+}
+
+/** The last search that finished: failed or cut-off runs don't count. */
+export async function getLatestCompletedPipelineRun(): Promise<PipelineRun | null> {
+  const tenantId = getActiveTenantId();
+  const [row] = await db
+    .select()
+    .from(pipelineRuns)
+    .where(
+      and(
+        eq(pipelineRuns.tenantId, tenantId),
+        eq(pipelineRuns.status, "completed"),
+      ),
+    )
+    .orderBy(desc(pipelineRuns.startedAt))
+    .limit(1);
+  return row ? mapRowToPipelineRun(row) : null;
+}
+
 export async function getLatestPipelineRun(): Promise<PipelineRun | null> {
   const tenantId = getActiveTenantId();
   const [row] = await db
