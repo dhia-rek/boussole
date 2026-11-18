@@ -8,7 +8,14 @@ import { fetchApi } from "./core";
 
 export async function requestMockInterviewTurn(
   jobId: string,
-  input: { round: MockInterviewRound; transcript: MockInterviewTurn[] },
+  input: {
+    round: MockInterviewRound;
+    transcript: MockInterviewTurn[];
+    /** The interview's language, as the screen speaks it. */
+    language?: "fr" | "en";
+    /** The interviewer's first name (from the chosen voice). */
+    interviewerName?: string;
+  },
 ): Promise<MockInterviewNextTurn> {
   return fetchApi<MockInterviewNextTurn>(`/jobs/${jobId}/mock-interview/turn`, {
     method: "POST",

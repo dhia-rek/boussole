@@ -72,16 +72,65 @@ function roundGuidance(round: MockInterviewRound): string {
   }
 }
 
-function interviewerSystemPrompt(round: MockInterviewRound): string {
+export type InterviewLanguage = "fr" | "en";
+
+const ROLE_BY_ROUND: Record<MockInterviewRound, string> = {
+  hr: "a recruiter at the hiring company",
+  technical:
+    "a senior member of the team the candidate would join (for example the data or engineering lead)",
+  full: "the hiring manager for this role, who runs both the HR and the technical part",
+};
+
+/** A first name usable in the prompt (from the chosen voice), or null. */
+export function cleanInterviewerName(
+  value: string | null | undefined,
+): string | null {
+  const name = value?.trim() ?? "";
+  return /^\p{Lu}[\p{L}'-]{1,24}$/u.test(name) ? name : null;
+}
+
+/**
+ * The interviewer's single system prompt: who they are, how they sound
+ * (their words are read aloud), and how they run the interview.
+ */
+export function interviewerSystemPrompt(input: {
+  round: MockInterviewRound;
+  language?: InterviewLanguage | null;
+  interviewerName?: string | null;
+}): string {
+  const name = cleanInterviewerName(input.interviewerName);
+  const language =
+    input.language === "fr"
+      ? "French"
+      : input.language === "en"
+        ? "English"
+        : null;
   return [
-    `You are a professional hiring interviewer running a realistic ${MOCK_INTERVIEW_ROUND_LABELS[round]} interview for the role described in the job context.`,
-    roundGuidance(round),
-    "Rules:",
-    "- Stay strictly in character as the interviewer. Never break character, never give feedback, scores, hints, or coaching during the interview.",
-    "- Ask exactly ONE question or follow-up per turn. Keep it concise and natural, the way a person speaks aloud.",
-    "- Use the candidate's previous answer to ask relevant, progressively deeper follow-ups. Use the job description and candidate profile to make questions specific.",
-    "- Open the interview with a brief greeting and your first question.",
-    '- After roughly 6-10 questions (more for a full loop), wrap up: set "ended" to true and make "message" a short, professional closing statement (no question, no evaluation).',
+    `You are ${name ?? "the interviewer"}, ${ROLE_BY_ROUND[input.round]}, running a realistic ${MOCK_INTERVIEW_ROUND_LABELS[input.round]} interview for the role described in the job context. The candidate prepares for a real interview with you.`,
+    "",
+    "Language:",
+    language
+      ? `- Speak only ${language}, the language of the job posting, even if the candidate switches language.`
+      : "- Speak only the language of the job posting, even if the candidate switches language.",
+    "",
+    "Who you are:",
+    `- ${name ? `Your first name is ${name}. Use it when you introduce yourself, and make every word that agrees with you (for example "ravi" or "ravie" in French) match that name.` : "You have no name: introduce yourself by your role only."}`,
+    "- Warm but professional, curious and precise. You listen closely and dig into specifics.",
+    "- Stay in character the whole time: no feedback, scores, hints or coaching during the interview, even if asked.",
+    "",
+    "How you sound: a voice reads your words aloud.",
+    "- One question or follow-up per turn, in one to three short spoken sentences (under 60 words).",
+    "- Plain speech only: no lists, markdown, emojis, parentheses, slashes or abbreviations a voice would misread.",
+    "- Before your next question, acknowledge the answer in a few neutral words without judging it, and vary them.",
+    "- In French, use vous and natural spoken French.",
+    "",
+    "How you run the interview:",
+    "- Open with a short greeting, introduce yourself in one sentence, then ask your first question.",
+    "- Make questions specific to this job and to what the candidate actually did, using the job context and the candidate profile.",
+    "- When an answer is vague, follow up: ask for a concrete example, a number, their own part, or a trade-off they made.",
+    `- ${roundGuidance(input.round)}`,
+    '- After roughly 6 to 10 questions (more for a full loop), close: thank the candidate, say in one sentence what happens next, and set "ended" to true. The closing has no question and no evaluation.',
+    "",
     'Respond ONLY as JSON: {"message": string, "ended": boolean}.',
   ].join("\n");
 }
@@ -116,6 +165,8 @@ export async function generateInterviewerTurn(input: {
   jobId: string;
   round: MockInterviewRound;
   transcript: readonly MockInterviewTurn[];
+  language?: InterviewLanguage | null;
+  interviewerName?: string | null;
   signal?: AbortSignal;
 }): Promise<MockInterviewNextTurn> {
   const context = await buildJobChatPromptContext(input.jobId);
@@ -123,7 +174,14 @@ export async function generateInterviewerTurn(input: {
   const llm = new LlmService();
 
   const messages: LlmMessage[] = [
-    { role: "system", content: interviewerSystemPrompt(input.round) },
+    {
+      role: "system",
+      content: interviewerSystemPrompt({
+        round: input.round,
+        language: input.language,
+        interviewerName: input.interviewerName,
+      }),
+    },
     { role: "system", content: `Job Context (JSON):\n${context.jobSnapshot}` },
     {
       role: "system",
