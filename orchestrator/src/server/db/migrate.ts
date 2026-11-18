@@ -524,6 +524,27 @@ const migrations = [
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_cv_checks_tenant_job_unique
     ON cv_checks(tenant_id, job_id)`,
 
+  `CREATE TABLE IF NOT EXISTS spontaneous_outreach (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    company TEXT NOT NULL,
+    website TEXT,
+    status TEXT NOT NULL CHECK(status IN ('researching', 'ready', 'failed')),
+    summary TEXT,
+    facts_json TEXT NOT NULL DEFAULT '[]',
+    contacts_json TEXT NOT NULL DEFAULT '[]',
+    error TEXT,
+    email_json TEXT,
+    job_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_spontaneous_outreach_tenant_updated
+    ON spontaneous_outreach(tenant_id, updated_at)`,
+
   `CREATE TABLE IF NOT EXISTS tracer_links (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL DEFAULT 'tenant_default',

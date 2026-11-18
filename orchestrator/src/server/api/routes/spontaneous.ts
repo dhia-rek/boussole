@@ -1,238 +1,144 @@
+import { badRequest, forbidden, toAppError } from "@infra/errors";
+import { fail, ok } from "@infra/http";
 import { logger } from "@infra/logger";
-import { sanitizeUnknown } from "@infra/sanitize";
-import { badRequest, toAppError, upstreamError } from "@server/infra/errors";
-import { fail, ok } from "@server/infra/http";
-import { getSetting } from "@server/repositories/settings";
-import { LlmService } from "@server/services/llm/service";
-import type { JsonSchemaDefinition } from "@server/services/llm/types";
-import { resolveLlmModel } from "@server/services/modelSelection";
-import { getProfile } from "@server/services/profile";
-import { Router } from "express";
+import { isDemoMode } from "@server/config/demo";
+import {
+  getOutreachOrThrow,
+  listOutreachHistory,
+  listOutreachSuggestions,
+  logOutreachSent,
+  startOutreach,
+  writeEmail,
+} from "@server/services/spontaneous";
+import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 
 export const spontaneousRouter = Router();
 
-const HUNTER_API = "https://api.hunter.io/v2";
-
-interface HunterEmail {
-  value: string;
-  type: string;
-  confidence: number;
-  first_name?: string;
-  last_name?: string;
-  position?: string;
-  department?: string;
+function requestId(res: Response): string {
+  return String(res.getHeader("x-request-id") || "unknown");
 }
 
-interface HunterDomainResponse {
-  data?: {
-    domain?: string;
-    organization?: string;
-    pattern?: string;
-    emails?: HunterEmail[];
-  };
-  errors?: { details: string }[];
+function failRoute(res: Response, route: string, error: unknown): void {
+  const err = toAppError(error);
+  logger.warn("Spontaneous route failed", {
+    route,
+    requestId: requestId(res),
+    status: err.status,
+    code: err.code,
+  });
+  fail(res, err);
 }
 
-const EMAIL_SCHEMA: JsonSchemaDefinition = {
-  name: "cold_email",
-  schema: {
-    type: "object",
-    properties: {
-      subject: { type: "string" },
-      body: { type: "string" },
-    },
-    required: ["subject", "body"],
-    additionalProperties: false,
-  },
-};
+function refuseInDemo(res: Response, route: string): boolean {
+  if (!isDemoMode()) return false;
+  failRoute(
+    res,
+    route,
+    forbidden("Spontaneous applications are not available in the demo."),
+  );
+  return true;
+}
 
-// POST /api/spontaneous/lookup
-spontaneousRouter.post("/lookup", async (req, res) => {
-  const parsed = z
-    .object({ domain: z.string().min(1).max(200) })
-    .safeParse(req.body);
-  if (!parsed.success) {
-    fail(res, badRequest("domain is required"));
-    return;
-  }
+const startSchema = z.object({
+  company: z.string().trim().min(1).max(200),
+  website: z.string().trim().max(300).optional().nullable(),
+});
 
-  const apiKey = await getSetting("hunterApiKey");
-  if (!apiKey) {
-    fail(
-      res,
-      badRequest("Hunter.io API key not configured. Add it in Settings."),
-    );
-    return;
-  }
+const emailSchema = z.object({
+  recipient: z.string().trim().max(320).optional().nullable(),
+  recipientName: z.string().trim().max(120).optional().nullable(),
+  targetRole: z.string().trim().max(200).optional().nullable(),
+  language: z.enum(["fr", "en"]).default("fr"),
+});
 
-  const domain = parsed.data.domain
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "")
-    .trim();
+const sentSchema = z.object({
+  recipient: z.string().trim().max(320).optional().nullable(),
+  subject: z.string().trim().min(1).max(300),
+  body: z.string().trim().min(1).max(10_000),
+});
 
+spontaneousRouter.get("/suggestions", async (_req, res) => {
   try {
-    const url = `${HUNTER_API}/domain-search?domain=${encodeURIComponent(domain)}&limit=10&type=personal&api_key=${apiKey}`;
-    const resp = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-    const data = (await resp.json()) as HunterDomainResponse;
-
-    if (!resp.ok || data.errors?.length) {
-      fail(
-        res,
-        upstreamError(
-          data.errors?.[0]?.details ?? `Hunter API error ${resp.status}`,
-        ),
-      );
-      return;
-    }
-
-    const emails = (data.data?.emails ?? [])
-      .filter((e) => e.confidence >= 50)
-      .sort((a, b) => {
-        const hrScore = (e: HunterEmail) =>
-          ["hr", "human", "recruit", "talent", "people", "rh"].some((kw) =>
-            `${e.position ?? ""} ${e.department ?? ""}`
-              .toLowerCase()
-              .includes(kw),
-          )
-            ? 1
-            : 0;
-        return hrScore(b) - hrScore(a) || b.confidence - a.confidence;
-      })
-      .slice(0, 8)
-      .map((e) => ({
-        email: e.value,
-        name: [e.first_name, e.last_name].filter(Boolean).join(" ") || null,
-        position: e.position ?? null,
-        confidence: e.confidence,
-      }));
-
-    ok(res, {
-      organization: data.data?.organization ?? domain,
-      domain: data.data?.domain ?? domain,
-      pattern: data.data?.pattern ?? null,
-      emails,
-    });
-  } catch (err) {
-    logger.error("Hunter.io lookup failed", { error: String(err) });
-    fail(res, toAppError(err));
+    ok(res, await listOutreachSuggestions());
+  } catch (error) {
+    failRoute(res, "GET /api/spontaneous/suggestions", error);
   }
 });
 
-// POST /api/spontaneous/generate-email
-spontaneousRouter.post("/generate-email", async (req, res) => {
-  const parsed = z
-    .object({
-      company: z.string().min(1).max(200),
-      recipientName: z.string().max(100).optional(),
-      recipientPosition: z.string().max(100).optional(),
-      targetRole: z.string().max(200).optional(),
-      language: z.enum(["en", "fr"]).default("en"),
-    })
-    .safeParse(req.body);
-
-  if (!parsed.success) {
-    fail(res, badRequest("Invalid request"));
-    return;
-  }
-
-  const model = await resolveLlmModel();
-  const llm = new LlmService();
-
-  let profileSummary = "No resume profile available.";
+spontaneousRouter.get("/outreach", async (_req, res) => {
   try {
-    const profile = await getProfile();
-    const name = profile?.basics?.name ?? "Unknown";
-    const headline = profile?.basics?.headline ?? profile?.basics?.label ?? "";
-    const skills = (profile?.sections?.skills?.items ?? [])
-      .slice(0, 8)
-      .map((s) => s.name)
-      .join(", ");
-    const experience = (profile?.sections?.experience?.items ?? [])
-      .filter((e) => e.visible !== false)
-      .slice(0, 3)
-      .map((e) => `${e.position} at ${e.company}`)
-      .join("; ");
-    type EducationItem = {
-      degree?: string;
-      studyType?: string;
-      institution: string;
-    };
-    type EducationSection = { items?: EducationItem[] };
-    const eduSection = profile?.sections?.education as
-      | EducationSection
-      | undefined;
-    const education = (eduSection?.items ?? [])
-      .slice(0, 2)
-      .map((e) => `${e.degree ?? e.studyType ?? ""} at ${e.institution}`)
-      .join("; ");
-
-    profileSummary = [
-      `Name: ${name}`,
-      headline ? `Headline: ${headline}` : null,
-      skills ? `Skills: ${skills}` : null,
-      experience ? `Experience: ${experience}` : null,
-      education ? `Education: ${education}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
-  } catch {
-    // keep default
+    ok(res, await listOutreachHistory());
+  } catch (error) {
+    failRoute(res, "GET /api/spontaneous/outreach", error);
   }
+});
 
-  const { company, recipientName, recipientPosition, targetRole, language } =
-    parsed.data;
-
-  const langInstruction =
-    language === "fr"
-      ? "Write the email in French. Use professional French (vous)."
-      : "Write the email in English. Use a professional tone.";
-
-  const recipient = recipientName
-    ? `${recipientName}${recipientPosition ? `, ${recipientPosition}` : ""}`
-    : "HR/Recruitment team";
-
-  const prompt = `You are helping write a spontaneous job application email.
-
-${langInstruction}
-
-Candidate profile:
-${profileSummary}
-
-Target company: ${company}
-Recipient: ${recipient}
-${targetRole ? `Target role: ${targetRole}` : "Target: any relevant position matching the candidate's profile"}
-
-Write a concise, personalized spontaneous application email. Return JSON with:
-- "subject": the email subject line
-- "body": the full email body (greeting through sign-off)
-
-Guidelines:
-- Under 250 words total
-- Specific to the company (not generic)
-- Highlight 2-3 most relevant skills/experience
-- End with a clear call to action
-- Be genuine and direct`;
-
-  const result = await llm.callJson<{ subject: string; body: string }>({
-    model,
-    messages: [{ role: "user", content: prompt }],
-    jsonSchema: EMAIL_SCHEMA,
-  });
-
-  if (!result.success) {
-    // The CLI's own output can contain stderr; keep it in the logs only.
-    logger.warn("Spontaneous email generation failed", {
-      error: sanitizeUnknown(result.error),
-    });
-    fail(
+spontaneousRouter.post("/outreach", async (req: Request, res: Response) => {
+  const route = "POST /api/spontaneous/outreach";
+  if (refuseInDemo(res, route)) return;
+  const parsed = startSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return failRoute(
       res,
-      upstreamError(
-        "Claude could not write the email. Check that Claude is signed in on this computer, then try again.",
-      ),
+      route,
+      badRequest("Enter a company name or website."),
     );
-    return;
   }
+  try {
+    ok(res, await startOutreach(parsed.data), 202);
+  } catch (error) {
+    failRoute(res, route, error);
+  }
+});
 
-  ok(res, result.data);
+spontaneousRouter.get("/outreach/:id", async (req, res) => {
+  try {
+    ok(res, await getOutreachOrThrow(req.params.id));
+  } catch (error) {
+    failRoute(res, "GET /api/spontaneous/outreach/:id", error);
+  }
+});
+
+spontaneousRouter.post("/outreach/:id/email", async (req, res) => {
+  const route = "POST /api/spontaneous/outreach/:id/email";
+  if (refuseInDemo(res, route)) return;
+  const parsed = emailSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return failRoute(res, route, badRequest("Invalid email request"));
+  }
+  try {
+    ok(
+      res,
+      await writeEmail(req.params.id, {
+        recipient: parsed.data.recipient || null,
+        recipientName: parsed.data.recipientName || null,
+        targetRole: parsed.data.targetRole || null,
+        language: parsed.data.language,
+      }),
+    );
+  } catch (error) {
+    failRoute(res, route, error);
+  }
+});
+
+spontaneousRouter.post("/outreach/:id/sent", async (req, res) => {
+  const route = "POST /api/spontaneous/outreach/:id/sent";
+  if (refuseInDemo(res, route)) return;
+  const parsed = sentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return failRoute(res, route, badRequest("Invalid sent request"));
+  }
+  try {
+    ok(
+      res,
+      await logOutreachSent(req.params.id, {
+        recipient: parsed.data.recipient || null,
+        subject: parsed.data.subject,
+        body: parsed.data.body,
+      }),
+    );
+  } catch (error) {
+    failRoute(res, route, error);
+  }
 });
