@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   detectInterviewLang,
+  personaNameFromVoice,
   rankVoices,
   splitForSpeech,
 } from "./interview-voice";
@@ -60,5 +61,21 @@ describe("interview voice", () => {
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every((chunk) => chunk.length <= 80)).toBe(true);
     expect(chunks.join(" ")).toBe(text);
+  });
+});
+
+describe("personaNameFromVoice", () => {
+  it("takes a first name from real voices only", () => {
+    expect(personaNameFromVoice("Audrey (Premium)")).toBe("Audrey");
+    expect(personaNameFromVoice("Thomas")).toBe("Thomas");
+    expect(personaNameFromVoice("Amélie (Enhanced)")).toBe("Amélie");
+    expect(
+      personaNameFromVoice(
+        "Microsoft Denise Online (Natural) - French (France)",
+      ),
+    ).toBe("Denise");
+    expect(personaNameFromVoice("Google français")).toBeNull();
+    expect(personaNameFromVoice("Grandpa (French (France))")).toBeNull();
+    expect(personaNameFromVoice(null)).toBeNull();
   });
 });
