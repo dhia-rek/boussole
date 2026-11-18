@@ -482,6 +482,26 @@ const migrations = [
     UNIQUE(tenant_id, provider, account_key, external_message_id)
   )`,
 
+  `CREATE TABLE IF NOT EXISTS company_research (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    job_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running', 'done', 'failed')),
+    verdict TEXT CHECK(verdict IN ('passed', 'needs_review')),
+    provider TEXT NOT NULL,
+    model TEXT,
+    brief_json TEXT,
+    judgement_json TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_company_research_tenant_job_unique
+    ON company_research(tenant_id, job_id)`,
+
   `CREATE TABLE IF NOT EXISTS tracer_links (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL DEFAULT 'tenant_default',

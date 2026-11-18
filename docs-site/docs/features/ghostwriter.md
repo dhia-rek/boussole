@@ -14,6 +14,7 @@ Ghostwriter uses:
 - current job description and metadata
 - reduced profile snapshot
 - selected job notes when you choose them in the composer
+- company facts confirmed by [Company Research](/docs/features/company-research), when you have run it for the job
 - global writing style settings
 - the configurable Ghostwriter system prompt template from Settings
 

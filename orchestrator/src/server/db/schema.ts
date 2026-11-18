@@ -707,6 +707,36 @@ export const tracerLinks = sqliteTable(
   }),
 );
 
+/** One company research brief per job (the latest run), see services/company-research. */
+export const companyResearch = sqliteTable(
+  "company_research",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["running", "done", "failed"] }).notNull(),
+    verdict: text("verdict", { enum: ["passed", "needs_review"] }),
+    provider: text("provider").notNull(),
+    model: text("model"),
+    briefJson: text("brief_json"),
+    judgementJson: text("judgement_json"),
+    error: text("error"),
+    startedAt: text("started_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => ({
+    tenantJobUnique: uniqueIndex("idx_company_research_tenant_job_unique").on(
+      table.tenantId,
+      table.jobId,
+    ),
+  }),
+);
+
 export const tracerClickEvents = sqliteTable(
   "tracer_click_events",
   {
@@ -866,3 +896,5 @@ export type TracerLinkRow = typeof tracerLinks.$inferSelect;
 export type NewTracerLinkRow = typeof tracerLinks.$inferInsert;
 export type TracerClickEventRow = typeof tracerClickEvents.$inferSelect;
 export type NewTracerClickEventRow = typeof tracerClickEvents.$inferInsert;
+export type CompanyResearchRow = typeof companyResearch.$inferSelect;
+export type NewCompanyResearchRow = typeof companyResearch.$inferInsert;
