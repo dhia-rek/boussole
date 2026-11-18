@@ -1,5 +1,5 @@
 import type { JobListItem } from "@shared/types.js";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { isPdfRegenerating, isPdfStale } from "@/client/lib/pdf-freshness";
 import { getSuitabilityScoreTokens } from "@/client/pages/job-page/JobPageLeftSidebar";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export const JobRowContent = ({
   className,
 }: JobRowContentProps) => {
   const hasScore = job.suitabilityScore != null;
+  const applyByEmail = job.applyChannel === "email";
   const statusToken = statusTokens[job.status] ?? defaultStatusToken;
   const showStalePdf = isPdfStale(job);
   const showRegeneratingPdf = isPdfRegenerating(job);
@@ -53,8 +54,20 @@ export const JobRowContent = ({
             <span className="before:content-['_in_']">{job.location}</span>
           )}
         </div>
-        {(job.salary?.trim() || showRegeneratingPdf || showStalePdf) && (
+        {(job.salary?.trim() ||
+          showRegeneratingPdf ||
+          showStalePdf ||
+          applyByEmail) && (
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+            {applyByEmail && (
+              <span
+                className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary"
+                title="The posting asks you to apply by email"
+              >
+                <Mail className="h-2.5 w-2.5" />
+                Apply by email
+              </span>
+            )}
             {job.salary?.trim() && (
               <span className="truncate text-xs text-muted-foreground">
                 {job.salary}

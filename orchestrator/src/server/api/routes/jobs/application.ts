@@ -1,4 +1,4 @@
-import { notFound } from "@infra/errors";
+import { badRequest, notFound } from "@infra/errors";
 import { fail, ok, okWithMeta } from "@infra/http";
 import { logger } from "@infra/logger";
 import { isDemoMode } from "@server/config/demo";
@@ -9,9 +9,20 @@ import { transitionStage } from "@server/services/applicationTracking";
 import { simulateApplyJob } from "@server/services/demo-simulator";
 import { notifyJobCompleteWebhook } from "@server/services/jobs/webhooks";
 import { type Request, type Response, Router } from "express";
+import { z } from "zod";
 import { hydrateJobPdfFreshness, requireJob, toJobsRouteError } from "./shared";
 
 export const jobsApplicationRouter = Router();
+
+/** Optional: how the person applied, recorded on the "Applied" timeline step. */
+const applyRequestSchema = z
+  .object({
+    /** "LinkedIn", "Email", "Workday"… */
+    channel: z.string().trim().min(1).max(60).optional(),
+    /** e.g. "to recrutement@acme.fr" */
+    detail: z.string().trim().min(1).max(200).optional(),
+  })
+  .optional();
 
 jobsApplicationRouter.post(
   "/:id/apply",
@@ -24,6 +35,11 @@ jobsApplicationRouter.post(
         });
       }
 
+      const parsed = applyRequestSchema.safeParse(req.body ?? undefined);
+      if (!parsed.success) {
+        return fail(res, badRequest("Invalid apply request"));
+      }
+      const how = parsed.data ?? {};
       const job = await requireJob(req.params.id);
 
       const appliedAtDate = new Date();
@@ -34,8 +50,9 @@ jobsApplicationRouter.post(
         "applied",
         Math.floor(appliedAtDate.getTime() / 1000),
         {
-          eventLabel: "Applied",
-          actor: "system",
+          eventLabel: how.channel ? `Applied via ${how.channel}` : "Applied",
+          note: how.detail ?? null,
+          actor: how.channel ? "user" : "system",
         },
         null,
       );

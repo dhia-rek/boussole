@@ -90,7 +90,7 @@ beforeEach(() => {
 });
 
 describe("InProgressBoardPage", () => {
-  it("loads in-progress jobs and renders cards", async () => {
+  it("loads applied and in-progress jobs and renders cards", async () => {
     render(
       <MemoryRouter>
         <InProgressBoardPage />
@@ -99,7 +99,7 @@ describe("InProgressBoardPage", () => {
 
     await waitFor(() => {
       expect(api.getJobs).toHaveBeenCalledWith({
-        statuses: ["in_progress"],
+        statuses: ["applied", "in_progress"],
         view: "list",
       });
     });
@@ -167,5 +167,16 @@ describe("InProgressBoardPage", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to load board");
     });
+  });
+});
+
+describe("daysSince", () => {
+  it("counts whole days since an ISO date", async () => {
+    const { daysSince } = await import("./InProgressBoardPage");
+    const now = Date.parse("2026-11-18T12:00:00Z");
+    expect(daysSince("2026-11-10T09:00:00Z", now)).toBe(8);
+    expect(daysSince("2026-11-18T08:00:00Z", now)).toBe(0);
+    expect(daysSince(null, now)).toBeNull();
+    expect(daysSince("not a date", now)).toBeNull();
   });
 });

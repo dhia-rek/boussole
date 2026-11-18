@@ -313,9 +313,13 @@ export async function generateJobPdf(id: string): Promise<Job> {
   });
 }
 
-export async function markAsApplied(id: string): Promise<Job> {
+export async function markAsApplied(
+  id: string,
+  how?: { channel?: string; detail?: string },
+): Promise<Job> {
   return fetchApi<Job>(`/jobs/${id}/apply`, {
     method: "POST",
+    ...(how ? { body: JSON.stringify(how) } : {}),
   });
 }
 

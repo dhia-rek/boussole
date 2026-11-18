@@ -76,7 +76,7 @@ Welcome to Boussole documentation. This site contains guides for setup, configur
   - Conversion analytics and funnel
   - Duration window controls (`7d`, `14d`, `30d`, `90d`)
 
-- **[In Progress Board](/docs/features/in-progress-board)**
+- **[Applications board](/docs/features/in-progress-board)**
   - Pre-application vs post-application workflow split
   - Kanban tracking for higher-attention opportunities
   - Drag-and-drop stage management

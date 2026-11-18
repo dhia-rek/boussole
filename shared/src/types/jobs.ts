@@ -269,7 +269,10 @@ export type JobListItem = Pick<
   | "readyAt"
   | "appliedAt"
   | "updatedAt"
->;
+> & {
+  /** How the posting says to apply (see @shared/apply-route). */
+  applyChannel?: import("../apply-route").ApplyChannel | null;
+};
 
 export interface CreateJobInput {
   source: JobSource;
