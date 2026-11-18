@@ -44,11 +44,25 @@ It exists to ensure:
 
 ## How to use it
 
+### The job panel
+
+Select a job to open its panel. It has three tabs, **The job**, **Your CV** and **Apply**, and few buttons:
+
+- **Apply step by step** (New and Ready jobs): opens the [guided application](/docs/features/guided-apply).
+- **Start Tailoring** (New jobs): opens the **Your CV** tab.
+- **⋯** (more actions): **Ask Ghostwriter**, **Mock interview**, **Skip this job**, **Edit details**, **View job description**, **Copy job info**, **Recalculate match**.
+
+For a Ready job, log the application in the **Apply** tab: open the job listing, apply, then **Mark Applied** (keyboard: `a`).
+
+### Older postings are hidden
+
+**Ready** and **Discovered** hide postings found more than 45 days ago, because most of them are closed. The list says how many are hidden; **Show them** brings them back (remembered on this browser), and **Hide them** hides them again. The tab counts follow what is shown. Nothing is deleted.
+
 ### Intended ready flow
 
 1. Manual flow:
    1. Job starts in `discovered`.
-   2. Open the job and choose Tailor.
+   2. Open the job and choose **Start Tailoring** (or **Apply step by step**).
    3. Edit JD/tailored fields/project picks.
    4. Click **Finalize & Move to Ready**.
 2. Auto flow:
@@ -113,7 +127,7 @@ If a job does not have the first selected timestamp, Boussole falls back to the 
 
 ### Ghostwriter availability
 
-Ghostwriter is available in `discovered` and `ready` job views.
+Ghostwriter is available in `discovered` and `ready` job views, under **⋯ → Ask Ghostwriter** in the job panel.
 
 For details, see [Ghostwriter](/docs/features/ghostwriter).
 

@@ -1,4 +1,5 @@
 import type { AppSettings, JobListItem, JobSource } from "@shared/types";
+import { FRESH_JOB_DAYS } from "@shared/types";
 import type { DateFilterDimension, FilterTab, JobSort } from "./constants";
 import {
   DEFAULT_PIPELINE_SOURCES,
@@ -153,6 +154,15 @@ const getSortDateValue = (job: JobListItem, sort: JobSort): number | null => {
 
   return dateValue(job.discoveredAt);
 };
+
+/** Found more than FRESH_JOB_DAYS ago: most such postings are closed. */
+export function isOlderPosting(
+  job: Pick<JobListItem, "discoveredAt">,
+  now = Date.now(),
+): boolean {
+  const found = Date.parse(job.discoveredAt);
+  return Number.isFinite(found) && now - found > FRESH_JOB_DAYS * 86_400_000;
+}
 
 export const getJobCounts = (
   jobs: JobListItem[],

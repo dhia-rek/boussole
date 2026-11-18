@@ -45,10 +45,12 @@ import {
   Link2,
   Loader2,
   MoreHorizontal,
+  PanelRightOpen,
   RefreshCcw,
   Sparkles,
   Star,
   Upload,
+  Video,
   XCircle,
 } from "lucide-react";
 import type React from "react";
@@ -102,14 +104,14 @@ const tabCopy: Record<
   }
 > = {
   brief: {
-    label: "Brief",
+    label: "The job",
     description: "Read the role, fit, and job description.",
     dotClassName: "bg-sky-500/70",
     selectedClassName: "!border-sky-400/65 !bg-sky-500/20 !text-sky-100",
   },
   tailoring: {
-    label: "Tailoring",
-    description: "Shape the resume material for this job.",
+    label: "Your CV",
+    description: "Adapt your CV for this job.",
     dotClassName: "bg-amber-500/70",
     selectedClassName: "!border-amber-400/65 !bg-amber-500/20 !text-amber-100",
   },
@@ -254,6 +256,8 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
   const [isApplying, setIsApplying] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+  const [isGhostwriterOpen, setIsGhostwriterOpen] = useState(false);
+  const [isInterviewOpen, setIsInterviewOpen] = useState(false);
   const [catalog, setCatalog] = useState<ResumeProjectCatalogItem[]>([]);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [openedListingJobIds, setOpenedListingJobIds] = useState<Set<string>>(
@@ -528,6 +532,8 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
     selectedJob.status === "processing";
   const canGenerate = ["discovered", "ready"].includes(selectedJob.status);
   const canSkip = ["discovered", "ready"].includes(selectedJob.status);
+  const canApplyStepByStep =
+    selectedJob.status === "discovered" || selectedJob.status === "ready";
   const isRegeneratingPdf = isPdfRegenerating(selectedJob);
   const isStalePdf = isPdfStale(selectedJob);
   const pdfLabels = getPdfActionLabels(selectedJob);
@@ -583,58 +589,43 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
         job={selectedJob}
         jobCTA={
           <div className="flex min-w-0 flex-wrap justify-end gap-2">
-            {selectedJob.status === "discovered" ||
-            selectedJob.status === "ready" ? (
-              <Button size="sm" variant="outline" asChild>
+            {canApplyStepByStep ? (
+              <Button size="sm" asChild>
                 <Link to={`/apply/${selectedJob.id}`}>Apply step by step</Link>
+              </Button>
+            ) : null}
+            {/* Ready jobs log the application in the Apply tab, after the
+                listing is opened; the header doesn't repeat it. */}
+            {selectedJob.status !== "ready" ? (
+              <Button
+                size="sm"
+                variant={canApplyStepByStep ? "outline" : "default"}
+                onClick={() => void handlePrimaryAction()}
+                disabled={primaryBusy || selectedJob.status === "processing"}
+                className={cn(!canApplyStepByStep && tone.button)}
+              >
+                {primaryBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : selectedJob.status === "discovered" ? (
+                  <Sparkles className="h-3.5 w-3.5" />
+                ) : (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                )}
+                {getPrimaryAction(selectedJob)}
               </Button>
             ) : null}
             <GhostwriterDrawer
               job={selectedJob}
-              triggerLabel="Ask Ghostwriter"
-              triggerVariant="ghost"
+              open={isGhostwriterOpen}
+              onOpenChange={setIsGhostwriterOpen}
+              hideTrigger
             />
             <MockInterviewButton
               job={selectedJob}
-              triggerLabel="Mock interview"
-              triggerVariant="ghost"
+              open={isInterviewOpen}
+              onOpenChange={setIsInterviewOpen}
+              hideTrigger
             />
-            <Button
-              size="sm"
-              onClick={() => void handlePrimaryAction()}
-              disabled={primaryBusy || selectedJob.status === "processing"}
-              className={cn(tone.button)}
-            >
-              {primaryBusy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : selectedJob.status === "discovered" ? (
-                <Sparkles className="h-3.5 w-3.5" />
-              ) : (
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              )}
-              {getPrimaryAction(selectedJob)}
-              {selectedJob.status === "ready" ? (
-                <KbdHint shortcut="a" className="ml-1" />
-              ) : null}
-            </Button>
-
-            {canSkip && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => void handleSkip()}
-                disabled={skipJobMutation.isPending}
-                aria-label="Skip this job"
-                className="text-muted-foreground hover:text-destructive"
-              >
-                {skipJobMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <XCircle className="h-3.5 w-3.5" />
-                )}
-                Skip
-              </Button>
-            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -643,6 +634,33 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onSelect={() =>
+                    window.setTimeout(() => setIsGhostwriterOpen(true), 0)
+                  }
+                >
+                  <PanelRightOpen className="mr-2 h-4 w-4" />
+                  Ask Ghostwriter
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    window.setTimeout(() => setIsInterviewOpen(true), 0)
+                  }
+                >
+                  <Video className="mr-2 h-4 w-4" />
+                  Mock interview
+                </DropdownMenuItem>
+                {canSkip ? (
+                  <DropdownMenuItem
+                    onSelect={() => void handleSkip()}
+                    disabled={skipJobMutation.isPending}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Skip this job
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={openEditDetails}>
                   <Edit2 className="mr-2 h-4 w-4" />
                   Edit details

@@ -647,7 +647,7 @@ export const TrackingInboxPage: React.FC = () => {
       <PageHeader
         icon={Inbox}
         title="Tracking Inbox"
-        subtitle="Post-application message review"
+        subtitle="Replies to your applications"
         actions={
           <Button
             size="sm"
@@ -667,22 +667,15 @@ export const TrackingInboxPage: React.FC = () => {
       />
 
       <PageMain className="space-y-4">
-        <section className="space-y-1 px-1">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Application Inbox Matching
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Connect your inbox to ingest related emails, review the suggested
-            job matches, and approve or deny to automatically update your
-            tracking timeline.
-          </p>
-        </section>
+        <p className="max-w-3xl px-1 text-sm text-muted-foreground">
+          Boussole reads your mailbox for replies to your applications, matches
+          each one to its job, and asks you before updating the job's timeline
+          when it isn't sure.
+        </p>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Provider Controls</CardTitle>
+            <CardTitle className="text-base">Your mailbox</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
@@ -861,7 +854,7 @@ export const TrackingInboxPage: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base">Pending Review Queue</CardTitle>
+            <CardTitle className="text-base">To confirm</CardTitle>
             {inbox.length > 0 && (
               <div className="flex gap-2">
                 <Button
@@ -916,7 +909,7 @@ export const TrackingInboxPage: React.FC = () => {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Recent Sync Runs</CardTitle>
+            <CardTitle className="text-base">Recent syncs</CardTitle>
           </CardHeader>
           <CardContent>
             {runs.length === 0 ? (
