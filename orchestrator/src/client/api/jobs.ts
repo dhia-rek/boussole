@@ -100,6 +100,23 @@ export async function getJobNotes(id: string): Promise<JobNote[]> {
   return fetchApi<JobNote[]>(withQuery(`/jobs/${id}/notes`, { t: Date.now() }));
 }
 
+export async function getCompanyResearch(
+  id: string,
+): Promise<import("@shared/types").CompanyResearch | null> {
+  return fetchApi<import("@shared/types").CompanyResearch | null>(
+    withQuery(`/jobs/${id}/research`, { t: Date.now() }),
+  );
+}
+
+export async function startCompanyResearch(
+  id: string,
+): Promise<import("@shared/types").CompanyResearch> {
+  return fetchApi<import("@shared/types").CompanyResearch>(
+    `/jobs/${id}/research`,
+    { method: "POST" },
+  );
+}
+
 export async function getJobEmails(
   id: string,
   options?: { limit?: number },
