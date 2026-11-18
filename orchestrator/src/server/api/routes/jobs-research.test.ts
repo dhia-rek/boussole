@@ -167,6 +167,69 @@ describe.sequential("Company research API", () => {
     });
   });
 
+  it("keeps the previous brief when a re-run fails", async () => {
+    ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    await useFakeResearch();
+    const { createJob } = await import("@server/repositories/jobs");
+    const job = await createJob({
+      source: "manual",
+      title: "Data Engineer",
+      employer: "Acme",
+      jobUrl: "https://example.com/job/rerun",
+      jobDescription: "Payments data role",
+    });
+    await fetch(`${baseUrl}/api/jobs/${job.id}/research`, { method: "POST" });
+    expect((await waitUntilSettled(baseUrl, job.id)).data.status).toBe("done");
+
+    await useFakeResearch({
+      webResearch: async () => {
+        throw new Error("Usage limit reached");
+      },
+    });
+    const rerun = await fetch(`${baseUrl}/api/jobs/${job.id}/research`, {
+      method: "POST",
+    });
+    expect(rerun.status).toBe(202);
+    const failed = await waitUntilSettled(baseUrl, job.id);
+    expect(failed.data).toMatchObject({
+      status: "failed",
+      error: "Usage limit reached",
+      verdict: "passed",
+    });
+    expect(failed.data.brief.facts).toHaveLength(4);
+
+    const { getVerifiedResearchFacts } = await import(
+      "@server/services/company-research"
+    );
+    expect(await getVerifiedResearchFacts(job.id)).toHaveLength(3);
+  });
+
+  it("explains a needs-review verdict", async () => {
+    ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    await useFakeResearch({
+      webResearch: async () => ({
+        ...RESEARCH_OUTPUT,
+        facts: RESEARCH_OUTPUT.facts.map((fact) => ({
+          ...fact,
+          source_url: "https://blocked.example/page",
+        })),
+      }),
+    });
+    const { createJob } = await import("@server/repositories/jobs");
+    const job = await createJob({
+      source: "manual",
+      title: "Data Engineer",
+      employer: "Acme",
+      jobUrl: "https://example.com/job/blocked",
+    });
+    await fetch(`${baseUrl}/api/jobs/${job.id}/research`, { method: "POST" });
+    const done = await waitUntilSettled(baseUrl, job.id);
+    expect(done.data.verdict).toBe("needs_review");
+    expect(done.data.judgement.issues[0]).toBe(
+      "Only 0 of 4 facts could be confirmed on their source page.",
+    );
+  });
+
   it("keeps research private to each workspace", async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
@@ -230,6 +293,30 @@ describe.sequential("Company research API", () => {
       headers: adam,
     });
     expect(adamStart.status).toBe(404);
+
+    const adamJob = await fetch(`${baseUrl}/api/manual-jobs/import`, {
+      method: "POST",
+      headers: { ...adam, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        job: {
+          title: "Adam Role",
+          employer: "Beta",
+          jobUrl: "https://example.com/adam-job",
+          jobDescription: "Role",
+        },
+      }),
+    }).then((res) => res.json());
+    const notSignedIn = await fetch(
+      `${baseUrl}/api/jobs/${adamJob.data.id}/research`,
+      { method: "POST", headers: adam },
+    );
+    expect(notSignedIn.status).toBe(422);
+    expect((await notSignedIn.json()).error.message).toMatch(/not signed in/);
+    const adamResearch = await fetch(
+      `${baseUrl}/api/jobs/${adamJob.data.id}/research`,
+      { headers: adam },
+    ).then((res) => res.json());
+    expect(adamResearch.data).toBeNull();
 
     const { getCompanyResearch } = await import(
       "@server/repositories/company-research"

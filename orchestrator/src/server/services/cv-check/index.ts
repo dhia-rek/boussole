@@ -16,13 +16,10 @@ import {
   type Job,
 } from "@shared/types";
 import { getDesignResumeForJobLanguage } from "../design-resume";
+import { resolveReadyAiAccount } from "../job-run-preflight";
 import { createJobRunTracker } from "../job-runs";
 import { LlmService } from "../llm/service";
-import {
-  resolveActiveAiProvider,
-  resolveModelForProvider,
-} from "../modelSelection";
-import { buildCvDictionary } from "./dictionary";
+import { buildCvDictionaryWithStats } from "./dictionary";
 import {
   buildCvReviewPrompt,
   CV_REVIEW_SCHEMA,
@@ -31,6 +28,10 @@ import {
 
 export const INTERRUPTED_MESSAGE =
   "The CV check was interrupted (the server restarted). Run it again.";
+export const NO_DESCRIPTION_MESSAGE =
+  "This job has no description yet. Add it (edit the job details), then run the CV check.";
+/** Below this, a "description" is a title or a teaser, not something to check a CV against. */
+export const MIN_DESCRIPTION_CHARS = 80;
 export const NO_CV_MESSAGE =
   "Import or create your CV first (Design Resume), then run the CV check.";
 
@@ -86,7 +87,7 @@ function isCvChanged(
   check: cvChecksRepo.StoredCvCheck,
   current: DesignResumeDocument | null,
 ): boolean {
-  if (check.status !== "done" || !check.cvId) return false;
+  if (!check.result || !check.cvId) return false;
   if (!current) return true;
   return current.id !== check.cvId || current.revision !== check.cvRevision;
 }
@@ -102,10 +103,9 @@ export async function getCvCheckForJob(job: Job): Promise<CvCheck | null> {
     });
     check = (await cvChecksRepo.getCvCheck(job.id)) ?? check;
   }
-  const current =
-    check.status === "done"
-      ? await getDesignResumeForJobLanguage(job.jobDescription)
-      : null;
+  const current = check.result
+    ? await getDesignResumeForJobLanguage(job.jobDescription)
+    : null;
   return { ...check, cvChanged: isCvChanged(check, current) };
 }
 
@@ -116,7 +116,10 @@ async function reviewCv(
 ): Promise<void> {
   const startedAt = Date.now();
   try {
-    const lines = buildCvDictionary(cv.resumeJson, cv.aiGuidance);
+    const { lines, skipped } = buildCvDictionaryWithStats(
+      cv.resumeJson,
+      cv.aiGuidance,
+    );
     if (lines.length === 0) throw new Error("Your CV has no lines to check.");
     const llm = testLlm ?? new LlmService();
     const response = await llm.callJson<unknown>({
@@ -138,8 +141,23 @@ async function reviewCv(
       jobId: job.id,
     });
     if (!response.success) throw new Error(response.error);
-    const result = normalizeCvReview(response.data, lines);
-    await cvChecksRepo.finishCvCheckRow(check.id, { status: "done", result });
+    const result = normalizeCvReview(response.data, lines, {
+      headlinePrefix:
+        cv.aiGuidance?.sections?.headline?.share === false
+          ? ""
+          : (cv.aiGuidance?.sections?.headline?.prefix ?? ""),
+      skippedLineCount: skipped,
+    });
+    await cvChecksRepo.finishCvCheckRow(check.id, {
+      status: "done",
+      result,
+      cv: {
+        cvId: cv.id,
+        cvTitle: cv.title,
+        cvLanguage: cv.language,
+        cvRevision: cv.revision,
+      },
+    });
     logger.info("CV check finished", {
       jobId: job.id,
       lineCount: lines.length,
@@ -171,31 +189,29 @@ async function reviewCv(
 }
 
 /**
- * Starts a CV check and returns the "running" record. 422 when there is no
- * CV yet; CONFLICT when one is already running for this job.
+ * Starts a CV check and returns the "running" record. UNPROCESSABLE_ENTITY
+ * when the job has no description, there is no CV yet or no AI account is
+ * signed in; CONFLICT when one is already running for this job. The previous
+ * result stays readable until the new run succeeds.
  */
 export async function startCvCheck(job: Job): Promise<CvCheck> {
+  const description = (job.jobDescription ?? "").replace(/\s+/g, " ").trim();
+  if (description.length < MIN_DESCRIPTION_CHARS) {
+    throw unprocessableEntity(NO_DESCRIPTION_MESSAGE);
+  }
   const cv = await getDesignResumeForJobLanguage(job.jobDescription);
   if (!cv) throw unprocessableEntity(NO_CV_MESSAGE);
   const check = await runs.start(
     job.id,
     async () => {
-      const provider = await resolveActiveAiProvider();
-      const model = (await resolveModelForProvider(provider)) || null;
-      return cvChecksRepo.startCvCheckRow({
-        jobId: job.id,
-        provider,
-        model,
-        cvId: cv.id,
-        cvTitle: cv.title,
-        cvLanguage: cv.language,
-        cvRevision: cv.revision,
-      });
+      const { provider, model } = await resolveReadyAiAccount();
+      return cvChecksRepo.startCvCheckRow({ jobId: job.id, provider, model });
     },
     (started) => reviewCv(job, started, cv),
   );
   logger.info("CV check started", { jobId: job.id, cvLanguage: cv.language });
-  return { ...check, cvChanged: false };
+  const current = check.result ? cv : null;
+  return { ...check, cvChanged: isCvChanged(check, current) };
 }
 
 export async function waitForCvCheck(jobId: string): Promise<void> {

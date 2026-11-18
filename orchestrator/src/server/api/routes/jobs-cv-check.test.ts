@@ -40,6 +40,9 @@ async function waitUntilSettled(
   throw new Error("CV check did not finish");
 }
 
+const DESCRIPTION =
+  "We need a data engineer to build Airflow and dbt pipelines, own data quality checks and work with analysts on reporting.";
+
 const REVIEW = {
   overall: "Close fit.",
   priorities: ["Reword L1"],
@@ -82,7 +85,7 @@ describe.sequential("CV check API", () => {
       title: "Data Engineer",
       employer: "Beta",
       jobUrl: "https://example.com/job/beta",
-      jobDescription: "We need Airflow and dbt.",
+      jobDescription: DESCRIPTION,
     });
 
     const noCv = await fetch(`${baseUrl}/api/jobs/${job.id}/cv-check`, {
@@ -122,6 +125,51 @@ describe.sequential("CV check API", () => {
       (res) => res.json(),
     );
     expect(later.data.cvChanged).toBe(true);
+  });
+
+  it("refuses a job without a description and keeps the last result when a re-run fails", async () => {
+    ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    const callJson = vi.fn().mockResolvedValue({ success: true, data: REVIEW });
+    const { __setCvCheckLlmForTests } = await import(
+      "@server/services/cv-check"
+    );
+    __setCvCheckLlmForTests({ callJson } as never);
+    await createCv("Data Engineer");
+    const { createJob } = await import("@server/repositories/jobs");
+
+    const bare = await createJob({
+      source: "manual",
+      title: "Data Engineer",
+      employer: "Beta",
+      jobUrl: "https://example.com/job/bare",
+      jobDescription: "Apply now!",
+    });
+    const refused = await fetch(`${baseUrl}/api/jobs/${bare.id}/cv-check`, {
+      method: "POST",
+    });
+    expect(refused.status).toBe(422);
+    expect((await refused.json()).error.message).toMatch(/no description/);
+    expect(callJson).not.toHaveBeenCalled();
+
+    const job = await createJob({
+      source: "manual",
+      title: "Data Engineer",
+      employer: "Beta",
+      jobUrl: "https://example.com/job/full",
+      jobDescription: DESCRIPTION,
+    });
+    await fetch(`${baseUrl}/api/jobs/${job.id}/cv-check`, { method: "POST" });
+    expect((await waitUntilSettled(baseUrl, job.id)).data.status).toBe("done");
+
+    callJson.mockResolvedValueOnce({ success: false, error: "Timed out" });
+    await fetch(`${baseUrl}/api/jobs/${job.id}/cv-check`, { method: "POST" });
+    const failed = await waitUntilSettled(baseUrl, job.id);
+    expect(failed.data).toMatchObject({
+      status: "failed",
+      error: "Timed out",
+      cvChanged: false,
+      result: { overall: "Close fit." },
+    });
   });
 
   it("keeps CV checks private to each workspace", async () => {
@@ -170,7 +218,7 @@ describe.sequential("CV check API", () => {
           title: "Admin Role",
           employer: "Beta",
           jobUrl: "https://example.com/admin-job",
-          jobDescription: "Role",
+          jobDescription: DESCRIPTION,
         },
       }),
     }).then((res) => res.json());

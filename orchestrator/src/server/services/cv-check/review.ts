@@ -148,9 +148,21 @@ export function findNewTerms(suggestion: string, cvText: string): string[] {
   return Array.from(found).slice(0, 6);
 }
 
+/** Puts the candidate's required headline start back if the AI dropped it. */
+export function applyHeadlinePrefix(
+  suggestion: string,
+  prefix: string,
+): string {
+  const required = prefix.trim();
+  if (!suggestion || !required) return suggestion;
+  if (normalize(suggestion).startsWith(normalize(required))) return suggestion;
+  return `${required} ${suggestion}`;
+}
+
 export function normalizeCvReview(
   value: unknown,
   lines: CvCheckLine[],
+  options: { headlinePrefix?: string; skippedLineCount?: number } = {},
 ): CvCheckResult {
   const record =
     value && typeof value === "object"
@@ -166,19 +178,31 @@ export function normalizeCvReview(
   const cvText = lines.map((line) => `${line.entry} ${line.text}`).join("\n");
   const knownRefs = new Set(lines.map((line) => line.ref));
 
+  let unreviewedCount = 0;
   const reviewed: CvCheckLineReview[] = lines.map((line) => {
     const entry = byRef.get(line.ref);
+    if (!entry) unreviewedCount += 1;
     const rawVerdict = clip(entry?.verdict, 10) as CvCheckVerdict;
-    const verdict: CvCheckVerdict = VERDICTS.includes(rawVerdict)
+    let verdict: CvCheckVerdict = VERDICTS.includes(rawVerdict)
       ? rawVerdict
       : "keep";
-    let suggestion = verdict === "reword" ? clip(entry?.suggestion) : "";
+    let suggestion = clip(entry?.suggestion);
+    if (line.section === "headline") {
+      // A CV always has a headline: "cut" means "say it differently".
+      if (verdict === "cut") verdict = "reword";
+      suggestion = applyHeadlinePrefix(
+        suggestion,
+        options.headlinePrefix ?? "",
+      );
+    }
+    if (verdict !== "reword") suggestion = "";
     if (suggestion && normalize(suggestion) === normalize(line.text)) {
       suggestion = "";
     }
+    if (verdict === "reword" && !suggestion) verdict = "keep";
     return {
       ...line,
-      verdict: verdict === "reword" && !suggestion ? "keep" : verdict,
+      verdict,
       reason: clip(entry?.reason, 300),
       suggestion,
       newTerms: suggestion ? findNewTerms(suggestion, cvText) : [],
@@ -208,5 +232,7 @@ export function normalizeCvReview(
       .slice(0, MAX_PRIORITIES),
     lines: reviewed,
     missing,
+    unreviewedCount,
+    skippedLineCount: options.skippedLineCount ?? 0,
   };
 }

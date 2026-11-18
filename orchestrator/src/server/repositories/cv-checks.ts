@@ -45,15 +45,14 @@ export async function getCvCheck(jobId: string): Promise<StoredCvCheck | null> {
   return row ? mapRow(row) : null;
 }
 
-/** Replaces the job's previous check with a fresh "running" one. */
+/**
+ * Marks the job's check as running under a new run id. The previous result
+ * (and the CV it was made from) stays until the new run succeeds.
+ */
 export async function startCvCheckRow(input: {
   jobId: string;
   provider: AiProvider;
   model: string | null;
-  cvId: string | null;
-  cvTitle: string | null;
-  cvLanguage: string | null;
-  cvRevision: number | null;
 }): Promise<StoredCvCheck> {
   const tenantId = getActiveTenantId();
   const fields = {
@@ -61,11 +60,6 @@ export async function startCvCheckRow(input: {
     status: "running" as const,
     provider: input.provider,
     model: input.model,
-    cvId: input.cvId,
-    cvTitle: input.cvTitle,
-    cvLanguage: input.cvLanguage,
-    cvRevision: input.cvRevision,
-    resultJson: null,
     error: null,
     startedAt: new Date().toISOString(),
     completedAt: null,
@@ -82,11 +76,18 @@ export async function startCvCheckRow(input: {
   return saved;
 }
 
+export type CheckedCv = {
+  cvId: string;
+  cvTitle: string;
+  cvLanguage: string | null;
+  cvRevision: number;
+};
+
 /** Saves the outcome of run `id`; ignored if a newer run replaced it. */
 export async function finishCvCheckRow(
   id: string,
   outcome:
-    | { status: "done"; result: CvCheckResult }
+    | { status: "done"; result: CvCheckResult; cv: CheckedCv }
     | { status: "failed"; error: string },
 ): Promise<void> {
   const tenantId = getActiveTenantId();
@@ -97,6 +98,7 @@ export async function finishCvCheckRow(
         ? {
             status: "done",
             resultJson: JSON.stringify(outcome.result),
+            ...outcome.cv,
             error: null,
             completedAt: new Date().toISOString(),
           }
