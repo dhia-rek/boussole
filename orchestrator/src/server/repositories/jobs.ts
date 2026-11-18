@@ -3,6 +3,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { detectApplyRoutes } from "@shared/apply-route";
 import { buildLocationEvidence } from "@shared/location-domain.js";
 import type {
   CreateJobInput,
@@ -131,6 +132,7 @@ export async function getJobListItems(
     title: jobs.title,
     employer: jobs.employer,
     jobUrl: jobs.jobUrl,
+    jobUrlDirect: jobs.jobUrlDirect,
     applicationLink: jobs.applicationLink,
     datePosted: jobs.datePosted,
     deadline: jobs.deadline,
@@ -181,6 +183,7 @@ export async function getJobListItems(
   return rows.map((row) => {
     return {
       ...row,
+      applyChannel: detectApplyRoutes(row).primary?.channel ?? null,
       source: row.source as JobListItem["source"],
       status: row.status as JobStatus,
       pdfSource: row.pdfSource as JobPdfSource | null,
