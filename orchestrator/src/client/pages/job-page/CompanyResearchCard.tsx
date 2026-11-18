@@ -89,7 +89,7 @@ export const CompanyResearchCard: React.FC<{ jobId: string }> = ({ jobId }) => {
             <Telescope className="h-4 w-4 text-primary" />
             Company research
           </h2>
-          {research?.status === "done" && research.judgement && (
+          {research?.brief && research.judgement && (
             <JudgementLine research={research} />
           )}
         </div>
@@ -135,12 +135,17 @@ export const CompanyResearchCard: React.FC<{ jobId: string }> = ({ jobId }) => {
       {!running && research?.status === "failed" && (
         <p className="mt-3 flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <span>{research.error ?? "The research failed."}</span>
+          <span>
+            {research.error ?? "The research failed."}
+            {research.brief && " The previous brief is shown below."}
+          </span>
         </p>
       )}
 
-      {!running && research?.status === "done" && research.brief && (
-        <ResearchBody research={research} />
+      {research?.brief && (
+        <div className={cn(running && "opacity-60")} aria-busy={running}>
+          <ResearchBody research={research} />
+        </div>
       )}
     </section>
   );
@@ -263,8 +268,8 @@ const ListSection: React.FC<{ title: string; items: string[] }> = ({
         {title}
       </h3>
       <ul className="space-y-1.5 leading-6">
-        {items.map((item) => (
-          <li key={item} className="flex gap-2">
+        {items.map((item, index) => (
+          <li key={`${index}-${item}`} className="flex gap-2">
             <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-foreground/45" />
             <span>{item}</span>
           </li>
@@ -288,8 +293,22 @@ const ResearchBody: React.FC<{ research: CompanyResearch }> = ({
       )}
 
       {issues.length > 0 && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-          <ListSection title="Check before using" items={issues} />
+        <div
+          className={cn(
+            "rounded-md border p-3",
+            research.verdict === "passed"
+              ? "border-border/60 bg-muted/30"
+              : "border-amber-500/30 bg-amber-500/5",
+          )}
+        >
+          <ListSection
+            title={
+              research.verdict === "passed"
+                ? "Notes from the review"
+                : "Check before using"
+            }
+            items={issues}
+          />
         </div>
       )}
 
@@ -302,11 +321,8 @@ const ResearchBody: React.FC<{ research: CompanyResearch }> = ({
             <ul className="space-y-2">
               {brief.facts
                 .filter((fact) => fact.topic === topic)
-                .map((fact) => (
-                  <FactItem
-                    key={`${fact.sourceUrl}-${fact.claim}`}
-                    fact={fact}
-                  />
+                .map((fact, index) => (
+                  <FactItem key={`${index}-${fact.sourceUrl}`} fact={fact} />
                 ))}
             </ul>
           </div>

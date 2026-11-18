@@ -6,36 +6,35 @@
  * tracked in memory by workspace + job, so a run cut short by a server restart
  * shows up as "interrupted" instead of "running" forever.
  */
-import { conflict } from "@infra/errors";
 import { logger } from "@infra/logger";
-import { runWithRequestContext } from "@infra/request-context";
 import { sanitizeUnknown } from "@infra/sanitize";
 import * as researchRepo from "@server/repositories/company-research";
-import { getActiveTenantId } from "@server/tenancy/context";
 import type {
   CompanyResearch,
   CompanyResearchBrief,
   CompanyResearchFact,
   Job,
 } from "@shared/types";
-import {
-  resolveActiveAiProvider,
-  resolveModelForProvider,
-} from "../modelSelection";
+import { resolveReadyAiAccount } from "../job-run-preflight";
+import { createJobRunTracker } from "../job-runs";
 import {
   buildResearchPrompt,
   normalizeResearchOutput,
   RESEARCH_JSON_SCHEMA,
 } from "./brief";
-import { decideVerdict, type JudgeLlm, judgeBrief } from "./judge";
+import {
+  decideVerdict,
+  explainVerdict,
+  type JudgeLlm,
+  judgeBrief,
+} from "./judge";
 import { checkFactQuotes, type PageReader } from "./quote-check";
 import { runWebResearch, type WebResearchRequest } from "./web-research";
 
 export const INTERRUPTED_MESSAGE =
   "The research was interrupted (the server restarted). Run it again.";
 
-const activeRuns = new Map<string, Promise<void>>();
-const runKey = (tenantId: string, jobId: string) => `${tenantId}:${jobId}`;
+const runs = createJobRunTracker("Research is already running for this job.");
 
 export type CompanyResearchDeps = {
   webResearch?: (request: WebResearchRequest) => Promise<unknown>;
@@ -50,7 +49,7 @@ export function __setCompanyResearchDepsForTests(deps: CompanyResearchDeps) {
 }
 
 export function isCompanyResearchRunning(jobId: string): boolean {
-  return activeRuns.has(runKey(getActiveTenantId(), jobId));
+  return runs.isRunning(jobId);
 }
 
 /** The job's latest research; a "running" row with no live run is failed. */
@@ -93,11 +92,20 @@ async function researchJob(
       talkingPoints: output.talkingPoints,
       questionsToAsk: output.questionsToAsk,
     };
-    const judgement = await judgeBrief(job, brief, {
+    const reviewed = await judgeBrief(job, brief, {
       model: research.model ?? "",
       llm: deps.judgeLlm,
     });
-    const verdict = decideVerdict(judgement);
+    const verdict = decideVerdict(reviewed);
+    const judgement =
+      verdict === "passed"
+        ? reviewed
+        : {
+            ...reviewed,
+            issues: Array.from(
+              new Set([...explainVerdict(reviewed), ...reviewed.issues]),
+            ).slice(0, 7),
+          };
     await researchRepo.finishCompanyResearchRow(research.id, {
       status: "done",
       verdict,
@@ -135,50 +143,27 @@ async function researchJob(
 }
 
 /**
- * Starts a research run for the job and returns the "running" record. Throws
- * CONFLICT if one is already running for this workspace and job. Problems
- * during the run (e.g. no AI account signed in) end as a "failed" record.
+ * Starts a research run for the job and returns the "running" record.
+ * UNPROCESSABLE_ENTITY when no AI account is signed in; CONFLICT when a run
+ * is already going for this workspace and job. The previous brief stays
+ * readable until the new run succeeds, so a failed re-run loses nothing.
  */
 export async function startCompanyResearch(
   job: Job,
   deps: CompanyResearchDeps = testDeps,
 ): Promise<CompanyResearch> {
-  const tenantId = getActiveTenantId();
-  const key = runKey(tenantId, job.id);
-  if (activeRuns.has(key)) {
-    throw conflict("Research is already running for this job.");
-  }
-  // Claim the slot before the first await so a double click cannot start two.
-  let release: () => void = () => undefined;
-  activeRuns.set(
-    key,
-    new Promise<void>((resolve) => {
-      release = resolve;
-    }),
+  const research = await runs.start(
+    job.id,
+    async () => {
+      const { provider, model } = await resolveReadyAiAccount();
+      return researchRepo.startCompanyResearchRow({
+        jobId: job.id,
+        provider,
+        model,
+      });
+    },
+    (started) => researchJob(job, started, deps),
   );
-
-  let research: CompanyResearch;
-  try {
-    const provider = await resolveActiveAiProvider();
-    const model = (await resolveModelForProvider(provider)) || null;
-    research = await researchRepo.startCompanyResearchRow({
-      jobId: job.id,
-      provider,
-      model,
-    });
-  } catch (error) {
-    activeRuns.delete(key);
-    release();
-    throw error;
-  }
-
-  const run = runWithRequestContext({ tenantId, jobId: job.id }, () =>
-    researchJob(job, research, deps),
-  ).finally(() => {
-    activeRuns.delete(key);
-    release();
-  });
-  activeRuns.set(key, run);
   logger.info("Company research started", {
     jobId: job.id,
     provider: research.provider,
@@ -186,20 +171,22 @@ export async function startCompanyResearch(
   return research;
 }
 
-/** Waits for a running research (tests and graceful shutdown). */
+/** Waits for a running research (tests). */
 export async function waitForCompanyResearch(jobId: string): Promise<void> {
-  await activeRuns.get(runKey(getActiveTenantId(), jobId));
+  await runs.wait(jobId);
 }
 
 /**
- * Facts Boussole confirmed on their source page, for cover letters. Nothing
- * when the review says the facts are about another company.
+ * Facts Boussole confirmed on their source page, for cover letters, from the
+ * latest successful brief (still valid while a re-run is going or after a
+ * failed one). Nothing when the review says the facts are about another
+ * company.
  */
 export async function getVerifiedResearchFacts(
   jobId: string,
 ): Promise<Array<{ claim: string; source: string }>> {
   const research = await researchRepo.getCompanyResearch(jobId);
-  if (research?.status !== "done" || !research.brief) return [];
+  if (!research?.brief) return [];
   if (research.judgement?.wrongCompany) return [];
   return research.brief.facts
     .filter((fact) => fact.check === "verified")

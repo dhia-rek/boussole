@@ -74,6 +74,7 @@ import {
 import { TooltipWhenDisabled } from "../components/TooltipWhenDisabled";
 import { JobTimeline } from "./job/Timeline";
 import { CompanyResearchCard } from "./job-page/CompanyResearchCard";
+import { CvCheckCard } from "./job-page/CvCheckCard";
 import { JobEmailsPanel } from "./job-page/JobEmailsPanel";
 import { JobNotesCard } from "./job-page/JobNotesCard";
 import {
@@ -592,6 +593,8 @@ export const JobPage: React.FC = () => {
                 />
 
                 <JobBriefPane job={job} />
+
+                <CvCheckCard jobId={job.id} />
 
                 <CompanyResearchCard jobId={job.id} />
 
