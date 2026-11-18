@@ -98,6 +98,13 @@ export const TrackingInboxPage: React.FC = () => {
   const [appliedJobByMessageId, setAppliedJobByMessageId] = useState<
     Record<string, string>
   >({});
+  const gmailConfigQuery = useQuery({
+    queryKey: ["post-application", "gmail-oauth-config"],
+    queryFn: api.getGmailOauthConfig,
+    staleTime: 5 * 60_000,
+  });
+  const gmailNotSetUp =
+    provider === "gmail" && gmailConfigQuery.data?.configured === false;
   const statusQuery = useQuery({
     queryKey: queryKeys.postApplication.providerStatus(provider, accountKey),
     queryFn: () => api.postApplicationProviderStatus({ provider, accountKey }),
@@ -694,10 +701,50 @@ export const TrackingInboxPage: React.FC = () => {
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Gmail connect uses Google OAuth popup and stores credentials
-              server-side. No manual refresh token paste is needed.
-            </p>
+            {gmailNotSetUp ? (
+              <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                <p className="font-medium">
+                  Gmail isn't set up on this Boussole yet
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Connecting Gmail needs a one-time setup by whoever runs this
+                  server (about 10 minutes):
+                </p>
+                <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+                  <li>
+                    In Google Cloud Console, enable the Gmail API and create an
+                    OAuth client of type "Web application".
+                  </li>
+                  <li>
+                    Add this authorized redirect URI:{" "}
+                    <code className="break-all rounded bg-muted px-1 text-foreground">
+                      {gmailConfigQuery.data?.redirectUri}
+                    </code>
+                  </li>
+                  <li>
+                    Put{" "}
+                    <code className="rounded bg-muted px-1">
+                      GMAIL_OAUTH_CLIENT_ID
+                    </code>{" "}
+                    and{" "}
+                    <code className="rounded bg-muted px-1">
+                      GMAIL_OAUTH_CLIENT_SECRET
+                    </code>{" "}
+                    in the <code className="rounded bg-muted px-1">.env</code>{" "}
+                    file, then restart Boussole.
+                  </li>
+                </ol>
+                <p className="text-xs text-muted-foreground">
+                  Until then, track replies by hand: drag the card on the
+                  Applications board or log the step on the job's timeline.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Gmail connect uses Google OAuth popup and stores credentials
+                server-side. No manual refresh token paste is needed.
+              </p>
+            )}
 
             <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
@@ -722,7 +769,7 @@ export const TrackingInboxPage: React.FC = () => {
                 {!isConnected ? (
                   <Button
                     onClick={() => void runProviderAction("connect")}
-                    disabled={isActionLoading}
+                    disabled={isActionLoading || gmailNotSetUp}
                     className="gap-2"
                   >
                     <Link2 className="h-4 w-4" />

@@ -302,6 +302,17 @@ manualJobsRouter.post("/import", async (req: Request, res: Response) => {
     const input = manualJobImportSchema.parse(req.body ?? {});
     const job = input.job;
 
+    // Importing a link that is already in the list must not re-process it:
+    // processing rebuilds the PDF and could move an applied job back to
+    // "ready". Return the existing job, flagged, untouched.
+    const existingJob = await jobsRepo.getJobByUrl(job.jobUrl.trim());
+    if (existingJob) {
+      logger.info("Manual import skipped: job already in the list", {
+        jobId: existingJob.id,
+      });
+      return ok(res, { ...existingJob, alreadyInList: true });
+    }
+
     const createdJob = await jobsRepo.createJob({
       source: "manual",
       title: job.title.trim(),

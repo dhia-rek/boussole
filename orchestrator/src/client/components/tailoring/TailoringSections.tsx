@@ -42,6 +42,8 @@ interface TailoringSectionsProps {
   tracerEnableBlocked: boolean;
   tracerEnableBlockedReason: string | null;
   tracerReadinessChecking?: boolean;
+  /** Why the headline looks the way it does (the CV's own headline rule). */
+  headlineRuleHint?: string | null;
   generatingSection: "summary" | "headline" | "skills" | null;
   openSkillGroupId: string;
   disableInputs: boolean;
@@ -194,6 +196,7 @@ export const TailoringSections: React.FC<TailoringSectionsProps> = ({
   tracerEnableBlocked,
   tracerEnableBlockedReason,
   tracerReadinessChecking = false,
+  headlineRuleHint = null,
   generatingSection,
   openSkillGroupId,
   disableInputs,
@@ -400,6 +403,11 @@ export const TailoringSections: React.FC<TailoringSectionsProps> = ({
               placeholder="Write a concise headline tailored to this role..."
               disabled={disableInputs}
             />
+            {headlineRuleHint ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {headlineRuleHint}
+              </p>
+            ) : null}
           </AccordionContent>
         </AccordionItem>
 
@@ -645,9 +653,17 @@ export const TailoringSections: React.FC<TailoringSectionsProps> = ({
                   : "When enabled, outgoing resume links are rewritten to Boussole tracer links on the next PDF generation. Existing PDFs are unchanged."}
               </p>
               {tracerEnableBlockedReason && !tracerLinksEnabled ? (
-                <p className="mt-2 text-xs text-destructive">
-                  Tracer links are unavailable: {tracerEnableBlockedReason}
-                </p>
+                <div className="mt-2 space-y-1 text-xs">
+                  <p className="text-foreground/90">
+                    Tracer links are off on this setup. They only work when
+                    Boussole is reachable from the internet, because a
+                    recruiter's click has to reach it. On your own computer they
+                    stay off; everything else works.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Details: {tracerEnableBlockedReason}
+                  </p>
+                </div>
               ) : null}
             </div>
           </AccordionContent>

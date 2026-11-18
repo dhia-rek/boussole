@@ -90,6 +90,53 @@ describe("InMemoryJobQueue", () => {
     expect(next.id).not.toBe(first.id);
   });
 
+  it("queues a duplicate behind a job that is already running", async () => {
+    const queue = new InMemoryJobQueue();
+    const payload = (requestedAt: string) => ({
+      tenantId: "tenant-test",
+      jobId: "job-1",
+      reason: "tailoring_updated" as const,
+      requestedAt,
+      requestedBy: "system" as const,
+    });
+    const first = await queue.enqueue(
+      "auto_pdf_regeneration",
+      payload("2026-05-04T10:00:00.000Z"),
+      { dedupeKey: "job-1:auto-pdf" },
+    );
+    expect((await queue.reserveNext("auto_pdf_regeneration"))?.id).toBe(
+      first.id,
+    );
+
+    // New tailoring arrives while the first rebuild renders older content.
+    const second = await queue.enqueue(
+      "auto_pdf_regeneration",
+      payload("2026-05-04T10:00:05.000Z"),
+      { dedupeKey: "job-1:auto-pdf" },
+    );
+    expect(second.deduplicated).toBe(false);
+
+    // A third request while the second still waits is absorbed by it.
+    const third = await queue.enqueue(
+      "auto_pdf_regeneration",
+      payload("2026-05-04T10:00:06.000Z"),
+      { dedupeKey: "job-1:auto-pdf" },
+    );
+    expect(third).toMatchObject({ deduplicated: true, id: second.id });
+
+    // Finishing the first must not erase the waiting second's de-dup entry.
+    await queue.acknowledge(first.id);
+    const fourth = await queue.enqueue(
+      "auto_pdf_regeneration",
+      payload("2026-05-04T10:00:07.000Z"),
+      { dedupeKey: "job-1:auto-pdf" },
+    );
+    expect(fourth).toMatchObject({ deduplicated: true, id: second.id });
+    expect((await queue.reserveNext("auto_pdf_regeneration"))?.id).toBe(
+      second.id,
+    );
+  });
+
   it("does not reserve delayed jobs before they are available", async () => {
     vi.useFakeTimers();
     try {

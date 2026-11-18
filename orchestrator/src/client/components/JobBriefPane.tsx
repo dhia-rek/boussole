@@ -104,8 +104,8 @@ const EstimateLine: React.FC<{ job: Job }> = ({ job }) => {
         </p>
         <p className="text-sm text-muted-foreground">
           Your AI account could not score this job when it was found, so this
-          number only counts generic keywords. Rescore it to get a real match
-          score and explanation.
+          number only counts generic keywords. Recalculate it to get a real
+          match score and explanation.
         </p>
       </div>
       <Button
@@ -118,7 +118,7 @@ const EstimateLine: React.FC<{ job: Job }> = ({ job }) => {
         ) : (
           <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
         )}
-        {isRescoring ? "Scoring…" : "Rescore with AI"}
+        {isRescoring ? "Scoring…" : "Recalculate match"}
       </Button>
     </div>
   );
