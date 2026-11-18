@@ -3,6 +3,7 @@ export * from "./ai-account";
 export * from "./auth";
 export * from "./auth-session";
 export * from "./ghostwriter";
+export * from "./guide";
 export * from "./jobs";
 export * from "./mock-interview";
 export * from "./pipeline";

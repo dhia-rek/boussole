@@ -609,6 +609,18 @@ export const JobPage: React.FC = () => {
           <div ref={sectionContentRef} className="scroll-mt-20 space-y-4">
             {activeMemoryView === "overview" && (
               <section className="space-y-4">
+                {job.status === "discovered" || job.status === "ready" ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+                    <p className="text-sm">
+                      Not sure where to start? Boussole walks you through it:
+                      CV, company, message, send.
+                    </p>
+                    <Button size="sm" asChild>
+                      <Link to={`/apply/${job.id}`}>Apply step by step</Link>
+                    </Button>
+                  </div>
+                ) : null}
+
                 <HowToApplyCard job={job} baseJobPath={baseJobPath} />
 
                 <OverviewGhostwriterComposer
