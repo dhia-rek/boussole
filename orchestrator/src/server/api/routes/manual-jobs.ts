@@ -170,7 +170,7 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
     if (needsFinalUrl(input.url)) {
       const posting = await readJobFromKnownFeed(input.url, {
         signal: controller.signal,
-        finalUrl: response.url,
+        finalUrl: response.finalUrl,
       });
       if (posting) {
         return ok(res, { content: formatJobPosting(posting), url: input.url });
