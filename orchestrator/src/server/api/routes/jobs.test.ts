@@ -1245,6 +1245,54 @@ describe.sequential("Jobs API routes", () => {
     expect(vi.mocked(getProfile)).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the previous score and reports the reason when a rescore fails", async () => {
+    const { createJob, updateJob } = await import("@server/repositories/jobs");
+    const { scoreJobSuitability } = await import("@server/services/scorer");
+    const { getProfile } = await import("@server/services/profile");
+    const { upstreamError } = await import("@infra/errors");
+    const { KEYWORD_ESTIMATE_REASON } = await import("@shared/scoring");
+
+    vi.mocked(getProfile).mockResolvedValue({});
+    vi.mocked(scoreJobSuitability).mockRejectedValue(
+      upstreamError("Your AI account could not score this job: Not logged in"),
+    );
+    const job = await createJob({
+      source: "manual",
+      title: "Estimated Role",
+      employer: "Acme",
+      jobUrl: "https://example.com/job/estimated",
+      jobDescription: "Test description",
+    });
+    await updateJob(job.id, {
+      suitabilityScore: 75,
+      suitabilityReason: KEYWORD_ESTIMATE_REASON,
+    });
+
+    const res = await fetch(`${baseUrl}/api/jobs/${job.id}/rescore`, {
+      method: "POST",
+    });
+    const body = await res.json();
+    expect(res.status).toBe(502);
+    expect(body.error.code).toBe("UPSTREAM_ERROR");
+    expect(body.error.message).toContain("Not logged in");
+    expect(vi.mocked(scoreJobSuitability)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { allowKeywordFallback: false },
+    );
+
+    const after = await fetch(`${baseUrl}/api/jobs/${job.id}`).then((r) =>
+      r.json(),
+    );
+    expect(after.data.suitabilityScore).toBe(75);
+
+    const list = await fetch(`${baseUrl}/api/jobs`).then((r) => r.json());
+    expect(
+      list.data.jobs.find((item: { id: string }) => item.id === job.id)
+        .scoreIsEstimate,
+    ).toBe(true);
+  });
+
   it("streams job action progress with done counters", async () => {
     const { createJob, updateJob } = await import("@server/repositories/jobs");
     const discovered = await createJob({

@@ -414,11 +414,21 @@ const TopMatchesCard: React.FC<{
                   <span
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
-                      scoreTone(score),
+                      job.scoreIsEstimate && score != null
+                        ? "border-dashed border-muted-foreground/50 text-muted-foreground"
+                        : scoreTone(score),
                     )}
-                    title="Match score"
+                    title={
+                      job.scoreIsEstimate && score != null
+                        ? "Keyword estimate, not an AI score"
+                        : "Match score"
+                    }
                   >
-                    {score ?? "–"}
+                    {score == null
+                      ? "–"
+                      : job.scoreIsEstimate
+                        ? `≈${score}`
+                        : score}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
