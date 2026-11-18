@@ -59,6 +59,13 @@ export const queryKeys = {
     notes: (id: string) => [...queryKeys.jobs.all, "notes", id] as const,
     research: (id: string) => [...queryKeys.jobs.all, "research", id] as const,
     cvCheck: (id: string) => [...queryKeys.jobs.all, "cv-check", id] as const,
+    /** Under "jobs" so every job change also refreshes the guide. */
+    guide: () => [...queryKeys.jobs.all, "guide"] as const,
+    guideNextSteps: () =>
+      [...queryKeys.jobs.all, "guide", "next-steps"] as const,
+    guideReview: () => [...queryKeys.jobs.all, "guide", "review"] as const,
+    guideProgress: (id: string) =>
+      [...queryKeys.jobs.all, "guide", "progress", id] as const,
     emails: (id: string, limit: number) =>
       [...queryKeys.jobs.all, "emails", id, { limit }] as const,
   },

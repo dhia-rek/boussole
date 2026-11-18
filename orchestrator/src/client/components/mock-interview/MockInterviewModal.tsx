@@ -147,7 +147,8 @@ export const MockInterviewButton: React.FC<MockInterviewButtonProps> = ({
   );
 };
 
-function MockInterviewRoom({
+/** The interview screen itself (full screen); also used by /interview/:id. */
+export function MockInterviewRoom({
   job,
   onClose,
 }: {

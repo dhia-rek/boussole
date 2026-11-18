@@ -31,6 +31,7 @@ export async function invalidateJobData(
   await queryClient.invalidateQueries({
     queryKey: [...queryKeys.jobs.all, "emails", jobId] as const,
   });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.jobs.guide() });
 }
 
 export async function invalidateSettingsData(

@@ -5,6 +5,7 @@ export * from "./cv-check";
 export * from "./design-resume";
 export * from "./design-resume-print";
 export * from "./extractors";
+export * from "./guide";
 export * from "./jobs";
 export * from "./pipeline";
 export * from "./post-application";
