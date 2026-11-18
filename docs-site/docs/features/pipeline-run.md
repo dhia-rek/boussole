@@ -105,6 +105,14 @@ You can also click **Add a job** in the **Jobs** header at any time, including w
 
 Use it when you already have a specific job description or link and do not want full discovery.
 
+How Boussole reads a link:
+
+1. **Welcome to the Jungle** and **Workable** links: from the sites' public job feeds (title, company, location, contract, remote policy, apply link and full description).
+2. Other career sites: from the job data the page embeds for search engines (schema.org `JobPosting`), which most career sites and hiring tools include.
+3. Otherwise: from the page text.
+
+Your AI account then fills in the import form from what was read; check it before importing. **LinkedIn** links, and sites that block automated reading (for example startup.jobs), show "Paste the job description manually": copy the description from the page into the form.
+
 For accepted input formats, inference behavior, and limits, see [Manual Import Extractor](/docs/extractors/manual).
 
 ## Common problems
