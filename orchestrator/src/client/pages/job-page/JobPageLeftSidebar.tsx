@@ -1,3 +1,4 @@
+import { isKeywordEstimate } from "@shared/scoring";
 import type { Job } from "@shared/types.js";
 import {
   ClipboardList,
@@ -100,18 +101,28 @@ export const getSuitabilityScoreTokens = (score: number | null) => {
 export const ScoreRing: React.FC<{
   score: number | null;
   size?: "sm" | "lg";
-}> = ({ score, size = "lg" }) => {
+  /** A keyword estimate, not an AI score (see @shared/scoring). */
+  estimated?: boolean;
+}> = ({ score, size = "lg", estimated = false }) => {
   const tokens = getSuitabilityScoreTokens(score);
+  const showEstimate = estimated && score != null;
 
   return (
     <div
       role="img"
-      aria-label={tokens.label}
+      aria-label={
+        showEstimate
+          ? `Keyword estimate ${score}, not an AI score`
+          : tokens.label
+      }
+      title={showEstimate ? "Keyword estimate, not an AI score" : undefined}
       className={cn(
         size === "sm"
           ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 p-1"
           : "flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 p-1",
-        tokens.shell,
+        showEstimate
+          ? "border-dashed border-muted-foreground/50 text-muted-foreground"
+          : tokens.shell,
       )}
     >
       <div className="flex h-full w-full flex-col items-center justify-center rounded-full border border-white/5 bg-background/70 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -121,11 +132,11 @@ export const ScoreRing: React.FC<{
             "font-semibold leading-none tabular-nums",
           )}
         >
-          {tokens.value}
+          {showEstimate ? `≈${score}` : tokens.value}
         </div>
         {size === "lg" && (
           <div className="mt-0.5 text-[9px] uppercase tracking-[0.22em] text-current/70">
-            score
+            {showEstimate ? "estimate" : "score"}
           </div>
         )}
       </div>
@@ -154,7 +165,10 @@ export const JobPageLeftSidebar: React.FC<JobPageLeftSidebarProps> = ({
           <div className="text-sm text-muted-foreground">{job.title}</div>
         </div>
         <div className="flex justify-start sm:justify-end">
-          <ScoreRing score={job.suitabilityScore} />
+          <ScoreRing
+            score={job.suitabilityScore}
+            estimated={isKeywordEstimate(job.suitabilityReason)}
+          />
         </div>
       </div>
 

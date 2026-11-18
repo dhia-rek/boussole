@@ -1,6 +1,9 @@
+import { isKeywordEstimate } from "@shared/scoring";
 import type { Job, JobBrief } from "@shared/types.js";
-import { Sparkles } from "lucide-react";
+import { CircleHelp, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import type React from "react";
+import { useRescoreJob } from "@/client/hooks/useRescoreJob";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type JobBriefPaneProps = {
@@ -68,6 +71,8 @@ export const JobBriefPane: React.FC<JobBriefPaneProps> = ({
 
 const FitLine: React.FC<{ job: Job }> = ({ job }) => {
   if (!job.suitabilityReason) return null;
+  if (isKeywordEstimate(job.suitabilityReason))
+    return <EstimateLine job={job} />;
 
   return (
     <div className="flex gap-2 rounded-md border border-primary/15 bg-background/35 p-4 leading-5 text-foreground/85">
@@ -80,6 +85,41 @@ const FitLine: React.FC<{ job: Job }> = ({ job }) => {
         )}
         {job.suitabilityReason}
       </span>
+    </div>
+  );
+};
+
+/** The score is a keyword estimate: say so, and offer a real AI score. */
+const EstimateLine: React.FC<{ job: Job }> = ({ job }) => {
+  const { isRescoring, rescoreJob } = useRescoreJob(() => undefined);
+  return (
+    <div className="flex flex-wrap items-start gap-3 rounded-md border border-dashed border-muted-foreground/40 bg-background/35 p-4 leading-5">
+      <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="font-medium">
+          {job.suitabilityScore != null && (
+            <span className="tabular-nums">≈{job.suitabilityScore}/100: </span>
+          )}
+          Keyword estimate, not an AI score
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Your AI account could not score this job when it was found, so this
+          number only counts generic keywords. Rescore it to get a real match
+          score and explanation.
+        </p>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => void rescoreJob(job.id)}
+        disabled={isRescoring}
+      >
+        {isRescoring ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        {isRescoring ? "Scoring…" : "Rescore with AI"}
+      </Button>
     </div>
   );
 };

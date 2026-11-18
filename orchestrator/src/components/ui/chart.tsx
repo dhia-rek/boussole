@@ -95,10 +95,14 @@ export const ChartTooltipContent = React.forwardRef<
       labelFormatter,
       formatter,
       nameKey,
-      ...props
+      style,
+      id,
     },
     ref,
   ) => {
+    // Recharts clones this element with all of its own tooltip props
+    // (allowEscapeViewBox, isAnimationActive, …). Only real DOM attributes are
+    // forwarded to the <div>; spreading the rest makes React warn.
     const config = useChartConfig() ?? {};
     if (!active || !payload?.length) return null;
     const formattedLabel = labelFormatter
@@ -112,7 +116,8 @@ export const ChartTooltipContent = React.forwardRef<
           "rounded-lg border border-border/60 bg-background px-3 py-2 text-xs shadow-sm",
           className,
         )}
-        {...props}
+        style={style}
+        id={id}
       >
         {formattedLabel ? (
           <div className="mb-2 text-[11px] font-medium text-muted-foreground">

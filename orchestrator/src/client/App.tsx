@@ -25,6 +25,7 @@ import { HomePage } from "./pages/HomePage";
 import { InProgressBoardPage } from "./pages/InProgressBoardPage";
 import { JobPage } from "./pages/JobPage";
 import { LandingPage } from "./pages/LandingPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrchestratorPage } from "./pages/OrchestratorPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -151,6 +152,7 @@ export const App: React.FC = () => {
             <Route path="/tracking-inbox" element={<TrackingInboxPage />} />
             <Route path="/jobs/:tab" element={<OrchestratorPage />} />
             <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
       </CSSTransition>

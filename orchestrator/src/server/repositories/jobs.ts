@@ -5,6 +5,7 @@
 import { randomUUID } from "node:crypto";
 import { detectApplyRoutes } from "@shared/apply-route";
 import { buildLocationEvidence } from "@shared/location-domain.js";
+import { isKeywordEstimate } from "@shared/scoring";
 import type {
   CreateJobInput,
   CreateJobNoteInput,
@@ -142,6 +143,7 @@ export async function getJobListItems(
     outcome: jobs.outcome,
     closedAt: jobs.closedAt,
     suitabilityScore: jobs.suitabilityScore,
+    suitabilityReason: jobs.suitabilityReason,
     pdfPath: jobs.pdfPath,
     pdfSource: jobs.pdfSource,
     pdfRegenerating: jobs.pdfRegenerating,
@@ -180,9 +182,10 @@ export async function getJobListItems(
           .orderBy(desc(jobs.discoveredAt));
 
   const rows = await query;
-  return rows.map((row) => {
+  return rows.map(({ suitabilityReason, ...row }) => {
     return {
       ...row,
+      scoreIsEstimate: isKeywordEstimate(suitabilityReason),
       applyChannel: detectApplyRoutes(row).primary?.channel ?? null,
       source: row.source as JobListItem["source"],
       status: row.status as JobStatus,
