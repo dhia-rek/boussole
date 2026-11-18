@@ -32,7 +32,17 @@ type BoardCard = {
   latestEventAt: number | null;
 };
 
-type BoardStage = Exclude<ApplicationStage, "applied">;
+type BoardStage = ApplicationStage;
+
+/** Days without a reply after which an applied card suggests a follow-up. */
+export const FOLLOW_UP_AFTER_DAYS = 7;
+
+export function daysSince(iso: string | null | undefined, now = Date.now()) {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return null;
+  return Math.max(0, Math.floor((now - at) / 86_400_000));
+}
 
 const sortByRecent = (a: BoardCard, b: BoardCard) => {
   if (a.latestEventAt != null && b.latestEventAt != null) {
@@ -49,12 +59,11 @@ const sortByTitle = (a: BoardCard, b: BoardCard) =>
 const sortByCompany = (a: BoardCard, b: BoardCard) =>
   a.job.employer.localeCompare(b.job.employer);
 
-const BOARD_STAGES = APPLICATION_STAGES.filter(
-  (stage) => stage !== "applied",
-) as BoardStage[];
+// "Applied" comes first: every job you mark applied shows up here right away,
+// and moves on when you log a reply or drag it to the next stage.
+const BOARD_STAGES = [...APPLICATION_STAGES] as BoardStage[];
 
-const toBoardStage = (stage: ApplicationStage): BoardStage =>
-  stage === "applied" ? "recruiter_screen" : stage;
+const toBoardStage = (stage: ApplicationStage): BoardStage => stage;
 
 const getCardLeftAccentClass = (stage: ApplicationStage) => {
   if (stage === "technical_interview") {
@@ -103,7 +112,7 @@ export const InProgressBoardPage: React.FC = () => {
     queryKey: queryKeys.jobs.inProgressBoard(),
     queryFn: async () => {
       const response = await api.getJobs({
-        statuses: ["in_progress"],
+        statuses: ["applied", "in_progress"],
         view: "list",
       });
 
@@ -161,6 +170,7 @@ export const InProgressBoardPage: React.FC = () => {
           : sortByRecent;
 
     const grouped: Record<BoardStage, BoardCard[]> = {
+      applied: [],
       recruiter_screen: [],
       assessment: [],
       hiring_manager_screen: [],
@@ -231,8 +241,8 @@ export const InProgressBoardPage: React.FC = () => {
     <>
       <PageHeader
         icon={Columns3}
-        title="In Progress Board"
-        subtitle="Kanban view of application stages"
+        title="Applications"
+        subtitle="Every application, from applied to offer"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Select
@@ -315,7 +325,9 @@ export const InProgressBoardPage: React.FC = () => {
                     <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5">
                       {laneCards.length === 0 ? (
                         <div className="rounded-md border border-dashed border-border/35 bg-background/20 px-2.5 py-2 text-[11px] text-muted-foreground/80">
-                          Drop a card here or log a stage.
+                          {stage === "applied"
+                            ? "Jobs you mark as applied land here."
+                            : "Drop a card here or log a stage."}
                         </div>
                       ) : (
                         laneCards.map(({ job, latestEventAt, stage }) => (
@@ -366,6 +378,7 @@ export const InProgressBoardPage: React.FC = () => {
                                 ) : null}
                               </div>
                             )}
+                            <AppliedAge job={job} stage={stage} />
                             <div className="mt-2 text-[11px] text-muted-foreground/70">
                               {latestEventAt != null
                                 ? `Updated ${formatTimestamp(latestEventAt)}`
@@ -383,5 +396,30 @@ export const InProgressBoardPage: React.FC = () => {
         )}
       </PageMain>
     </>
+  );
+};
+
+/** "Applied 9 days ago", plus a follow-up nudge when no reply came. */
+const AppliedAge: React.FC<{ job: JobListItem; stage: ApplicationStage }> = ({
+  job,
+  stage,
+}) => {
+  const days = daysSince(job.appliedAt);
+  if (days == null) return null;
+  const age =
+    days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+  const needsFollowUp = stage === "applied" && days >= FOLLOW_UP_AFTER_DAYS;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+      <span className="text-muted-foreground">Applied {age}</span>
+      {needsFollowUp && (
+        <Badge
+          variant="outline"
+          className="border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+        >
+          No reply yet — follow up?
+        </Badge>
+      )}
+    </div>
   );
 };
