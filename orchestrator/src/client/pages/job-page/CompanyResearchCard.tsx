@@ -293,8 +293,22 @@ const ResearchBody: React.FC<{ research: CompanyResearch }> = ({
       )}
 
       {issues.length > 0 && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-          <ListSection title="Check before using" items={issues} />
+        <div
+          className={cn(
+            "rounded-md border p-3",
+            research.verdict === "passed"
+              ? "border-border/60 bg-muted/30"
+              : "border-amber-500/30 bg-amber-500/5",
+          )}
+        >
+          <ListSection
+            title={
+              research.verdict === "passed"
+                ? "Notes from the review"
+                : "Check before using"
+            }
+            items={issues}
+          />
         </div>
       )}
 
