@@ -56,10 +56,25 @@ import { formatDateTime } from "@/lib/utils";
 import * as api from "../api";
 import { EmptyState, PageHeader, PageMain } from "../components";
 import { EmailViewerList } from "./tracking-inbox/EmailViewerList";
+import { ImapConnectForm } from "./tracking-inbox/ImapConnectForm";
 
 const PROVIDER_OPTIONS: PostApplicationProvider[] = [
   ...POST_APPLICATION_PROVIDERS,
 ];
+const PROVIDER_LABELS: Record<PostApplicationProvider, string> = {
+  gmail: "Gmail",
+  imap: "iCloud Mail or other (IMAP)",
+};
+const PROVIDER_STORAGE_KEY = "boussole.trackingInbox.provider";
+
+function readStoredProvider(): PostApplicationProvider {
+  try {
+    const stored = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return PROVIDER_OPTIONS.find((option) => option === stored) ?? "gmail";
+  } catch {
+    return "gmail";
+  }
+}
 const GMAIL_OAUTH_RESULT_TYPE = "gmail-oauth-result";
 const GMAIL_OAUTH_TIMEOUT_MS = 3 * 60 * 1000;
 const EMPTY_INBOX_ITEMS: PostApplicationInboxItem[] = [];
@@ -78,7 +93,15 @@ function formatEpochMs(value?: number | null): string {
 }
 
 export const TrackingInboxPage: React.FC = () => {
-  const [provider, setProvider] = useState<PostApplicationProvider>("gmail");
+  const [provider, setProvider] =
+    useState<PostApplicationProvider>(readStoredProvider);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PROVIDER_STORAGE_KEY, provider);
+    } catch {
+      // Remembering the choice is a convenience only.
+    }
+  }, [provider]);
   const [accountKey, setAccountKey] = useState("default");
   const [maxMessages, setMaxMessages] = useState("100");
   const [searchDays, setSearchDays] = useState("90");
@@ -301,16 +324,8 @@ export const TrackingInboxPage: React.FC = () => {
             provider,
             account_key_is_default: isDefaultAccountKey,
           });
-          if (provider !== "gmail") {
-            trackProductEvent("tracking_inbox_connect_completed", {
-              provider,
-              result: "error",
-            });
-            toast.error(
-              `${provider} connect is not implemented yet. Use Gmail for now.`,
-            );
-            return;
-          }
+          // IMAP mailboxes connect through their own form.
+          if (provider !== "gmail") return;
 
           const oauthStart = await api.postApplicationGmailOauthStart({
             accountKey,
@@ -685,23 +700,33 @@ export const TrackingInboxPage: React.FC = () => {
                   <SelectContent>
                     {PROVIDER_OPTIONS.map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option}
+                        {PROVIDER_LABELS[option]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="accountKey">Account Key</Label>
-                <Input
-                  id="accountKey"
-                  value={accountKey}
-                  onChange={(event) => setAccountKey(event.target.value)}
-                />
-              </div>
             </div>
-            {gmailNotSetUp ? (
+            {provider === "imap" ? (
+              isConnected ? (
+                <p className="text-sm">
+                  Connected to{" "}
+                  <span className="font-medium">
+                    {String(
+                      status?.integration?.credentials?.email ??
+                        status?.integration?.displayName ??
+                        "your mailbox",
+                    )}
+                  </span>
+                  . Sync reads your recent inbox and keeps only job emails.
+                </p>
+              ) : statusQuery.isLoading ? null : (
+                <ImapConnectForm
+                  accountKey={accountKey}
+                  onConnected={() => refresh()}
+                />
+              )
+            ) : gmailNotSetUp ? (
               <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
                 <p className="font-medium">
                   Gmail isn't set up on this Boussole yet
@@ -746,62 +771,76 @@ export const TrackingInboxPage: React.FC = () => {
               </p>
             )}
 
-            <div className="grid gap-3 md:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxMessages">Max Messages</Label>
-                <Input
-                  id="maxMessages"
-                  inputMode="numeric"
-                  value={maxMessages}
-                  onChange={(event) => setMaxMessages(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="searchDays">Search Days</Label>
-                <Input
-                  id="searchDays"
-                  inputMode="numeric"
-                  value={searchDays}
-                  onChange={(event) => setSearchDays(event.target.value)}
-                />
-              </div>
-              <div className="md:col-span-2 flex flex-wrap items-end gap-2">
-                {!isConnected ? (
-                  <Button
-                    onClick={() => void runProviderAction("connect")}
-                    disabled={isActionLoading || gmailNotSetUp}
-                    className="gap-2"
-                  >
-                    <Link2 className="h-4 w-4" />
-                    Connect
-                  </Button>
-                ) : null}
+            <div className="flex flex-wrap items-end gap-2">
+              {!isConnected && provider === "gmail" ? (
                 <Button
-                  onClick={() => void runProviderAction("sync")}
-                  disabled={isActionLoading || !isConnected}
-                  variant="secondary"
+                  onClick={() => void runProviderAction("connect")}
+                  disabled={isActionLoading || gmailNotSetUp}
                   className="gap-2"
                 >
-                  {activeAction === "sync" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  {activeAction === "sync" ? "Syncing..." : "Sync"}
+                  <Link2 className="h-4 w-4" />
+                  Connect
                 </Button>
-                {isConnected ? (
-                  <Button
-                    onClick={() => void runProviderAction("disconnect")}
-                    disabled={isActionLoading}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Unplug className="h-4 w-4" />
-                    Disconnect
-                  </Button>
-                ) : null}
-              </div>
+              ) : null}
+              <Button
+                onClick={() => void runProviderAction("sync")}
+                disabled={isActionLoading || !isConnected}
+                variant="secondary"
+                className="gap-2"
+              >
+                {activeAction === "sync" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {activeAction === "sync" ? "Syncing..." : "Sync"}
+              </Button>
+              {isConnected ? (
+                <Button
+                  onClick={() => void runProviderAction("disconnect")}
+                  disabled={isActionLoading}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Unplug className="h-4 w-4" />
+                  Disconnect
+                </Button>
+              ) : null}
             </div>
+
+            <details className="rounded-md border border-border/50 px-3 py-2 text-sm">
+              <summary className="cursor-pointer text-xs text-muted-foreground">
+                Advanced: how many emails, how far back, account key
+              </summary>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="maxMessages">Max Messages</Label>
+                  <Input
+                    id="maxMessages"
+                    inputMode="numeric"
+                    value={maxMessages}
+                    onChange={(event) => setMaxMessages(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="searchDays">Search Days</Label>
+                  <Input
+                    id="searchDays"
+                    inputMode="numeric"
+                    value={searchDays}
+                    onChange={(event) => setSearchDays(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="accountKey">Account Key</Label>
+                  <Input
+                    id="accountKey"
+                    value={accountKey}
+                    onChange={(event) => setAccountKey(event.target.value)}
+                  />
+                </div>
+              </div>
+            </details>
 
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <Badge variant={status?.connected ? "default" : "outline"}>
