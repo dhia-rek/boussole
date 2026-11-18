@@ -769,6 +769,37 @@ export const cvChecks = sqliteTable(
   }),
 );
 
+/** Spontaneous applications: company, found contacts, email, logged job. */
+export const spontaneousOutreach = sqliteTable(
+  "spontaneous_outreach",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    company: text("company").notNull(),
+    website: text("website"),
+    status: text("status", {
+      enum: ["researching", "ready", "failed"],
+    }).notNull(),
+    summary: text("summary"),
+    factsJson: text("facts_json").notNull().default("[]"),
+    contactsJson: text("contacts_json").notNull().default("[]"),
+    error: text("error"),
+    emailJson: text("email_json"),
+    jobId: text("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => ({
+    tenantUpdatedIndex: index("idx_spontaneous_outreach_tenant_updated").on(
+      table.tenantId,
+      table.updatedAt,
+    ),
+  }),
+);
+
 export const tracerClickEvents = sqliteTable(
   "tracer_click_events",
   {
@@ -931,3 +962,4 @@ export type NewTracerClickEventRow = typeof tracerClickEvents.$inferInsert;
 export type CompanyResearchRow = typeof companyResearch.$inferSelect;
 export type NewCompanyResearchRow = typeof companyResearch.$inferInsert;
 export type CvCheckRow = typeof cvChecks.$inferSelect;
+export type SpontaneousOutreachRow = typeof spontaneousOutreach.$inferSelect;
