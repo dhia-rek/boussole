@@ -1,6 +1,11 @@
 import { requestTimeout } from "@infra/errors";
 import { normalizeWhitespace } from "@shared/utils/string";
 import { convert } from "html-to-text";
+import {
+  EXCLUDE_SUBJECT_TERMS,
+  FROM_TERMS,
+  SUBJECT_TERMS,
+} from "./job-email-filter";
 
 export const GMAIL_HTTP_TIMEOUT_MS = 15_000;
 
@@ -150,60 +155,9 @@ export async function gmailApi<T>(token: string, url: string): Promise<T> {
 }
 
 export function buildGmailQuery(searchDays: number): string {
-  const subjectTerms = [
-    "application",
-    "thank you for applying",
-    "thanks for applying",
-    "application received",
-    "application submitted",
-    "your application",
-    "interview",
-    "assessment",
-    "coding challenge",
-    "take-home",
-    "availability",
-    "offer",
-    "offer letter",
-    "referral",
-    "recruiter",
-    "hiring team",
-    "regret to inform",
-    "not moving forward",
-    "not selected",
-    "application unsuccessful",
-    "moving forward with other candidates",
-    "unable to proceed",
-    "position has been filled",
-    "hiring freeze",
-    "position on hold",
-    "withdrawn",
-  ];
-  const fromTerms = [
-    "careers@",
-    "jobs@",
-    "recruiting@",
-    "talent@",
-    "no-reply@greenhouse.io",
-    "no-reply@us.greenhouse-mail.io",
-    "no-reply@ashbyhq.com",
-    "notification@smartrecruiters.com",
-    "@smartrecruiters.com",
-    "@workablemail.com",
-    "@hire.lever.co",
-    "@myworkday.com",
-    "@workdaymail.com",
-    "@greenhouse.io",
-    "@ashbyhq.com",
-  ];
-  const excludeSubjectTerms = [
-    "newsletter",
-    "webinar",
-    "course",
-    "discount",
-    "event invitation",
-    "job search council",
-    "matched new opportunities",
-  ];
+  const subjectTerms = SUBJECT_TERMS;
+  const fromTerms = FROM_TERMS;
+  const excludeSubjectTerms = EXCLUDE_SUBJECT_TERMS;
 
   const quoteTerm = (value: string) => `"${value.replace(/"/g, '\\"')}"`;
   const subjectBlock = subjectTerms

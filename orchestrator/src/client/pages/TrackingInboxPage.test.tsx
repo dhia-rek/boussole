@@ -21,6 +21,7 @@ vi.mock("../api", () => ({
   postApplicationGmailOauthExchange: vi.fn(),
   postApplicationProviderSync: vi.fn(),
   postApplicationProviderDisconnect: vi.fn(),
+  postApplicationImapConnect: vi.fn(),
 }));
 
 function makeInboxItem() {
@@ -210,6 +211,76 @@ describe("TrackingInboxPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Interview invite")).toBeInTheDocument();
     });
+  });
+
+  it("connects iCloud Mail with an app-specific password", async () => {
+    localStorage.setItem("boussole.trackingInbox.provider", "imap");
+    const disconnected = {
+      provider: "imap",
+      action: "status",
+      accountKey: "default",
+      status: {
+        provider: "imap",
+        accountKey: "default",
+        connected: false,
+        integration: null,
+      },
+    } as never;
+    vi.mocked(api.postApplicationProviderStatus).mockResolvedValue(
+      disconnected,
+    );
+    vi.mocked(api.postApplicationImapConnect).mockRejectedValueOnce(
+      new Error(
+        "The mail server refused the sign-in. Check the email address and use an app-specific password.",
+      ),
+    );
+    vi.mocked(api.postApplicationImapConnect).mockResolvedValueOnce(
+      disconnected,
+    );
+    try {
+      render(
+        <MemoryRouter>
+          <TrackingInboxPage />
+        </MemoryRouter>,
+      );
+
+      expect(
+        await screen.findByText("Connect iCloud Mail"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "account.apple.com" }),
+      ).toHaveAttribute("href", "https://account.apple.com");
+      // iCloud needs no server fields.
+      expect(screen.queryByLabelText("IMAP server")).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByLabelText("Email address"), {
+        target: { value: "me@icloud.com" },
+      });
+      fireEvent.change(screen.getByLabelText("App-specific password"), {
+        target: { value: "abcd-efgh-ijkl-mnop" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "refused the sign-in",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Connect" }));
+      await waitFor(() =>
+        expect(api.postApplicationImapConnect).toHaveBeenLastCalledWith({
+          accountKey: "default",
+          email: "me@icloud.com",
+          appPassword: "abcd-efgh-ijkl-mnop",
+        }),
+      );
+
+      // Another provider: its server is asked for.
+      fireEvent.change(screen.getByLabelText("Email address"), {
+        target: { value: "me@example.org" },
+      });
+      expect(screen.getByLabelText("IMAP server")).toBeInTheDocument();
+    } finally {
+      localStorage.removeItem("boussole.trackingInbox.provider");
+    }
   });
 
   it("explains the Gmail setup and disables Connect when it is missing", async () => {
