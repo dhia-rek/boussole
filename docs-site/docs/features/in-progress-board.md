@@ -1,18 +1,19 @@
 ---
 id: in-progress-board
-title: In Progress Board
-description: Post-application kanban board for tracking fewer, higher-attention jobs through interview and offer stages.
+title: Applications Board
+description: Kanban board of every application, from the moment you apply to interviews, offer or close, with follow-up hints.
 sidebar_position: 3
 ---
 
 ## What it is
 
-The In Progress Board is a kanban view for jobs that have moved beyond initial application.
+The Applications board (sidebar → **Applications**) is a kanban view of every job you applied to.
 
-![In Progress Board kanban lanes](/img/features/in-progress-board.png)
+![Applications board kanban lanes](/img/features/in-progress-board.png)
 
-It groups jobs into post-application lanes:
+It groups jobs into lanes:
 
+- Applied: waiting for a reply. Each card shows how long ago you applied, and after 7 days without a reply it shows **"No reply yet — follow up?"**.
 - Recruiter Screen
 - Assessment
 - Team Match
@@ -26,26 +27,23 @@ It groups jobs into post-application lanes:
 Boussole uses two operational modes:
 
 - **Pre-application tracking** (`Jobs` page): large volume, pipeline and readiness focused.
-- **Post-application tracking** (`In Progress Board`): smaller volume, higher attention per job.
+- **Post-application tracking** (`Applications`): smaller volume, higher attention per job.
 
 Once a job enters the post-application phase, each opportunity usually needs tighter follow-up, interview prep, and deliberate stage management. A kanban board is better for that than a large list.
 
 ## How to use it
 
-1. Open **In Progress Board**.
+1. Open **Applications**.
 2. Review jobs by lane to see current stage distribution.
 3. Drag a card to a new lane to log a stage transition.
 4. Open a card to view full job details and timeline.
 5. Use sorting (Recent / Title / Company) to prioritize review.
 
-### Moving jobs into post-application
+### How jobs get on the board
 
-Jobs typically move into post-application tracking when they receive a response after applying.
-
-This can happen via:
-
-- Tracking Inbox review/automation (recommended)
-- Manual stage transitions in job detail/timeline tools
+- **Mark applied** on a job (from **How to apply** on the job's Overview, or **Mark Applied**). The job appears in **Applied** right away, with the channel you used ("Applied via LinkedIn", "Applied via email · to recrutement@…") on its timeline.
+- When a reply comes in, drag the card to the next lane, or log the step on the job's **Timeline**. Logging a reply or interview on an applied job moves it forward automatically.
+- The Tracking Inbox can move jobs for you when it matches a recruiter email.
 
 ### API examples
 
