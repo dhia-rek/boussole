@@ -75,6 +75,7 @@ import { TooltipWhenDisabled } from "../components/TooltipWhenDisabled";
 import { JobTimeline } from "./job/Timeline";
 import { CompanyResearchCard } from "./job-page/CompanyResearchCard";
 import { CvCheckCard } from "./job-page/CvCheckCard";
+import { HowToApplyCard } from "./job-page/HowToApplyCard";
 import { JobEmailsPanel } from "./job-page/JobEmailsPanel";
 import { JobNotesCard } from "./job-page/JobNotesCard";
 import {
@@ -290,8 +291,8 @@ export const JobPage: React.FC = () => {
     eventId?: string,
   ) => {
     if (!job) return;
-    if (job.status !== "in_progress") {
-      toast.error("Move this job to In Progress to track stages.");
+    if (!canTrackStages) {
+      toast.error("Mark this job as applied to start tracking it.");
       return;
     }
 
@@ -504,7 +505,10 @@ export const JobPage: React.FC = () => {
         : null))
     : null;
   const isClosedStage = currentStage === "closed";
-  const canTrackStages = job?.status === "in_progress";
+  // Logging a reply or interview on an applied job moves it to in progress on
+  // the server, so applied jobs can be tracked straight away.
+  const canTrackStages =
+    job?.status === "applied" || job?.status === "in_progress";
   const canLogEvents = canTrackStages && !isClosedStage;
   const jobLink = job ? job.applicationLink || job.jobUrl : null;
   const isBusy = activeAction !== null;
@@ -585,6 +589,8 @@ export const JobPage: React.FC = () => {
           <div className="space-y-4">
             {activeMemoryView === "overview" && (
               <section className="space-y-4">
+                <HowToApplyCard job={job} baseJobPath={baseJobPath} />
+
                 <OverviewGhostwriterComposer
                   job={job}
                   baseJobPath={baseJobPath}
@@ -887,7 +893,8 @@ export const JobPage: React.FC = () => {
                 <div className="p-4">
                   {!canTrackStages && (
                     <div className="mb-4 rounded-md border border-dashed border-border/60 p-3 text-sm text-muted-foreground">
-                      Move this job to In Progress to track application stages.
+                      Mark this job as applied to start tracking replies and
+                      interviews.
                     </div>
                   )}
                   {canTrackStages && isClosedStage && (

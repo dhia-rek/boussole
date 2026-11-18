@@ -77,6 +77,18 @@ Effects:
 
 This completes the detailed pre-application loop.
 
+## How to apply to a job
+
+Every job's **Overview** starts with **How to apply**. Boussole reads the posting and its links (no AI) and shows the route:
+
+- **By email**: when the posting says so ("send your CV to…", "envoyez votre candidature à…"), with the posting's own sentence. **Open in my mail app** pre-fills the address and subject. **Write the email with Ghostwriter** drafts the message, and **CV to attach** opens your tailored PDF. Addresses meant for something else (disability accommodations, privacy, fraud reports) are never offered as a way to apply.
+- **On the company's application site**: Workday, Greenhouse, Lever, Ashby, SmartRecruiters…
+- **On LinkedIn** (or LinkedIn Easy Apply), or on a job board (Welcome to the Jungle, Indeed…).
+
+In the Jobs list, postings that ask for an email application show an **Apply by email** chip.
+
+After you use one of these buttons, Boussole asks **"Did you apply?"**. Click **Yes, mark applied** and the job moves to **Applications** with the channel and date on its timeline. Use **I already applied** if you applied some other way.
+
 ## What happens next
 
 Once a job is marked `applied`, it becomes part of:

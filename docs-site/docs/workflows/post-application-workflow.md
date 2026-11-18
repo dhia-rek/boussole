@@ -23,7 +23,7 @@ Use this when you want explicit, hands-on control for each job.
 1. Open an `applied` or `in_progress` job.
 2. Record stage progress as events (screening, interview, offer, closed, etc.).
 3. Keep notes/outcomes current as conversations progress.
-4. Use In Progress Board for high-attention jobs in later stages.
+4. Use Applications board for high-attention jobs in later stages.
 
 ### API example (manual stage transition)
 
@@ -141,5 +141,5 @@ curl -X POST "http://localhost:3001/api/post-application/inbox/<messageId>/deny"
 
 - [Find Jobs and Apply Workflow](./find-jobs-and-apply-workflow)
 - [Post-Application Tracking](../features/post-application-tracking)
-- [In Progress Board](../features/in-progress-board)
+- [Applications board](../features/in-progress-board)
 - [Overview](../features/overview)
