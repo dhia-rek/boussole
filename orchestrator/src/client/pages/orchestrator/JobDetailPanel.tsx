@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { parseJobBrief } from "@/client/components/JobBriefPane";
 import { showErrorToast } from "@/client/lib/error-toast";
@@ -582,6 +583,12 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
         job={selectedJob}
         jobCTA={
           <div className="flex min-w-0 flex-wrap justify-end gap-2">
+            {selectedJob.status === "discovered" ||
+            selectedJob.status === "ready" ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/apply/${selectedJob.id}`}>Apply step by step</Link>
+              </Button>
+            ) : null}
             <GhostwriterDrawer
               job={selectedJob}
               triggerLabel="Ask Ghostwriter"

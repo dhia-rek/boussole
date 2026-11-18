@@ -21,13 +21,16 @@ import { setAuthNavigator } from "./lib/auth-navigation";
 import { isPublicPath } from "./lib/public-paths";
 import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
+import { GuidedApplyPage } from "./pages/GuidedApplyPage";
 import { HomePage } from "./pages/HomePage";
 import { InProgressBoardPage } from "./pages/InProgressBoardPage";
+import { InterviewPage } from "./pages/InterviewPage";
 import { JobPage } from "./pages/JobPage";
 import { LandingPage } from "./pages/LandingPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { OrchestratorPage } from "./pages/OrchestratorPage";
+import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./pages/SignInPage";
 import { SpontaneousPage } from "./pages/SpontaneousPage";
@@ -132,6 +135,9 @@ export const App: React.FC = () => {
             <Route path="/" element={<RootRedirect />} />
             <Route path="/welcome" element={<LandingPage />} />
             <Route path="/today" element={<TodayPage />} />
+            <Route path="/review" element={<ReviewPage />} />
+            <Route path="/apply/:id" element={<GuidedApplyPage />} />
+            <Route path="/interview/:id" element={<InterviewPage />} />
             <Route path="/overview" element={<HomePage />} />
             <Route
               path="/oauth/gmail/callback"

@@ -14,6 +14,7 @@ export * from "./types/cv-check";
 export * from "./types/design-resume";
 export * from "./types/design-resume-print";
 export * from "./types/extractors";
+export * from "./types/guide";
 export * from "./types/jobs";
 export * from "./types/location";
 export * from "./types/mock-interview";

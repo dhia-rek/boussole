@@ -9,6 +9,7 @@ import { createApp } from "./app";
 import { isDemoMode } from "./config/demo";
 import { initializeExtractorRegistry } from "./extractors/registry";
 import { deleteExpiredOrRevokedAuthSessions } from "./repositories/auth-sessions";
+import { markInterruptedPipelineRuns } from "./repositories/pipeline";
 import * as settingsRepo from "./repositories/settings";
 import { initializeActivationAnalyticsSafely } from "./services/activation-funnel";
 import { enqueueStaleReadyPdfsForAllWorkspaces } from "./services/auto-pdf-regeneration";
@@ -57,6 +58,20 @@ async function startServer() {
       "Extractor registry initialization failed outside production. Server startup aborted.",
     );
     return;
+  }
+
+  // Before accepting requests: runs left "running" by a restart are dead.
+  try {
+    const interrupted = markInterruptedPipelineRuns();
+    if (interrupted > 0) {
+      logger.info("Marked interrupted pipeline runs as failed", {
+        count: interrupted,
+      });
+    }
+  } catch (error) {
+    logger.warn("Could not mark interrupted pipeline runs", {
+      error: sanitizeUnknown(error),
+    });
   }
 
   const app = createApp();

@@ -1,17 +1,19 @@
 import type {
   AppSettings,
-  JobListItem,
+  GuideNextSteps,
   PipelineRunInsights,
 } from "@shared/types";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "../api";
 import { renderWithQueryClient } from "../test/renderWithQueryClient";
-import { firstNameOf, pickTopMatches, TodayPage } from "./TodayPage";
+import { firstNameOf, TodayPage } from "./TodayPage";
 
 vi.mock("../api", () => ({
-  getJobs: vi.fn(),
+  getGuideNextSteps: vi.fn(),
+  rescoreJob: vi.fn(),
+  logFollowUpSent: vi.fn(),
   getPipelineStatus: vi.fn(),
   getPipelineProgressSnapshot: vi.fn(),
   getPipelineRunInsights: vi.fn(),
@@ -19,43 +21,37 @@ vi.mock("../api", () => ({
   getProfile: vi.fn(),
 }));
 
-const BY_STATUS = {
-  discovered: 254,
-  processing: 0,
-  ready: 3,
-  applied: 4,
-  in_progress: 1,
-  skipped: 10,
-  expired: 0,
+const STEPS: GuideNextSteps = {
+  steps: [
+    {
+      kind: "follow_up",
+      title: "Follow up with Alan",
+      detail: "You applied to Data Engineer 10 days ago, no answer yet.",
+      cta: {
+        label: "Write the follow-up",
+        href: "/job/j1/ghostwriter?prompt=x",
+      },
+      secondary: { label: "I've sent it", action: "log_follow_up" },
+      jobId: "j1",
+    },
+    {
+      kind: "find_jobs",
+      title: "Find new jobs",
+      detail: "Your last search was 5 months ago.",
+      cta: { label: "Search now", href: "/jobs/ready?run=automatic" },
+    },
+    {
+      kind: "recalculate_scores",
+      title: "Recalculate 2 match scores",
+      detail: "These jobs only have a keyword estimate.",
+      cta: {
+        label: "Recalculate now",
+        action: "recalculate",
+        jobIds: ["a", "b"],
+      },
+    },
+  ],
 };
-
-function job(overrides: Partial<JobListItem>): JobListItem {
-  return {
-    id: "job",
-    source: "wttj",
-    title: "Job",
-    employer: "Acme",
-    jobUrl: "https://example.com",
-    status: "ready",
-    suitabilityScore: 50,
-    readyAt: "2026-11-16T10:00:00Z",
-    discoveredAt: "2026-11-16T09:00:00Z",
-    ...overrides,
-  } as JobListItem;
-}
-
-const READY_JOBS = [
-  job({ id: "low", title: "Sales Engineer", suitabilityScore: 41 }),
-  job({
-    id: "top",
-    title: "Data Quality Analyst",
-    employer: "skiils",
-    location: "Lille, France",
-    jobType: "Full-time permanent (CDI)",
-    suitabilityScore: 92,
-  }),
-  job({ id: "mid", title: "AI Engineer", suitabilityScore: 77 }),
-];
 
 const LocationProbe = () => {
   const location = useLocation();
@@ -75,26 +71,9 @@ function renderToday() {
   );
 }
 
-describe("pickTopMatches", () => {
-  it("orders by score, puts unscored jobs last and breaks ties by recency", () => {
-    const picked = pickTopMatches([
-      job({ id: "none", suitabilityScore: null }),
-      job({ id: "old", suitabilityScore: 80, readyAt: "2026-11-01T00:00:00Z" }),
-      job({ id: "new", suitabilityScore: 80, readyAt: "2026-11-10T00:00:00Z" }),
-      job({ id: "best", suitabilityScore: 95 }),
-    ]);
-    expect(picked.map((item) => item.id)).toEqual([
-      "best",
-      "new",
-      "old",
-      "none",
-    ]);
-  });
-});
-
 describe("firstNameOf", () => {
   it("takes the first word of the CV name and ignores the placeholder", () => {
-    expect(firstNameOf("Dhia Rekik")).toBe("Dhia");
+    expect(firstNameOf("Alex Martin")).toBe("Alex");
     expect(firstNameOf("Resume")).toBeNull();
     expect(firstNameOf("  ")).toBeNull();
     expect(firstNameOf(undefined)).toBeNull();
@@ -104,14 +83,16 @@ describe("firstNameOf", () => {
 describe("TodayPage", () => {
   beforeEach(() => {
     vi.mocked(api.getProfile).mockResolvedValue({
-      basics: { name: "Dhia Rekik" },
+      basics: { name: "Alex Martin" },
     } as never);
-    vi.mocked(api.getJobs).mockResolvedValue({
-      jobs: READY_JOBS,
-      total: READY_JOBS.length,
-      byStatus: BY_STATUS,
-      revision: "r1",
-    } as unknown as Awaited<ReturnType<typeof api.getJobs>>);
+    vi.mocked(api.getGuideNextSteps).mockResolvedValue(STEPS);
+    vi.mocked(api.rescoreJob).mockResolvedValue({
+      requested: 2,
+      succeeded: 2,
+      failed: 0,
+      results: [],
+    } as never);
+    vi.mocked(api.logFollowUpSent).mockResolvedValue({} as never);
     vi.mocked(api.getPipelineStatus).mockResolvedValue({
       isRunning: false,
       nextScheduledRun: null,
@@ -145,59 +126,65 @@ describe("TodayPage", () => {
     } as unknown as AppSettings);
   });
 
-  it("shows next actions, the last run with source problems and the best matches", async () => {
+  it("shows one next step first, then a short list, with search details folded away", async () => {
     renderToday();
 
-    expect(await screen.findByText("Data Quality Analyst")).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", {
-        name: /, Dhia\. 3 jobs are ready for you\./,
-      }),
+      await screen.findByRole("heading", { name: /, Alex\./ }),
     ).toBeInTheDocument();
-    const nextActions = screen.getByRole("heading", { name: "Next actions" })
-      .parentElement?.parentElement as HTMLElement;
+    const next = (
+      await screen.findByRole("heading", { name: "Follow up with Alan" })
+    ).closest("section") as HTMLElement;
+    expect(within(next).getByText("Your next step")).toBeInTheDocument();
     expect(
-      within(nextActions).getByRole("link", { name: /New to review.*254/ }),
-    ).toHaveAttribute("href", "/jobs/discovered");
+      within(next).getByRole("link", { name: /Write the follow-up/ }),
+    ).toHaveAttribute("href", "/job/j1/ghostwriter?prompt=x");
 
-    const matches = screen.getAllByRole("link", { name: /Engineer|Analyst/ });
-    expect(matches.map((link) => link.getAttribute("href"))).toEqual([
-      "/jobs/ready/top",
-      "/jobs/ready/mid",
-      "/jobs/ready/low",
-    ]);
+    const after = screen
+      .getByRole("heading", { name: "After that" })
+      .closest("section") as HTMLElement;
+    expect(within(after).getByText("Find new jobs")).toBeInTheDocument();
     expect(
-      screen.getByText("skiils · Lille, France · Full-time permanent (CDI)"),
-    ).toBeInTheDocument();
+      within(after).getByRole("link", { name: /Search now/ }),
+    ).toHaveAttribute("href", "/jobs/ready?run=automatic");
 
+    // The old dashboard is still there, folded under "Search details".
+    const details = screen.getByText("Search details").closest("details");
+    expect(details).not.toHaveAttribute("open");
     expect(
       await screen.findByText("1 source had problems"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("indeed: HTTP 403 from upstream"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Welcome to the Jungle")).toBeInTheDocument();
-
-    expect(
       await screen.findByText(/14 search terms · France/),
     ).toBeInTheDocument();
-    expect(screen.getByText("+2 more")).toBeInTheDocument();
   });
 
-  it("invites a run when nothing is ready", async () => {
-    vi.mocked(api.getJobs).mockResolvedValue({
-      jobs: [],
-      total: 0,
-      byStatus: { ...BY_STATUS, ready: 0 },
-      revision: "r2",
-    });
+  it("logs a sent follow-up and recalculates estimates in place", async () => {
     renderToday();
 
-    expect(
-      await screen.findByText(/No jobs are ready yet/),
-    ).toBeInTheDocument();
-    const runButtons = screen.getAllByRole("button", { name: /run pipeline/i });
-    fireEvent.click(runButtons[runButtons.length - 1] as HTMLElement);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "I've sent it" }),
+    );
+    await waitFor(() => expect(api.logFollowUpSent).toHaveBeenCalledWith("j1"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Recalculate now" }));
+    await waitFor(() =>
+      expect(api.rescoreJob).toHaveBeenCalledWith(["a", "b"]),
+    );
+    // The steps reload so the finished step disappears.
+    await waitFor(() =>
+      expect(
+        vi.mocked(api.getGuideNextSteps).mock.calls.length,
+      ).toBeGreaterThan(2),
+    );
+  });
+
+  it("still lets you start a search from the folded details", async () => {
+    renderToday();
+    fireEvent.click(await screen.findByText("Search details"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /run pipeline/i }),
+    );
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/jobs/ready?run=automatic",
     );
