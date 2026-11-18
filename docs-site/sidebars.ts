@@ -40,6 +40,7 @@ const sidebars: SidebarsConfig = {
         "features/company-research",
         "features/cv-check",
         "features/spontaneous-applications",
+        "features/mock-interview",
         "features/ghostwriter",
         "features/in-progress-board",
         "features/post-application-tracking",

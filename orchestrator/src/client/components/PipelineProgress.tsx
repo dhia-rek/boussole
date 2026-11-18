@@ -5,6 +5,7 @@
 import {
   getPipelineProgressSnapshot,
   prepareChallengeViewer,
+  skipPipelineChallenges,
   solvePipelineChallenge,
 } from "@client/api";
 import {
@@ -15,6 +16,7 @@ import type { PipelineProgressState } from "@shared/types";
 import { Loader2, ShieldAlert } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showErrorToast } from "@/client/lib/error-toast";
 import { subscribeToEventSource } from "@/client/lib/sse";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,6 +78,21 @@ export const PipelineProgress: React.FC<PipelineProgressProps> = ({
     "connecting",
   );
   const [solvingExtractor, setSolvingExtractor] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState(false);
+
+  const handleSkipChallenges = useCallback(async () => {
+    setSkipping(true);
+    try {
+      await skipPipelineChallenges();
+    } catch (err) {
+      showErrorToast(
+        err,
+        "Could not skip. The search continues by itself after 10 minutes.",
+      );
+    } finally {
+      setSkipping(false);
+    }
+  }, []);
 
   const handleSolveChallenge = useCallback(async (extractorId: string) => {
     setSolvingExtractor(extractorId);
@@ -421,6 +438,11 @@ export const PipelineProgress: React.FC<PipelineProgressProps> = ({
             progress.pendingChallenges.length > 0 && (
               <div className="space-y-2">
                 <Separator />
+                <p className="text-xs text-muted-foreground">
+                  A site asks to prove you're human. Solve it in the window that
+                  opens, or skip it: the search then continues without that
+                  site. Otherwise it waits up to 10 minutes.
+                </p>
                 {progress.pendingChallenges.map((challenge) => (
                   <div
                     key={challenge.extractorId}
@@ -450,6 +472,22 @@ export const PipelineProgress: React.FC<PipelineProgressProps> = ({
                     </Button>
                   </div>
                 ))}
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={skipping || solvingExtractor !== null}
+                    onClick={() => void handleSkipChallenges()}
+                  >
+                    {skipping ? (
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    ) : null}
+                    Skip and continue without{" "}
+                    {progress.pendingChallenges.length === 1
+                      ? progress.pendingChallenges[0]?.extractorName
+                      : "these sites"}
+                  </Button>
+                </div>
               </div>
             )}
 

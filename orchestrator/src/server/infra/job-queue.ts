@@ -6,7 +6,8 @@ export type AutoPdfRegenerationReason =
   | "design_resume_updated"
   | "tailoring_updated"
   | "settings_changed"
-  | "manual_refresh";
+  | "manual_refresh"
+  | "startup";
 
 export interface AutoPdfRegenerationJobPayload {
   tenantId: string;

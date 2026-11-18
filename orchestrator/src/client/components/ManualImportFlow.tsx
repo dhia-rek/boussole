@@ -429,9 +429,15 @@ export const ManualImportFlow: React.FC<ManualImportFlowProps> = ({
       setIsImporting(true);
       const payload = toPayload(draft);
       const created = await api.importManualJob({ job: payload });
-      toast.success("Job imported", {
-        description: "The job was tailored and moved to the ready column.",
-      });
+      if (created.alreadyInList) {
+        toast.info("This job is already in your list", {
+          description: "Nothing was changed. It's open for you now.",
+        });
+      } else {
+        toast.success("Job imported", {
+          description: "The job was tailored and moved to the ready column.",
+        });
+      }
       await onImported({
         jobId: created.id,
         source: importSource,

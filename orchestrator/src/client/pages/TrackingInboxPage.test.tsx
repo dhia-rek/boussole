@@ -9,6 +9,7 @@ const render = (ui: Parameters<typeof renderWithQueryClient>[0]) =>
   renderWithQueryClient(ui);
 
 vi.mock("../api", () => ({
+  getGmailOauthConfig: vi.fn(),
   postApplicationProviderStatus: vi.fn(),
   getPostApplicationInbox: vi.fn(),
   getPostApplicationRuns: vi.fn(),
@@ -66,6 +67,11 @@ function makeInboxItem() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  vi.mocked(api.getGmailOauthConfig).mockResolvedValue({
+    configured: true,
+    redirectUri: "http://localhost:3001/oauth/gmail/callback",
+  });
 
   vi.mocked(api.postApplicationProviderStatus).mockResolvedValue({
     provider: "gmail",
@@ -204,6 +210,37 @@ describe("TrackingInboxPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Interview invite")).toBeInTheDocument();
     });
+  });
+
+  it("explains the Gmail setup and disables Connect when it is missing", async () => {
+    vi.mocked(api.getGmailOauthConfig).mockResolvedValue({
+      configured: false,
+      redirectUri: "http://localhost:3001/oauth/gmail/callback",
+    });
+    vi.mocked(api.postApplicationProviderStatus).mockResolvedValue({
+      provider: "gmail",
+      action: "status",
+      accountKey: "default",
+      status: {
+        provider: "gmail",
+        accountKey: "default",
+        connected: false,
+        integration: null,
+      },
+    } as never);
+    render(
+      <MemoryRouter>
+        <TrackingInboxPage />
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText("Gmail isn't set up on this Boussole yet"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("http://localhost:3001/oauth/gmail/callback"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Connect/ })).toBeDisabled();
   });
 
   it("submits approve action", async () => {

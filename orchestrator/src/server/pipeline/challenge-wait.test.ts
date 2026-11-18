@@ -39,4 +39,17 @@ describe("challenge wait", () => {
     await vi.advanceTimersByTimeAsync(1_000);
     await expect(waiting).resolves.toBe(false);
   });
+
+  it("ends the wait immediately when the person skips", async () => {
+    vi.useFakeTimers();
+    let skip: (() => void) | null = null;
+    const waiting = waitForChallengesSolved({
+      timeoutMs: 600_000,
+      register: (_resolve, onSkip) => {
+        skip = onSkip;
+      },
+    });
+    (skip as unknown as () => void)();
+    await expect(waiting).resolves.toBe(false);
+  });
 });

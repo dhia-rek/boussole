@@ -301,3 +301,9 @@ export async function updateUserPassword(input: {
     })
     .where(eq(users.id, input.id));
 }
+
+/** Every workspace id (startup maintenance runs once per workspace). */
+export async function listAllTenantIds(): Promise<string[]> {
+  const rows = await db.select({ id: tenants.id }).from(tenants);
+  return rows.map((row) => row.id);
+}
