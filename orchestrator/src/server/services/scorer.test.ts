@@ -915,3 +915,45 @@ describe("salary penalty", () => {
     });
   });
 });
+
+describe("keyword estimate fallback", () => {
+  beforeEach(() => {
+    getSettingMock.mockResolvedValue(null);
+    getEffectiveSettingsMock.mockResolvedValue({
+      penalizeMissingSalary: { value: false, default: false, override: null },
+      missingSalaryPenalty: { value: 0, default: 0, override: null },
+      scoringInstructions: { value: "", default: "", override: null },
+      scoringPromptTemplate: { value: "", default: "", override: null },
+    } as any);
+    resolveLlmModelMock.mockResolvedValue("opus:medium");
+    callJsonMock.mockResolvedValue({ success: false, error: "Not logged in" });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("labels the pipeline fallback as a keyword estimate", async () => {
+    const { scoreJobSuitability } = await import("./scorer");
+    const { isKeywordEstimate } = await import("@shared/scoring");
+    const result = await scoreJobSuitability(
+      createJob({ id: "job-estimate", title: "Software Engineer" }),
+      {},
+    );
+    expect(isKeywordEstimate(result.reason)).toBe(true);
+  });
+
+  it("fails an explicit rescore instead of storing another estimate", async () => {
+    const { scoreJobSuitability } = await import("./scorer");
+    await expect(
+      scoreJobSuitability(
+        createJob({ id: "job-strict", title: "Software Engineer" }),
+        {},
+        { allowKeywordFallback: false },
+      ),
+    ).rejects.toMatchObject({
+      status: 502,
+      message: expect.stringContaining("Not logged in"),
+    });
+  });
+});

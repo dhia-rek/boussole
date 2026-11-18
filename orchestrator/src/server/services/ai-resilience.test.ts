@@ -1,3 +1,4 @@
+import { isKeywordEstimate } from "@shared/scoring";
 import { createJob } from "@shared/testing/factories";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as settingsRepo from "../repositories/settings";
@@ -64,7 +65,7 @@ describe("AI Service Resilience", () => {
       // Not a transient failure, so it is not retried.
       expect(claude).toHaveBeenCalledOnce();
       expect(typeof result.score).toBe("number");
-      expect(result.reason).toContain("keyword matching");
+      expect(isKeywordEstimate(result.reason)).toBe(true);
     });
 
     it("should handle Claude CLI errors gracefully (fallback)", async () => {
@@ -75,7 +76,7 @@ describe("AI Service Resilience", () => {
       const result = await scoreJobSuitability(mockJob, mockProfile);
 
       expect(result.score).toBeDefined(); // Fallback score
-      expect(result.reason).toContain("keyword matching"); // Fallback reason
+      expect(isKeywordEstimate(result.reason)).toBe(true); // Fallback reason
     });
 
     it("should handle Malformed/Invalid JSON in Claude's answer", async () => {
@@ -87,7 +88,7 @@ describe("AI Service Resilience", () => {
 
       // Parse failures are retried (maxRetries: 2) before falling back.
       expect(claude).toHaveBeenCalledTimes(3);
-      expect(result.reason).toContain("keyword matching"); // Fell back
+      expect(isKeywordEstimate(result.reason)).toBe(true); // Fell back
     });
 
     it("should extract JSON from markdown code blocks", async () => {
