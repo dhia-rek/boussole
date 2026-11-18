@@ -1,6 +1,6 @@
 import type { JobListItem } from "@shared/types.js";
 import { Loader2 } from "lucide-react";
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, type ReactNode, useImperativeHandle } from "react";
 import {
   useVirtualizedList,
   type VirtualListHandle,
@@ -35,6 +35,8 @@ interface JobListPanelProps {
   primaryEmptyStateAction?: EmptyStateAction;
   secondaryEmptyStateAction?: EmptyStateAction;
   emptyStateMessage?: string;
+  /** Shown at the top of the list (for example "12 older postings hidden"). */
+  listNotice?: ReactNode;
 }
 
 const ROW_ESTIMATE = 84;
@@ -54,6 +56,7 @@ export const JobListPanel = forwardRef<VirtualListHandle, JobListPanelProps>(
       primaryEmptyStateAction,
       secondaryEmptyStateAction,
       emptyStateMessage,
+      listNotice,
     },
     ref,
   ) => {
@@ -89,6 +92,7 @@ export const JobListPanel = forwardRef<VirtualListHandle, JobListPanelProps>(
       return (
         <div className="min-w-0 rounded-xl border border-border bg-card shadow-sm">
           <div className="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+            {listNotice}
             <div className="text-base font-semibold">No jobs found</div>
             <p className="max-w-md text-sm text-muted-foreground">
               {emptyStateMessage ?? emptyStateCopy[activeTab]}
@@ -146,6 +150,7 @@ export const JobListPanel = forwardRef<VirtualListHandle, JobListPanelProps>(
               {selectedJobIds.size} selected
             </span>
           </div>
+          {listNotice ? <div className="px-4 py-2">{listNotice}</div> : null}
           <div
             className="relative"
             style={{

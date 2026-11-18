@@ -299,7 +299,9 @@ vi.mock("./orchestrator/JobListPanel", () => ({
         onToggleSelectJob,
         onToggleSelectAll,
         selectedJobId,
+        listNotice,
       }: {
+        listNotice?: React.ReactNode;
         onSelectJob: (id: string) => void;
         onToggleSelectJob: (id: string) => void;
         onToggleSelectAll: (checked: boolean) => void;
@@ -318,6 +320,8 @@ vi.mock("./orchestrator/JobListPanel", () => ({
           <div data-job-id="job-2" />
           <div data-job-id="job-3" />
           <div data-testid="selected-job">{selectedJobId ?? "none"}</div>
+          <div data-testid="active-count">{activeJobs.length}</div>
+          <div data-testid="list-notice">{listNotice}</div>
           <div data-testid="duplicate-count">
             {activeJobs.filter((job) => job.appliedDuplicateMatch).length}
           </div>
@@ -427,6 +431,8 @@ describe("OrchestratorPage", () => {
     _resetKeyboardAvailabilityForTests();
     localStorage.clear();
     localStorage.setItem("has-seen-keyboard-shortcuts", "true");
+    // Fixtures date from 2025: keep them visible unless a test says otherwise.
+    localStorage.setItem("boussole.jobs.showOlderPostings", "true");
     mockDemoMode = false;
     mockIsPipelineRunning = false;
     mockPipelineTerminalEvent = null;
@@ -452,6 +458,47 @@ describe("OrchestratorPage", () => {
       configurable: true,
       value: originalScrollIntoView,
     });
+  });
+
+  it("hides postings found more than 45 days ago until asked", async () => {
+    localStorage.removeItem("boussole.jobs.showOlderPostings");
+    mockJobs = [
+      createJob({
+        id: "old-1",
+        status: "ready",
+        discoveredAt: "2025-01-01T00:00:00Z",
+      }),
+      createJob({
+        id: "fresh-1",
+        status: "ready",
+        discoveredAt: new Date().toISOString(),
+      }),
+    ];
+    window.matchMedia = createMatchMedia(
+      true,
+    ) as unknown as typeof window.matchMedia;
+
+    render(
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
+        <Routes>
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("active-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("list-notice")).toHaveTextContent(
+      "1 posting found more than 45 days ago is hidden: most are closed.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show them" }));
+    expect(screen.getByTestId("active-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("list-notice")).toHaveTextContent(
+      "Showing postings found more than 45 days ago too.",
+    );
+    expect(localStorage.getItem("boussole.jobs.showOlderPostings")).toBe(
+      "true",
+    );
   });
 
   it("syncs tab selection to the URL", () => {

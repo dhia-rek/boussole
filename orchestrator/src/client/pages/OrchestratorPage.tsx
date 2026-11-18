@@ -36,7 +36,10 @@ import {
   getEnabledSources,
   getJobCounts,
   getSourcesWithJobs,
+  isOlderPosting,
 } from "./orchestrator/utils";
+
+const SHOW_OLDER_POSTINGS_KEY = "boussole.jobs.showOlderPostings";
 
 export const OrchestratorPage: React.FC = () => {
   const { tab, jobId } = useParams<{ tab: string; jobId?: string }>();
@@ -169,7 +172,7 @@ export const OrchestratorPage: React.FC = () => {
     isPipelineRunning,
   ]);
 
-  const activeJobs = useFilteredJobs(
+  const tabJobs = useFilteredJobs(
     jobs,
     activeTab,
     dateFilter,
@@ -177,6 +180,34 @@ export const OrchestratorPage: React.FC = () => {
     salaryFilter,
     sort,
   );
+  // Postings found 45+ days ago are mostly closed: hidden from Ready and
+  // Discovered unless asked (remembered on this browser).
+  const [showOlderPostings, setShowOlderPostings] = useState(() => {
+    try {
+      return localStorage.getItem(SHOW_OLDER_POSTINGS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const toggleOlderPostings = useCallback(() => {
+    setShowOlderPostings((current) => {
+      try {
+        localStorage.setItem(SHOW_OLDER_POSTINGS_KEY, String(!current));
+      } catch {
+        // Remembering the choice is a convenience only.
+      }
+      return !current;
+    });
+  }, []);
+  const tabHidesOlder = activeTab === "ready" || activeTab === "discovered";
+  const activeJobs = useMemo(
+    () =>
+      tabHidesOlder && !showOlderPostings
+        ? tabJobs.filter((job) => !isOlderPosting(job))
+        : tabJobs,
+    [tabJobs, tabHidesOlder, showOlderPostings],
+  );
+  const hiddenOlderCount = tabJobs.length - activeJobs.length;
   const setActiveTab = useCallback(
     (newTab: FilterTab) => {
       // Keep selected job if it belongs to the target tab, otherwise clear it.
@@ -206,7 +237,12 @@ export const OrchestratorPage: React.FC = () => {
     return tabDef.statuses.includes(selectedJob.status) ? selectedJob : null;
   }, [selectedJob, activeTab]);
 
-  const counts = useMemo(() => getJobCounts(jobs), [jobs]);
+  const counts = useMemo(() => {
+    const all = getJobCounts(jobs);
+    if (showOlderPostings) return all;
+    const fresh = getJobCounts(jobs.filter((job) => !isOlderPosting(job)));
+    return { ...all, ready: fresh.ready, discovered: fresh.discovered };
+  }, [jobs, showOlderPostings]);
   const displayedCounts = useMemo(() => counts, [counts]);
   const sourcesWithJobs = useMemo(() => getSourcesWithJobs(jobs), [jobs]);
   const {
@@ -486,6 +522,22 @@ export const OrchestratorPage: React.FC = () => {
               primaryEmptyStateAction={primaryEmptyStateAction}
               secondaryEmptyStateAction={secondaryEmptyStateAction}
               emptyStateMessage={emptyStateMessage}
+              listNotice={
+                tabHidesOlder && (hiddenOlderCount > 0 || showOlderPostings) ? (
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    {showOlderPostings
+                      ? "Showing postings found more than 45 days ago too."
+                      : `${hiddenOlderCount} ${hiddenOlderCount === 1 ? "posting" : "postings"} found more than 45 days ago ${hiddenOlderCount === 1 ? "is" : "are"} hidden: most are closed.`}
+                    <button
+                      type="button"
+                      onClick={toggleOlderPostings}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {showOlderPostings ? "Hide them" : "Show them"}
+                    </button>
+                  </p>
+                ) : null
+              }
             />
 
             {/* Inspector panel: visually subordinate to list */}

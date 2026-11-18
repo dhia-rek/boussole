@@ -15,7 +15,7 @@ Interviews for AI, data and automation roles quickly go into specifics ("what ex
 
 ## How to use it
 
-1. Open a job in **Jobs** and click **Mock interview**. When an application reaches an interview stage, **Today** also shows "Prepare your … with …": **Practice now** opens the interview for that job directly.
+1. Open a job in **Jobs** and choose **⋯ → Mock interview** in its panel. When an application reaches an interview stage, **Today** also shows "Prepare your … with …": **Practice now** opens the interview for that job directly.
 2. Choose the round: **HR / Behavioral**, **Technical**, or **Full loop**.
 3. Optionally pick the **Interviewer voice** and click **Preview**. Boussole picks the most natural voice your computer offers for the interview's language and never picks novelty voices (for example macOS "Grandpa"). The interviewer takes the voice's first name (for example **Audrey (Premium)** → Audrey) and plays a role that fits the round: a recruiter for **HR / Behavioral**, a team lead for **Technical**, the hiring manager for **Full loop**. Voices without a first name (for example "Google français") give an interviewer without a name.
 4. Click **Start interview**.

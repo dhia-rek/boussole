@@ -6,6 +6,7 @@
 import { isKeywordEstimate } from "@shared/scoring";
 import {
   type ApplicationStage,
+  FRESH_JOB_DAYS,
   GUIDED_APPLY_STEP_LABELS,
   GUIDED_APPLY_STEPS,
   type GuidedApplyStep,
@@ -19,8 +20,6 @@ export const SEARCH_STALE_DAYS = 7;
 export const FOLLOW_UP_AFTER_DAYS = 7;
 /** After a month without an answer, a follow-up rarely helps. */
 export const FOLLOW_UP_UNTIL_DAYS = 30;
-/** Older postings are mostly closed: never suggest them as a next application. */
-export const FRESH_JOB_DAYS = 45;
 export const GOOD_MATCH_SCORE = 60;
 export const MAX_RECALCULATE = 100;
 /** A started application untouched this long is treated as abandoned. */

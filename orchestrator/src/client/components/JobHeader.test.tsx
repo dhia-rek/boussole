@@ -74,7 +74,7 @@ describe("JobHeader", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows contextual tooltips for discovered, tracer off, and suitability score", () => {
+  it("shows contextual tooltips for discovered and suitability score, and no chip when tracer links are off", () => {
     const jobWithTooltips = {
       ...mockJob,
       tracerLinksEnabled: false,
@@ -87,10 +87,11 @@ describe("JobHeader", () => {
       screen.getByText("Found by the pipeline. Not tailored yet."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.queryByText(
         "Tracer links are turned off for this job, so click tracking will not be recorded.",
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/tracer off/i)).not.toBeInTheDocument();
     expect(
       screen.getByRole("img", { name: "Suitability score 45" }),
     ).toBeInTheDocument();
