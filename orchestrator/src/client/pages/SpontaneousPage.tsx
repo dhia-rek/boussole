@@ -1,624 +1,780 @@
-import { fetchApi } from "@client/api/core";
+import { isRecruitingContact } from "@shared/spontaneous";
+import type {
+  OutreachContact,
+  SpontaneousOutreach,
+  SpontaneousSuggestion,
+} from "@shared/types.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
+  AlertTriangle,
   Building2,
-  Check,
-  ChevronRight,
+  CheckCircle2,
+  CircleHelp,
   Copy,
-  FileText,
+  ExternalLink,
+  FileDown,
   Globe,
-  Languages,
   Loader2,
   Mail,
+  PenLine,
   Search,
   Send,
-  User,
+  UserRound,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
+import * as api from "@/client/api";
+import { useQueryErrorToast } from "@/client/hooks/useQueryErrorToast";
+import { showErrorToast } from "@/client/lib/error-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { PageHeader, PageMain } from "../components";
 
-interface HunterContact {
-  email: string;
-  name: string | null;
-  position: string | null;
-  confidence: number;
+const POLL_MS = 3000;
+/** Longer mailto links get cut by some mail apps; the body is copied instead. */
+const MAX_MAILTO_LENGTH = 1800;
+const historyKey = ["spontaneous", "history"] as const;
+const outreachKey = (id: string) => ["spontaneous", "outreach", id] as const;
+
+function hostOf(url: string | null): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
-interface LookupResult {
-  organization: string;
-  domain: string;
-  pattern: string | null;
-  emails: HunterContact[];
+function Step({
+  n,
+  title,
+  done,
+  children,
+}: {
+  n: number;
+  title: string;
+  done?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-xl border border-border/60 bg-card/40 p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold">
+        <span
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+            done
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+              : "bg-primary/15 text-primary",
+          )}
+        >
+          {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : n}
+        </span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
 }
 
-interface GeneratedEmail {
-  subject: string;
-  body: string;
-}
-
-type StepState = "done" | "active" | "upcoming";
-
-function StepBadge({ n, state }: { n: number; state: StepState }) {
-  if (state === "done") {
+function CheckLabel({ contact }: { contact: OutreachContact }) {
+  if (contact.origin === "hunter") {
     return (
-      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-        <Check className="h-3.5 w-3.5" />
-      </div>
+      <span className="text-xs text-muted-foreground">
+        Hunter.io estimate
+        {contact.confidence != null ? ` · ${contact.confidence}% sure` : ""} ·
+        not checked
+      </span>
+    );
+  }
+  if (contact.check === "verified") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300">
+        <CheckCircle2 className="h-3 w-3" />
+        {contact.kind === "email"
+          ? `Found on ${hostOf(contact.sourceUrl)}`
+          : "Page checked"}
+      </span>
+    );
+  }
+  if (contact.check === "not_checked") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <CircleHelp className="h-3 w-3" />
+        LinkedIn can't be checked automatically
+      </span>
     );
   }
   return (
-    <div
-      className={cn(
-        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
-        state === "active"
-          ? "bg-primary-500/20 text-primary-400"
-          : "bg-muted/40 text-muted-foreground",
-      )}
-    >
-      {n}
-    </div>
-  );
-}
-
-function InlineError({ message }: { message: string }) {
-  return (
-    <div
-      role="alert"
-      className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
-    >
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{message}</span>
-    </div>
-  );
-}
-
-function ConfidenceBadge({ score }: { score: number }) {
-  const cls =
-    score >= 80
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-      : score >= 60
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-        : "border-orange-500/30 bg-orange-500/10 text-orange-300";
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-        cls,
-      )}
-    >
-      {score}%
+    <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
+      <AlertTriangle className="h-3 w-3" />
+      Source page could not be read
     </span>
   );
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleCopy}
-      className="h-7 px-2 text-xs gap-1"
-    >
-      {copied ? (
-        <Check className="h-3 w-3 text-emerald-400" />
-      ) : (
-        <Copy className="h-3 w-3" />
-      )}
-      {copied ? "Copied" : (label ?? "Copy")}
-    </Button>
-  );
+function ContactIcon({ contact }: { contact: OutreachContact }) {
+  const className = "mt-0.5 h-4 w-4 shrink-0 text-muted-foreground";
+  if (contact.kind === "email") return <Mail className={className} />;
+  if (contact.kind === "linkedin_person") {
+    return <UserRound className={className} />;
+  }
+  if (contact.kind === "application_form") {
+    return <Building2 className={className} />;
+  }
+  return <Globe className={className} />;
 }
 
-export function SpontaneousPage() {
-  const [domain, setDomain] = useState("");
-  const [isLooking, setIsLooking] = useState(false);
-  const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [selectedEmail, setSelectedEmail] = useState<HunterContact | null>(
-    null,
-  );
-  const [targetRole, setTargetRole] = useState("");
-  const [language, setLanguage] = useState<"en" | "fr">("en");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(
-    null,
-  );
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  const [editedSubject, setEditedSubject] = useState("");
-  const [editedBody, setEditedBody] = useState("");
+const KIND_LABELS: Record<OutreachContact["kind"], string> = {
+  email: "Email",
+  application_form: "Application form",
+  careers_page: "Careers page",
+  linkedin_person: "On LinkedIn",
+};
 
-  const step2Ref = useRef<HTMLDivElement>(null);
+async function downloadCv(language: "fr" | "en") {
+  const generated = await api.generateDesignResumePdf(language);
+  const blob = await api.getDesignResumePdfBlob(generated.pdfUrl);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `CV-${language.toUpperCase()}.pdf`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
 
-  // Keep the editable draft in sync with each fresh generation / regeneration.
-  useEffect(() => {
-    if (generatedEmail) {
-      setEditedSubject(generatedEmail.subject);
-      setEditedBody(generatedEmail.body);
-    }
-  }, [generatedEmail]);
+export const SpontaneousPage: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const activeId = params.get("id");
+  const [company, setCompany] = React.useState("");
+  const [website, setWebsite] = React.useState("");
 
-  // Progressive disclosure: pull the user to the recipient list after a hit.
-  useEffect(() => {
-    if (lookupResult && step2Ref.current) {
-      step2Ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [lookupResult]);
+  const suggestionsQuery = useQuery({
+    queryKey: ["spontaneous", "suggestions"],
+    queryFn: api.getSpontaneousSuggestions,
+  });
+  const historyQuery = useQuery({
+    queryKey: historyKey,
+    queryFn: api.getSpontaneousHistory,
+  });
+  const outreachQuery = useQuery({
+    queryKey: outreachKey(activeId ?? ""),
+    queryFn: () => api.getSpontaneousOutreach(activeId ?? ""),
+    enabled: Boolean(activeId),
+    refetchInterval: (query) =>
+      query.state.data?.status === "researching" ? POLL_MS : false,
+  });
+  useQueryErrorToast(outreachQuery.error, "Could not load this application.");
 
-  const wordCount = editedBody.trim()
-    ? editedBody.trim().split(/\s+/).length
-    : 0;
-  const overWordLimit = wordCount > 250;
+  const outreach = outreachQuery.data ?? null;
+  const startMutation = useMutation({
+    mutationFn: api.startSpontaneousOutreach,
+    onSuccess: (created) => {
+      queryClient.setQueryData(outreachKey(created.id), created);
+      void queryClient.invalidateQueries({ queryKey: historyKey });
+      setParams({ id: created.id });
+    },
+    onError: (error) => showErrorToast(error, "Could not start the search."),
+  });
 
-  const step1State: StepState = lookupResult ? "done" : "active";
-  const step2State: StepState = !lookupResult ? "upcoming" : "done";
-  const step3State: StepState = !lookupResult
-    ? "upcoming"
-    : generatedEmail
-      ? "done"
-      : "active";
-
-  const handleLookup = async () => {
-    const trimmed = domain.trim();
-    if (!trimmed) return;
-    setIsLooking(true);
-    setLookupError(null);
-    setLookupResult(null);
-    setSelectedEmail(null);
-    setGeneratedEmail(null);
-    setGenerateError(null);
-    try {
-      const result = await fetchApi<LookupResult>("/spontaneous/lookup", {
-        method: "POST",
-        body: JSON.stringify({ domain: trimmed }),
-      });
-      setLookupResult(result);
-    } catch (err) {
-      setLookupError(err instanceof Error ? err.message : "Lookup failed");
-    } finally {
-      setIsLooking(false);
-    }
-  };
-
-  const handleGenerate = async () => {
-    if (!lookupResult) return;
-    setIsGenerating(true);
-    setGenerateError(null);
-    setGeneratedEmail(null);
-    try {
-      const result = await fetchApi<GeneratedEmail>(
-        "/spontaneous/generate-email",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            company: lookupResult.organization,
-            recipientName: selectedEmail?.name ?? undefined,
-            recipientPosition: selectedEmail?.position ?? undefined,
-            targetRole: targetRole.trim() || undefined,
-            language,
-          }),
-        },
-      );
-      setGeneratedEmail(result);
-    } catch (err) {
-      setGenerateError(
-        err instanceof Error ? err.message : "Email generation failed",
-      );
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleReset = () => {
-    setDomain("");
-    setLookupResult(null);
-    setLookupError(null);
-    setSelectedEmail(null);
-    setGeneratedEmail(null);
-    setGenerateError(null);
-    setTargetRole("");
+  const start = (input: { company: string; website?: string | null }) => {
+    if (!input.company.trim()) return;
+    startMutation.mutate(input);
   };
 
   return (
     <>
       <PageHeader
         icon={Send}
-        title="Spontaneous Applications"
-        subtitle="Find HR contacts and generate personalized cold emails"
+        title="Spontaneous applications"
+        subtitle="Write to a company that hasn't posted the job you want"
       />
-
-      <PageMain>
-        <div className="max-w-3xl space-y-6">
-          {/* Step 1 — Domain search */}
-          <section className="rounded-xl border border-border/60 bg-card/40 p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <StepBadge n={1} state={step1State} />
-              <h2 className="text-sm font-semibold text-foreground">
-                Find HR contacts
-              </h2>
-            </div>
-
-            {lookupResult ? (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
-                <div className="flex min-w-0 items-center gap-2 text-sm">
-                  <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-muted-foreground">Searched</span>
-                  <span className="truncate font-medium text-foreground">
-                    {lookupResult.domain}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleReset}
-                  className="shrink-0"
-                >
-                  Change
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <label htmlFor="spontaneous-domain" className="sr-only">
-                      Company domain
-                    </label>
-                    <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="spontaneous-domain"
-                      placeholder="company.com or https://company.com"
-                      value={domain}
-                      onChange={(e) => {
-                        setDomain(e.target.value);
-                        if (lookupError) setLookupError(null);
-                      }}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && !isLooking && handleLookup()
-                      }
-                      className="w-full pl-10"
-                      disabled={isLooking}
-                      autoFocus
-                    />
-                  </div>
-                  <Button
-                    onClick={handleLookup}
-                    disabled={isLooking || !domain.trim()}
-                    className="w-full sm:w-auto"
-                  >
-                    {isLooking ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                    {isLooking ? "Searching…" : "Search"}
-                  </Button>
-                </div>
-
-                {lookupError && <InlineError message={lookupError} />}
-
-                <p className="text-xs text-muted-foreground">
-                  Powered by Hunter.io — requires a Hunter.io API key in
-                  Settings.
-                </p>
-              </>
-            )}
-          </section>
-
-          {/* Step 2 — Recipient list */}
-          {lookupResult && (
-            <section
-              ref={step2Ref}
-              className="rounded-xl border border-border/60 bg-card/40 p-5 space-y-4"
+      <PageMain className="max-w-3xl space-y-4">
+        <Step n={1} title="Pick a company" done={Boolean(outreach)}>
+          <form
+            className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              start({ company, website: website || null });
+            }}
+          >
+            <Input
+              aria-label="Company name"
+              placeholder="Company, e.g. Qonto"
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+            />
+            <Input
+              aria-label="Company website (optional)"
+              placeholder="Website (optional)"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+            />
+            <Button
+              type="submit"
+              disabled={!company.trim() || startMutation.isPending}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <StepBadge n={2} state={step2State} />
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Select a recipient
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span className="font-medium text-foreground">
-                    {lookupResult.organization}
-                  </span>
-                  {lookupResult.pattern && (
-                    <span className="opacity-60">· {lookupResult.pattern}</span>
-                  )}
-                </div>
-              </div>
-
-              {lookupResult.emails.length === 0 ? (
-                <div className="rounded-lg border border-border/40 bg-muted/20 p-6 text-center">
-                  <Mail className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium text-foreground">
-                    No emails found
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Hunter.io found no publicly listed emails for this domain.
-                    You can still generate a generic email below.
-                  </p>
-                </div>
+              {startMutation.isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
-                <div className="space-y-2">
-                  {/* Generic HR option */}
+                <Search className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Find contacts
+            </Button>
+          </form>
+          <Suggestions
+            items={suggestionsQuery.data ?? []}
+            onPick={(item) => {
+              setCompany(item.company);
+              setWebsite(item.website ?? "");
+              start({ company: item.company, website: item.website });
+            }}
+          />
+          <History
+            items={historyQuery.data ?? []}
+            activeId={activeId}
+            onOpen={(id) => setParams({ id })}
+          />
+        </Step>
+
+        {outreach && (
+          <ContactsAndEmail
+            key={outreach.id}
+            outreach={outreach}
+            onSearchAgain={() =>
+              start({ company: outreach.company, website: outreach.website })
+            }
+          />
+        )}
+      </PageMain>
+    </>
+  );
+};
+
+function Suggestions({
+  items,
+  onPick,
+}: {
+  items: SpontaneousSuggestion[];
+  onPick: (item: SpontaneousSuggestion) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Not sure where to start? Companies from your jobs that you haven't
+        applied to yet:
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <button
+            key={item.company}
+            type="button"
+            onClick={() => onPick(item)}
+            className="rounded-full border border-border/60 bg-background/40 px-3 py-1 text-xs hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="font-medium">{item.company}</span>
+            <span className="ml-1.5 text-muted-foreground">
+              {item.jobCount} job{item.jobCount === 1 ? "" : "s"}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function historyStatus(item: SpontaneousOutreach): string {
+  if (item.jobId) return "Sent · on your board";
+  if (item.status === "researching") return "Searching…";
+  if (item.status === "failed") return "Search failed";
+  if (item.email) return "Email written";
+  return "Contacts found";
+}
+
+function History({
+  items,
+  activeId,
+  onOpen,
+}: {
+  items: SpontaneousOutreach[];
+  activeId: string | null;
+  onOpen: (id: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <details className="text-sm" open={!activeId}>
+      <summary className="cursor-pointer text-xs text-muted-foreground">
+        Your spontaneous applications ({items.length})
+      </summary>
+      <ul className="mt-2 divide-y divide-border/40">
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              onClick={() => onOpen(item.id)}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 px-1 py-2 text-left hover:bg-muted/40",
+                item.id === activeId && "font-semibold",
+              )}
+            >
+              <span className="truncate">{item.company}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {historyStatus(item)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function ContactsAndEmail({
+  outreach,
+  onSearchAgain,
+}: {
+  outreach: SpontaneousOutreach;
+  onSearchAgain: () => void;
+}) {
+  const queryClient = useQueryClient();
+  // "Send to" offers recruiting addresses only; founders, executives and
+  // other teams are listed apart and never picked by default.
+  const emails = outreach.contacts.filter(isRecruitingContact);
+  const otherEmails = outreach.contacts.filter(
+    (c) => c.kind === "email" && !isRecruitingContact(c),
+  );
+  const pages = outreach.contacts.filter(
+    (c) => c.kind === "application_form" || c.kind === "careers_page",
+  );
+  const people = outreach.contacts.filter((c) => c.kind === "linkedin_person");
+  const [recipient, setRecipient] = React.useState<OutreachContact | null>(
+    () =>
+      outreach.contacts.find(
+        (c) => c.kind === "email" && c.value === outreach.email?.recipient,
+      ) ??
+      emails[0] ??
+      null,
+  );
+  // Contacts arrive after the page first renders (the search runs in the
+  // background): pick the best address once they do, unless one is chosen.
+  const firstEmail = emails[0] ?? null;
+  React.useEffect(() => {
+    if (!recipient && firstEmail) setRecipient(firstEmail);
+  }, [recipient, firstEmail]);
+  const [targetRole, setTargetRole] = React.useState(
+    outreach.email?.targetRole ?? "",
+  );
+  const [language, setLanguage] = React.useState<"fr" | "en">(
+    outreach.email?.language ?? "fr",
+  );
+  const [subject, setSubject] = React.useState(outreach.email?.subject ?? "");
+  const [body, setBody] = React.useState(outreach.email?.body ?? "");
+  const [askSent, setAskSent] = React.useState(false);
+
+  const setOutreach = (next: SpontaneousOutreach) => {
+    queryClient.setQueryData(outreachKey(next.id), next);
+    void queryClient.invalidateQueries({ queryKey: historyKey });
+  };
+
+  const writeMutation = useMutation({
+    mutationFn: () =>
+      api.writeSpontaneousEmail(outreach.id, {
+        recipient: recipient?.value ?? null,
+        recipientName: recipient?.name ?? null,
+        targetRole: targetRole.trim() || null,
+        language,
+      }),
+    onSuccess: (next) => {
+      setOutreach(next);
+      setSubject(next.email?.subject ?? "");
+      setBody(next.email?.body ?? "");
+    },
+    onError: (error) => showErrorToast(error, "Could not write the email."),
+  });
+
+  const sentMutation = useMutation({
+    mutationFn: () =>
+      api.logSpontaneousSent(outreach.id, {
+        recipient: recipient?.value ?? null,
+        subject,
+        body,
+      }),
+    onSuccess: (next) => {
+      setOutreach(next);
+      setAskSent(false);
+      toast.success("Logged: it's on your Applications board.");
+      void queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+    onError: (error) => showErrorToast(error, "Could not log it."),
+  });
+
+  if (outreach.status === "researching") {
+    return (
+      <Step n={2} title={`Who to write to at ${outreach.company}`}>
+        <output className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Searching the web for recruiting addresses, forms and recruiters, then
+          checking every source. This usually takes 1 to 3 minutes.
+        </output>
+      </Step>
+    );
+  }
+
+  if (outreach.status === "failed") {
+    return (
+      <Step n={2} title={`Who to write to at ${outreach.company}`}>
+        <p className="flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          {outreach.error ?? "The search failed."}
+        </p>
+        <Button size="sm" onClick={onSearchAgain}>
+          Search again
+        </Button>
+      </Step>
+    );
+  }
+
+  const mailtoFull = `mailto:${recipient?.value ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailtoShort = `mailto:${recipient?.value ?? ""}?subject=${encodeURIComponent(subject)}`;
+  const mailtoTooLong = mailtoFull.length > MAX_MAILTO_LENGTH;
+  const verifiedFacts = outreach.facts.filter((f) => f.check === "verified");
+
+  return (
+    <>
+      <Step
+        n={2}
+        title={`Who to write to at ${outreach.company}`}
+        done={Boolean(outreach.email)}
+      >
+        {outreach.summary && (
+          <p className="rounded-lg bg-muted/50 p-3 text-sm leading-6">
+            {outreach.summary}
+          </p>
+        )}
+        {emails.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No recruiting address was found. Best next step: apply through the
+            application form or careers page below, or message one of the
+            recruiters on LinkedIn. You can still write the email here and paste
+            it into the form or the LinkedIn message.
+          </p>
+        )}
+        {emails.length > 0 && (
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Send to
+            </legend>
+            {emails.map((contact) => (
+              <label
+                key={contact.value}
+                className={cn(
+                  "flex cursor-pointer gap-3 rounded-lg border p-3",
+                  recipient?.value === contact.value
+                    ? "border-primary/60 bg-primary/5"
+                    : "border-border/50",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="recipient"
+                  className="mt-1"
+                  checked={recipient?.value === contact.value}
+                  onChange={() => setRecipient(contact)}
+                />
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="break-all text-sm font-medium">
+                    {contact.value}
+                  </p>
+                  {(contact.name || contact.title) && (
+                    <p className="text-xs text-muted-foreground">
+                      {[contact.name, contact.title]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-x-2">
+                    <CheckLabel contact={contact} />
+                    {contact.sourceUrl && (
+                      <a
+                        href={contact.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        source <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </label>
+            ))}
+          </fieldset>
+        )}
+        {[...pages, ...people].length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Other ways in
+            </p>
+            <ul className="space-y-2">
+              {[...pages, ...people].map((contact) => (
+                <li key={contact.value} className="flex gap-3 text-sm">
+                  <ContactIcon contact={contact} />
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={contact.value}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                    >
+                      {contact.kind === "linkedin_person"
+                        ? contact.name || "LinkedIn profile"
+                        : KIND_LABELS[contact.kind]}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <p className="text-xs text-muted-foreground">
+                      {contact.kind === "linkedin_person"
+                        ? contact.title || "Recruiting"
+                        : hostOf(contact.value)}
+                    </p>
+                    <CheckLabel contact={contact} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {otherEmails.length > 0 && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-xs text-muted-foreground">
+              Other addresses (not in recruiting): {otherEmails.length}
+            </summary>
+            <ul className="mt-2 space-y-1.5">
+              {otherEmails.map((contact) => (
+                <li
+                  key={contact.value}
+                  className="flex flex-wrap items-center gap-x-2 text-xs"
+                >
                   <button
                     type="button"
-                    onClick={() => setSelectedEmail(null)}
+                    onClick={() => setRecipient(contact)}
                     className={cn(
-                      "w-full rounded-lg border px-4 py-3 text-left transition-colors",
-                      selectedEmail === null
-                        ? "border-primary-500/50 bg-primary-500/10"
-                        : "border-border/60 bg-muted/10 hover:bg-muted/30",
+                      "break-all font-medium underline-offset-2 hover:underline",
+                      recipient?.value === contact.value && "text-primary",
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          HR / Recruitment team
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Generic — no specific recipient
-                        </p>
-                      </div>
-                      {selectedEmail === null && (
-                        <Check className="h-4 w-4 text-primary-400 shrink-0" />
-                      )}
-                    </div>
+                    {contact.value}
                   </button>
-
-                  {lookupResult.emails.map((contact) => (
-                    <button
-                      key={contact.email}
-                      type="button"
-                      onClick={() => setSelectedEmail(contact)}
-                      className={cn(
-                        "w-full rounded-lg border px-4 py-3 text-left transition-colors",
-                        selectedEmail?.email === contact.email
-                          ? "border-primary-500/50 bg-primary-500/10"
-                          : "border-border/60 bg-muted/10 hover:bg-muted/30",
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {contact.name ?? contact.email}
-                            </span>
-                            <ConfidenceBadge score={contact.confidence} />
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                            <span className="truncate">{contact.email}</span>
-                            {contact.position && (
-                              <>
-                                <span>·</span>
-                                <span className="truncate">
-                                  {contact.position}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Step 3 — Generate email */}
-          {lookupResult && (
-            <section className="rounded-xl border border-border/60 bg-card/40 p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <StepBadge n={3} state={step3State} />
-                <h2 className="text-sm font-semibold text-foreground">
-                  Generate cold email
-                </h2>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="spontaneous-target-role"
-                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  <span className="text-muted-foreground">
+                    {[contact.name, contact.title].filter(Boolean).join(" · ")}
+                  </span>
+                  <CheckLabel contact={contact} />
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        {verifiedFacts.length > 0 && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-xs text-muted-foreground">
+              {verifiedFacts.length} verified facts the email may use
+            </summary>
+            <ul className="mt-2 space-y-1">
+              {verifiedFacts.map((fact) => (
+                <li key={fact.claim} className="text-xs">
+                  {fact.claim}{" "}
+                  <a
+                    href={fact.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground underline-offset-2 hover:underline"
                   >
-                    Target role (optional)
-                  </label>
-                  <Input
-                    id="spontaneous-target-role"
-                    placeholder="e.g. Software Engineer, Data Analyst"
-                    value={targetRole}
-                    onChange={(e) => setTargetRole(e.target.value)}
-                    disabled={isGenerating}
-                  />
-                </div>
+                    ({hostOf(fact.sourceUrl)})
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </Step>
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="spontaneous-language"
-                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >
-                    Language
-                  </label>
-                  <Select
-                    value={language}
-                    onValueChange={(v) => setLanguage(v as "en" | "fr")}
-                    disabled={isGenerating}
-                  >
-                    <SelectTrigger
-                      id="spontaneous-language"
-                      aria-label="Language"
-                    >
-                      <Languages className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="w-full sm:w-auto"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" />
-                      Generate email
-                    </>
-                  )}
-                </Button>
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" />
-                  Generated from your saved profile
-                </span>
-              </div>
-
-              {generateError && <InlineError message={generateError} />}
-
-              {/* Generated result — editable before sending */}
-              {generatedEmail && (
-                <div className="mt-2 space-y-3 rounded-xl border border-border/60 bg-background/60 p-4">
-                  {/* Subject */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="spontaneous-subject"
-                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        Subject
-                      </label>
-                      <CopyButton text={editedSubject} />
-                    </div>
-                    <Input
-                      id="spontaneous-subject"
-                      value={editedSubject}
-                      onChange={(e) => setEditedSubject(e.target.value)}
-                      className="text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="h-px bg-border/40" />
-
-                  {/* Body */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="spontaneous-body"
-                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        Body
-                      </label>
-                      <div className="flex gap-1">
-                        <CopyButton text={editedBody} />
-                        <CopyButton
-                          text={`Subject: ${editedSubject}\n\n${editedBody}`}
-                          label="Copy all"
-                        />
-                      </div>
-                    </div>
-                    <Textarea
-                      id="spontaneous-body"
-                      value={editedBody}
-                      onChange={(e) => setEditedBody(e.target.value)}
-                      rows={12}
-                      className="text-sm leading-relaxed"
-                    />
-                    <div className="flex justify-end">
-                      <span
-                        className={cn(
-                          "text-xs",
-                          overWordLimit
-                            ? "font-medium text-amber-400"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {wordCount} / 250 words
-                        {overWordLimit && " — consider trimming"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {selectedEmail && (
-                    <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span>
-                        Send to:{" "}
-                        <span className="text-foreground font-medium">
-                          {selectedEmail.email}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigator.clipboard.writeText(selectedEmail.email)
-                        }
-                        className="hover:text-foreground transition-colors"
-                        title="Copy email address"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 flex-wrap pt-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {language === "fr" ? "Français" : "English"}
-                    </Badge>
-                    {targetRole && (
-                      <Badge variant="secondary" className="text-xs">
-                        {targetRole}
-                      </Badge>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerate}
-                      className="h-6 px-2 text-xs ml-auto"
-                      disabled={isGenerating}
-                    >
-                      Regenerate
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
+      <Step n={3} title="Write the email" done={Boolean(outreach.jobId)}>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <Input
+            aria-label="Role you're after (optional)"
+            placeholder="Role you're after (optional), e.g. Data Engineer"
+            value={targetRole}
+            onChange={(event) => setTargetRole(event.target.value)}
+          />
+          <fieldset className="flex rounded-md border border-border/60 p-0.5">
+            <legend className="sr-only">Language</legend>
+            {(["fr", "en"] as const).map((value) => (
+              <label
+                key={value}
+                className={cn(
+                  "flex cursor-pointer items-center rounded px-3 text-xs font-medium focus-within:ring-2 focus-within:ring-primary",
+                  language === value
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="email-language"
+                  value={value}
+                  checked={language === value}
+                  onChange={() => setLanguage(value)}
+                  className="sr-only"
+                />
+                {value === "fr" ? "Français" : "English"}
+              </label>
+            ))}
+          </fieldset>
+          <Button
+            onClick={() => writeMutation.mutate()}
+            disabled={writeMutation.isPending || Boolean(outreach.jobId)}
+          >
+            {writeMutation.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <PenLine className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {outreach.email ? "Rewrite" : "Write it"}
+          </Button>
         </div>
-      </PageMain>
+        <p className="text-xs text-muted-foreground">
+          Written from your {language === "fr" ? "French" : "English"} CV and
+          the verified facts only.
+        </p>
+        {outreach.email && (
+          <div className="space-y-2">
+            <Input
+              aria-label="Subject"
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+            />
+            <Textarea
+              aria-label="Email"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              className="min-h-[16rem] text-sm leading-6"
+            />
+            {outreach.email.unsupportedTerms.length > 0 && (
+              <p className="flex gap-1.5 text-xs text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                Not in your CV or the verified facts:{" "}
+                {outreach.email.unsupportedTerms.join(", ")}. Keep these words
+                only if they are true.
+              </p>
+            )}
+          </div>
+        )}
+      </Step>
+
+      {outreach.email && (
+        <Step n={4} title="Send it" done={Boolean(outreach.jobId)}>
+          {outreach.jobId ? (
+            <p className="flex flex-wrap items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              Sent and logged.
+              <Link
+                to="/applications/in-progress"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                See it on your Applications board
+              </Link>
+              ·
+              <Link
+                to={`/job/${outreach.jobId}`}
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                Open it
+              </Link>
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild>
+                  <a
+                    href={mailtoTooLong ? mailtoShort : mailtoFull}
+                    onClick={() => {
+                      if (mailtoTooLong) {
+                        void navigator.clipboard
+                          ?.writeText(body)
+                          .then(() =>
+                            toast.info(
+                              "The email text is copied: paste it into the message.",
+                            ),
+                          );
+                      }
+                      setAskSent(true);
+                    }}
+                  >
+                    <Mail className="mr-1.5 h-3.5 w-3.5" />
+                    Open in my mail app
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(
+                        `${recipient ? `${recipient.value}\n` : ""}${subject}\n\n${body}`,
+                      )
+                      .then(() => toast.success("Copied"));
+                    setAskSent(true);
+                  }}
+                >
+                  <Copy className="mr-1.5 h-3.5 w-3.5" />
+                  Copy all
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    void downloadCv(language).catch((error) =>
+                      showErrorToast(error, "Could not create the CV PDF."),
+                    );
+                  }}
+                >
+                  <FileDown className="mr-1.5 h-3.5 w-3.5" />
+                  My CV to attach ({language.toUpperCase()})
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {recipient
+                  ? "Don't forget to attach your CV before sending."
+                  : "No address chosen: copy the email and paste it into the application form or a LinkedIn message, with your CV attached."}
+              </p>
+              {askSent && (
+                <output className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+                  <span className="min-w-0 flex-1">
+                    Did you send it? Log it so it appears on your Applications
+                    board and you get a follow-up reminder.
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => sentMutation.mutate()}
+                    disabled={sentMutation.isPending}
+                  >
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                    Yes, log it
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setAskSent(false)}
+                  >
+                    Not yet
+                  </Button>
+                </output>
+              )}
+            </>
+          )}
+        </Step>
+      )}
     </>
   );
 }
