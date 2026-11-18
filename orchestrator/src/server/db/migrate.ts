@@ -1051,6 +1051,13 @@ const migrations = [
        ORDER BY se.occurred_at DESC, se.id DESC
        LIMIT 1
      ), 'applied') = 'closed'`,
+  // Deep Agents memories saved under the app's previous name.
+  `UPDATE agent_memories
+     SET namespace = '["boussole","memories"]'
+   WHERE json_valid(namespace)
+     AND json_array_length(namespace) = 2
+     AND json_extract(namespace, '$[1]') = 'memories'
+     AND json_extract(namespace, '$[0]') <> 'boussole'`,
 ];
 
 console.log("🔧 Running database migrations...");

@@ -100,7 +100,9 @@ describe("trackApplicationAcceptedIfNeeded", () => {
     expect(mocks.trackCanonicalActivationEvent).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ requestOrigin: "https://boussole.example.com" }),
+      expect.objectContaining({
+        requestOrigin: "https://boussole.example.com",
+      }),
     );
   });
 

@@ -1,4 +1,4 @@
-# JobOps Docs Site
+# Boussole Docs Site
 
 Docusaurus workspace for user-facing documentation.
 

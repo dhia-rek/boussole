@@ -16,6 +16,10 @@ const turnSchema = z.object({
 const requestTurnSchema = z.object({
   round: z.enum(MOCK_INTERVIEW_ROUNDS),
   transcript: z.array(turnSchema).max(80).default([]),
+  /** The interview's language, as the screen speaks it. */
+  language: z.enum(["fr", "en"]).optional(),
+  /** First name taken from the chosen voice; checked again server-side. */
+  interviewerName: z.string().trim().max(40).optional(),
 });
 
 const requestReportSchema = z.object({
@@ -48,6 +52,8 @@ mockInterviewRouter.post(
         jobId,
         round: parsed.data.round,
         transcript: parsed.data.transcript,
+        language: parsed.data.language ?? null,
+        interviewerName: parsed.data.interviewerName ?? null,
       });
       ok(res, result);
     });
