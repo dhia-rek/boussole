@@ -3,6 +3,7 @@ import { runWithRequestContext } from "@infra/request-context";
 import type { AutoPdfRegenerationReason } from "@server/infra/job-queue";
 import { getJobQueue } from "@server/infra/job-queue-registry";
 import * as jobsRepo from "@server/repositories/jobs";
+import * as usersRepo from "@server/repositories/users";
 import { getActiveTenantId } from "@server/tenancy/context";
 import type { Job } from "@shared/types";
 import { generateFinalPdf } from "../pipeline";
@@ -105,7 +106,11 @@ async function drainQueue(): Promise<void> {
 function shouldTopUpReadyPdfRegeneration(
   reason: AutoPdfRegenerationReason,
 ): boolean {
-  return reason === "design_resume_updated" || reason === "settings_changed";
+  return (
+    reason === "design_resume_updated" ||
+    reason === "settings_changed" ||
+    reason === "startup"
+  );
 }
 
 async function getStaleReadyGeneratedPdfJobs(limit: number): Promise<Job[]> {
@@ -256,4 +261,35 @@ export function shouldEnqueueTailoringAutoPdfRegeneration(
     previousJob.tracerLinksEnabled !== nextJob.tracerLinksEnabled ||
     previousJob.employer !== nextJob.employer
   );
+}
+
+/**
+ * The queue lives in memory, so a restart forgets rebuilds that were due (for
+ * example after a CV edit) while the job page still says "a new one will
+ * regenerate automatically". On startup, queue the outdated "Ready" PDFs of
+ * every workspace again. Rendering is local; no AI is used.
+ */
+export async function enqueueStaleReadyPdfsForAllWorkspaces(
+  listTenantIds: () => Promise<string[]> = usersRepo.listAllTenantIds,
+): Promise<number> {
+  let total = 0;
+  for (const tenantId of await listTenantIds()) {
+    try {
+      total += await runWithRequestContext({ tenantId }, () =>
+        enqueueAutoPdfRegenerationForReadyJobs({
+          reason: "startup",
+          requestedBy: "system",
+        }),
+      );
+    } catch (error) {
+      logger.warn("Could not queue outdated PDFs at startup", {
+        tenantId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
+  if (total > 0) {
+    logger.info("Queued outdated PDFs for regeneration at startup", { total });
+  }
+  return total;
 }

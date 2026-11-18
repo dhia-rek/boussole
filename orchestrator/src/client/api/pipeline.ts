@@ -65,6 +65,13 @@ export async function solvePipelineChallenge(extractorId: string): Promise<{
   });
 }
 
+/** Continue a paused run without the sources behind an anti-bot check. */
+export async function skipPipelineChallenges(): Promise<{ skipped: boolean }> {
+  return fetchApi<{ skipped: boolean }>("/pipeline/skip-challenges", {
+    method: "POST",
+  });
+}
+
 export async function getPipelineRunInsights(
   id: string,
 ): Promise<PipelineRunInsights> {

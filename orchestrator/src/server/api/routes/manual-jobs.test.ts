@@ -70,6 +70,44 @@ describe.sequential("Manual jobs API routes", () => {
     });
   });
 
+  it("does not re-process a job that is already in the list", async () => {
+    const { createJob, updateJob, getJobById } = await import(
+      "@server/repositories/jobs"
+    );
+    const { processJob } = await import("@server/pipeline/index");
+    const existing = await createJob({
+      source: "manual",
+      title: "Data Engineer",
+      employer: "Acme",
+      jobUrl: "https://jobs.example.com/acme/1",
+      jobDescription: "Already applied here",
+    });
+    await updateJob(existing.id, { status: "applied" });
+    vi.mocked(processJob).mockClear();
+
+    const res = await fetch(`${baseUrl}/api/manual-jobs/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        job: {
+          title: "Data Engineer",
+          employer: "Acme",
+          jobUrl: "https://jobs.example.com/acme/1",
+          jobDescription: "Same posting, imported again",
+        },
+      }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.data).toMatchObject({ id: existing.id, alreadyInList: true });
+    expect(vi.mocked(processJob)).not.toHaveBeenCalled();
+    const after = await getJobById(existing.id);
+    expect(after).toMatchObject({
+      status: "applied",
+      jobDescription: "Already applied here",
+    });
+  });
+
   it("infers manual jobs and rejects empty payloads", async () => {
     const badRes = await fetch(`${baseUrl}/api/manual-jobs/infer`, {
       method: "POST",

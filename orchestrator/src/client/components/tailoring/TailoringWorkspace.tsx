@@ -1,4 +1,5 @@
 import * as api from "@client/api";
+import { useDesignResume } from "@client/hooks/useDesignResume";
 import { useProfile } from "@client/hooks/useProfile";
 import { useTracerReadiness } from "@client/hooks/useTracerReadiness";
 import type { Job } from "@shared/types.js";
@@ -22,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { detectInterviewLang } from "../mock-interview/interview-voice";
 import {
   fromEditableSkillGroups,
   getOriginalHeadline,
@@ -474,8 +476,29 @@ export const TailoringWorkspace: React.FC<TailoringWorkspaceProps> = (
   const disableInputs = Boolean(generateTarget) || isGeneratingPdf;
   const isDraftReady = textHasValue(summary) && textHasValue(headline);
 
+  // The CV variant this job uses (its language, else the main CV): its
+  // headline rule explains prefixes such as "Stagiaire" in tailored headlines.
+  const jobCvLanguage =
+    detectInterviewLang(props.job.jobDescription) === "fr-FR" ? "fr" : "en";
+  const { document: languageCv } = useDesignResume(jobCvLanguage);
+  const { document: primaryCv } = useDesignResume(null);
+  const headlineRuleHint = useMemo(() => {
+    const rule = (languageCv ?? primaryCv)?.aiGuidance?.sections?.headline;
+    if (!rule || rule.share === false) return null;
+    const parts = [
+      rule.prefix?.trim()
+        ? `starts every tailored headline with “${rule.prefix.trim()}”`
+        : "",
+      rule.notes?.trim() ? `asks: “${rule.notes.trim()}”` : "",
+    ].filter(Boolean);
+    return parts.length
+      ? `Your CV's AI guidance ${parts.join(" and ")}. If that no longer fits (for example for a CDI), change it in CV → AI guidance.`
+      : null;
+  }, [languageCv, primaryCv]);
+
   const tailoringSectionsProps = useMemo<TailoringSectionsProps>(
     () => ({
+      headlineRuleHint,
       catalog,
       isCatalogLoading,
       summary,
@@ -527,6 +550,7 @@ export const TailoringWorkspace: React.FC<TailoringWorkspaceProps> = (
       onTracerLinksEnabledChange: setTracerLinksEnabled,
     }),
     [
+      headlineRuleHint,
       catalog,
       isCatalogLoading,
       summary,
