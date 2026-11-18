@@ -129,6 +129,17 @@ For accepted input formats, inference behavior, and limits, see [Manual Import E
 - Use `Fast` preset or lower `Max jobs discovered`.
 - Disable high-cost source combinations where acceptable.
 
+### A score shows "≈" and "estimate"
+
+The AI account could not score the job when the pipeline found it (not signed in, usage limit, timeout). Boussole then keeps a **keyword estimate**: a rough number from generic keywords, not a judgement of your fit. Estimates are shown with a dashed outline and "≈", for example `≈75`.
+
+To get real scores:
+
+- **One job:** open it and click **Rescore with AI** on the Overview.
+- **Many jobs:** in **Jobs**, click **Select all filtered**, then **Rescore** (up to 100 jobs per run).
+
+An explicit rescore never falls back to an estimate. If your AI account still can't answer, the job keeps its current score and you see the reason, for example "Your AI account could not score this job: Not logged in". Fix the account under **Settings → AI account** and rescore.
+
 ### Older jobs look expired or stale
 
 - Run the pipeline again before reviewing or applying.
