@@ -79,7 +79,9 @@ describe("API client auth flow", () => {
 
     vi.spyOn(global, "fetch").mockResolvedValueOnce(jwtLoginSuccess());
 
-    const storedBefore = sessionStorage.getItem("boussole.basicAuthCredentials");
+    const storedBefore = sessionStorage.getItem(
+      "boussole.basicAuthCredentials",
+    );
     expect(storedBefore).toContain('"password"');
 
     const promise = api.restoreAuthSessionFromLegacyCredentials();
