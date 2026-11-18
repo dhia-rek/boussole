@@ -54,6 +54,7 @@ const integrationRepo = await import(
 
 import {
   PostApplicationProviderError,
+  providerNotImplemented,
   providerUpstreamError,
   toProviderAppError,
 } from "./errors";
@@ -209,7 +210,7 @@ describe("post-application provider action dispatcher", () => {
     });
   });
 
-  it("maps IMAP not-implemented errors to service unavailable app errors", async () => {
+  it("rejects an IMAP connect without credentials as an invalid request", async () => {
     await expect(
       executePostApplicationProviderAction({
         provider: "imap",
@@ -217,11 +218,19 @@ describe("post-application provider action dispatcher", () => {
         accountKey: "account:imap:test",
       }),
     ).rejects.toMatchObject({
-      status: 503,
-      code: "SERVICE_UNAVAILABLE",
-      message:
-        "IMAP provider is not implemented yet for account 'account:imap:test'.",
+      status: 400,
+      code: "INVALID_REQUEST",
+      message: "Enter your email address and an app-specific password.",
     });
+  });
+
+  it("maps not-implemented provider errors to service unavailable app errors", () => {
+    const appError = toProviderAppError(
+      providerNotImplemented("Provider is not implemented yet."),
+    );
+
+    expect(appError.status).toBe(503);
+    expect(appError.code).toBe("SERVICE_UNAVAILABLE");
   });
 
   it("maps upstream provider errors to upstream app errors", () => {
