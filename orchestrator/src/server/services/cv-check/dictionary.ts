@@ -133,10 +133,23 @@ export function buildCvDictionary(
   resume: DesignResumeJson,
   guidance?: DesignResumeAiGuidance | null,
 ): CvCheckLine[] {
+  return buildCvDictionaryWithStats(resume, guidance).lines;
+}
+
+/** Same as buildCvDictionary, plus how many lines were over the limit. */
+export function buildCvDictionaryWithStats(
+  resume: DesignResumeJson,
+  guidance?: DesignResumeAiGuidance | null,
+): { lines: CvCheckLine[]; skipped: number } {
   const lines: CvCheckLine[] = [];
+  let skipped = 0;
   const push = (line: Omit<CvCheckLine, "ref">) => {
     const text = line.text.replace(/\s+/g, " ").trim();
-    if (!text || lines.length >= MAX_LINES) return;
+    if (!text) return;
+    if (lines.length >= MAX_LINES) {
+      skipped += 1;
+      return;
+    }
     lines.push({
       ...line,
       text:
@@ -214,5 +227,5 @@ export function buildCvDictionary(
     const section = asRec(raw);
     addSection(str(section.id) || "custom", str(section.type), section);
   }
-  return lines;
+  return { lines, skipped };
 }

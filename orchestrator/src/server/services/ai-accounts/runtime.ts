@@ -110,3 +110,16 @@ export async function resolveCodexRuntime(
   const codexHome = aiAccountDir(tenantId, "chatgpt");
   return { codexHome, env: personalCodexEnv(codexHome) };
 }
+
+/**
+ * Throws AiAccountNotSignedInError when the workspace cannot run AI work on
+ * `provider`, without starting the CLI. Lets long background runs refuse up
+ * front instead of failing a minute later.
+ */
+export async function assertAiAccountReady(
+  provider: AiProvider,
+  tenantId: string = getActiveTenantId(),
+): Promise<void> {
+  if (provider === "chatgpt") await resolveCodexRuntime(tenantId);
+  else await resolveClaudeRuntime(tenantId);
+}

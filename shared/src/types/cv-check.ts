@@ -43,6 +43,10 @@ export interface CvCheckResult {
   priorities: string[];
   lines: CvCheckLineReview[];
   missing: CvCheckGap[];
+  /** Lines the AI did not answer for; they are shown as "keep". */
+  unreviewedCount?: number;
+  /** Lines beyond the review limit, not sent at all. */
+  skippedLineCount?: number;
 }
 
 export type CvCheckStatus = "running" | "done" | "failed";
@@ -53,7 +57,7 @@ export interface CvCheck {
   status: CvCheckStatus;
   provider: AiProvider;
   model: string | null;
-  /** The CV variant that was checked. */
+  /** The CV variant behind `result` (the last successful check). */
   cvId: string | null;
   cvTitle: string | null;
   cvLanguage: string | null;

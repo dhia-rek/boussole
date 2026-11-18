@@ -104,9 +104,7 @@ export const CvCheckCard: React.FC<{ jobId: string }> = ({ jobId }) => {
             <FileSearch className="h-4 w-4 text-primary" />
             CV check
           </h2>
-          {check?.status === "done" && check.result && (
-            <SummaryLine check={check} />
-          )}
+          {check?.result && <SummaryLine check={check} />}
         </div>
         {!running && (
           <Button
@@ -149,16 +147,21 @@ export const CvCheckCard: React.FC<{ jobId: string }> = ({ jobId }) => {
       {!running && check?.status === "failed" && (
         <p className="mt-3 flex gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <span>{check.error ?? "The CV check failed."}</span>
+          <span>
+            {check.error ?? "The CV check failed."}
+            {check.result && " The previous check is shown below."}
+          </span>
         </p>
       )}
 
-      {!running && check?.status === "done" && check.result && (
-        <CheckBody
-          check={check}
-          showAll={showAll}
-          onToggleShowAll={() => setShowAll((value) => !value)}
-        />
+      {check?.result && (
+        <div className={cn(running && "opacity-60")} aria-busy={running}>
+          <CheckBody
+            check={check}
+            showAll={showAll}
+            onToggleShowAll={() => setShowAll((value) => !value)}
+          />
+        </div>
       )}
     </section>
   );
@@ -252,6 +255,18 @@ const CheckBody: React.FC<{
         </p>
       )}
 
+      {(result.unreviewedCount ?? 0) + (result.skippedLineCount ?? 0) > 0 && (
+        <p className="flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+          <span>
+            {(result.unreviewedCount ?? 0) > 0 &&
+              `The review skipped ${result.unreviewedCount} line${result.unreviewedCount === 1 ? "" : "s"}; they are shown as fitting. `}
+            {(result.skippedLineCount ?? 0) > 0 &&
+              `Your CV is long: the last ${result.skippedLineCount} line${result.skippedLineCount === 1 ? " was" : "s were"} not reviewed.`}
+          </span>
+        </p>
+      )}
+
       {result.overall && (
         <p className="rounded-lg bg-muted/50 p-3 leading-6">{result.overall}</p>
       )}
@@ -262,8 +277,8 @@ const CheckBody: React.FC<{
             Change first
           </h3>
           <ol className="list-decimal space-y-1.5 pl-5 leading-6">
-            {result.priorities.map((priority) => (
-              <li key={priority}>{priority}</li>
+            {result.priorities.map((priority, index) => (
+              <li key={`${index}-${priority}`}>{priority}</li>
             ))}
           </ol>
         </div>
@@ -285,8 +300,8 @@ const CheckBody: React.FC<{
             Every line fits this job as written.
           </p>
         ) : (
-          sections.map((section) => (
-            <div key={section.title} className="space-y-2">
+          sections.map((section, index) => (
+            <div key={`${index}-${section.title}`} className="space-y-2">
               <h4 className="text-xs font-semibold">{section.title}</h4>
               <ul className="space-y-2">
                 {section.lines.map((line) => (
@@ -304,8 +319,8 @@ const CheckBody: React.FC<{
             The job asks, your CV doesn't show
           </h3>
           <ul className="space-y-2">
-            {result.missing.map((gap) => (
-              <li key={gap.requirement} className="leading-6">
+            {result.missing.map((gap, index) => (
+              <li key={`${index}-${gap.requirement}`} className="leading-6">
                 <span className="font-medium">{gap.requirement}</span>
                 {gap.closestRef && (
                   <span className="ml-2 font-mono text-xs text-muted-foreground">
