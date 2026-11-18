@@ -47,7 +47,9 @@ describe("JobBriefPane", () => {
 
     expect(screen.getByText("Fallback fit reason.")).toBeVisible();
     expect(
-      screen.getByText("Recalculate match to generate a concise JD brief."),
+      screen.getByText(
+        "Recalculate the match to get a short summary of this job.",
+      ),
     ).toBeVisible();
   });
 

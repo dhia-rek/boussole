@@ -28,6 +28,7 @@ const sidebars: SidebarsConfig = {
       label: "Core Features",
       items: [
         "features/today",
+        "features/guided-apply",
         "features/overview",
         "features/pipeline-run",
         "features/job-search-bar",

@@ -10,6 +10,7 @@ import {
   within,
 } from "@testing-library/react";
 import type React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JobDetailPanel } from "./JobDetailPanel";
 
@@ -146,7 +147,11 @@ vi.mock("sonner", () => ({
 const renderJobDetailPanel = async (
   props: React.ComponentProps<typeof JobDetailPanel>,
 ) => {
-  const rendered = render(<JobDetailPanel {...props} />);
+  const rendered = render(
+    <MemoryRouter>
+      <JobDetailPanel {...props} />
+    </MemoryRouter>,
+  );
   await act(async () => {
     await Promise.resolve();
   });
@@ -178,6 +183,9 @@ describe("JobDetailPanel", () => {
         "Base description extracted from the job listing, editable if something looks off. Used by the Ghostwriter and for fit assessment.",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Apply step by step" }),
+    ).toHaveAttribute("href", "/apply/job-99");
   });
 
   it("shows stale PDF copy and old-PDF actions in the application kit", async () => {
