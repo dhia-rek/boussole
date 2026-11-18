@@ -227,6 +227,24 @@ async function fetchGmailUserProfile(accessToken: string): Promise<{
   };
 }
 
+/**
+ * Whether Gmail connect can work on this server, so the page can explain the
+ * one-time setup instead of failing on click. Never returns the secrets.
+ */
+postApplicationProvidersRouter.get(
+  "/providers/gmail/oauth/config",
+  asyncRoute(async (req: Request, res: Response) => {
+    const configured = Boolean(
+      asNonEmptyString(process.env.GMAIL_OAUTH_CLIENT_ID) &&
+        asNonEmptyString(process.env.GMAIL_OAUTH_CLIENT_SECRET),
+    );
+    const redirectUri =
+      asNonEmptyString(process.env.GMAIL_OAUTH_REDIRECT_URI) ??
+      `${req.protocol}://${req.get("host")}/oauth/gmail/callback`;
+    ok(res, { configured, redirectUri });
+  }),
+);
+
 postApplicationProvidersRouter.get(
   "/providers/gmail/oauth/start",
   asyncRoute(async (req: Request, res: Response) => {

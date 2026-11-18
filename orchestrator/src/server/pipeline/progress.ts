@@ -347,26 +347,7 @@ export const progressHelpers = {
       crawlingCurrentUrl: update.currentUrl ?? current.crawlingCurrentUrl,
     };
 
-    const sourcesPart =
-      next.crawlingListPagesTotal > 0
-        ? `${next.crawlingListPagesProcessed}/${next.crawlingListPagesTotal}`
-        : `${next.crawlingListPagesProcessed}`;
-
-    const pagesPart = `${next.crawlingJobPagesProcessed}/${next.crawlingJobPagesEnqueued}`;
-    const termsPart =
-      next.crawlingTermsTotal > 0
-        ? `, terms ${next.crawlingTermsProcessed}/${next.crawlingTermsTotal}`
-        : "";
-    const skippedPart =
-      next.crawlingJobPagesSkipped > 0
-        ? `, skipped ${next.crawlingJobPagesSkipped}`
-        : "";
-    const cardsPart =
-      next.crawlingJobCardsFound > 0
-        ? `, cards ${next.crawlingJobCardsFound}`
-        : "";
-
-    const message = `Crawling jobs (list pages ${sourcesPart}, job pages ${pagesPart}${termsPart}${skippedPart}${cardsPart})...`;
+    const message = formatCrawlingMessage(next);
     const detail =
       next.crawlingCurrentUrl && next.crawlingPhase
         ? `${next.crawlingPhase === "list" ? "List" : "Job"}: ${next.crawlingCurrentUrl}`
@@ -506,3 +487,40 @@ export const progressHelpers = {
       pendingChallenges: remaining,
     }),
 };
+
+/**
+ * "x/y" only when it is a real fraction. Sources report their counters
+ * independently (some count processed pages without a total), so a summed
+ * "10/9" would be meaningless.
+ */
+function formatCount(processed: number, total: number): string {
+  return total > 0 && processed <= total
+    ? `${processed}/${total}`
+    : String(processed);
+}
+
+export function formatCrawlingMessage(progress: {
+  crawlingTermsProcessed: number;
+  crawlingTermsTotal: number;
+  crawlingListPagesProcessed: number;
+  crawlingListPagesTotal: number;
+  crawlingJobPagesProcessed: number;
+  crawlingJobPagesEnqueued: number;
+  crawlingJobPagesSkipped: number;
+  crawlingJobCardsFound: number;
+}): string {
+  const parts = [
+    progress.crawlingTermsTotal > 0
+      ? `search terms ${formatCount(progress.crawlingTermsProcessed, progress.crawlingTermsTotal)}`
+      : "",
+    `result pages ${formatCount(progress.crawlingListPagesProcessed, progress.crawlingListPagesTotal)}`,
+    `job pages ${formatCount(progress.crawlingJobPagesProcessed, progress.crawlingJobPagesEnqueued)}`,
+    progress.crawlingJobPagesSkipped > 0
+      ? `${progress.crawlingJobPagesSkipped} skipped`
+      : "",
+    progress.crawlingJobCardsFound > 0
+      ? `${progress.crawlingJobCardsFound.toLocaleString("en-US")} listings scanned`
+      : "",
+  ].filter(Boolean);
+  return `Searching job sites (${parts.join(", ")})...`;
+}

@@ -1,3 +1,4 @@
+import { ManualImportSheet } from "@client/components/ManualImportSheet";
 import { useSettings } from "@client/hooks/useSettings";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -128,6 +129,7 @@ export const OrchestratorPage: React.FC = () => {
   const { pipelineSources, setPipelineSources, toggleSource } =
     usePipelineSources(enabledSources);
 
+  const [isManualImportOpen, setIsManualImportOpen] = useState(false);
   const {
     isRunModeModalOpen,
     setIsRunModeModalOpen,
@@ -417,6 +419,15 @@ export const OrchestratorPage: React.FC = () => {
         pipelineSources={pipelineSources}
         onOpenAutomaticRun={() => openRunMode("automatic")}
         onCancelPipeline={handleCancelPipeline}
+        onOpenManualImport={() => setIsManualImportOpen(true)}
+      />
+      <ManualImportSheet
+        open={isManualImportOpen}
+        onOpenChange={setIsManualImportOpen}
+        onImported={async (result) => {
+          setIsManualImportOpen(false);
+          await handleManualImported(result);
+        }}
       />
 
       <main

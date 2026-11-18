@@ -201,7 +201,9 @@ export const HowToApplyCard: React.FC<{ job: Job; baseJobPath: string }> = ({
                     rel="noopener noreferrer"
                     onClick={() => setPending(primary)}
                   >
-                    Apply on {primary.label}
+                    {primary.channel === "company_site"
+                      ? "Apply on the company website"
+                      : `Apply on ${primary.label}`}
                     <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                   </a>
                 </Button>

@@ -14,6 +14,7 @@ const renderHeader = (
     pipelineSources: ["wttj"],
     onOpenAutomaticRun: vi.fn(),
     onCancelPipeline: vi.fn(),
+    onOpenManualImport: vi.fn(),
     ...overrides,
   };
 
@@ -50,5 +51,20 @@ describe("OrchestratorHeader", () => {
     const { props } = renderHeader({ isPipelineRunning: true });
     fireEvent.click(screen.getByRole("button", { name: /cancel run/i }));
     expect(props.onCancelPipeline).toHaveBeenCalled();
+  });
+
+  it("offers adding a job from a link, also while a search runs", () => {
+    for (const isPipelineRunning of [false, true]) {
+      const onOpenManualImport = vi.fn();
+      const { unmount } = renderHeader({
+        isPipelineRunning,
+        onOpenManualImport,
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Add a job from a link" }),
+      );
+      expect(onOpenManualImport).toHaveBeenCalledTimes(1);
+      unmount();
+    }
   });
 });

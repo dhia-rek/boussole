@@ -24,6 +24,7 @@ import {
   requestPipelineCancel,
   resolvePipelineChallenge,
   runPipeline,
+  skipPipelineChallenges,
   subscribeToProgress,
 } from "@server/pipeline/index";
 import * as pipelineRepo from "@server/repositories/pipeline";
@@ -458,6 +459,16 @@ pipelineRouter.post(
  */
 const solveChallengeSchema = z.object({
   extractorId: z.string().min(1),
+});
+
+/** Continue the paused run without the sources behind an anti-bot check. */
+pipelineRouter.post("/skip-challenges", (_req: Request, res: Response) => {
+  const { skipped } = skipPipelineChallenges();
+  logger.info("Pipeline challenges skipped", {
+    route: "/api/pipeline/skip-challenges",
+    skipped,
+  });
+  ok(res, { skipped });
 });
 
 pipelineRouter.post("/solve-challenge", async (req: Request, res: Response) => {
