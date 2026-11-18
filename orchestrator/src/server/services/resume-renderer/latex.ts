@@ -226,7 +226,7 @@ async function stagePhoto(
 export const latexResumeRenderer: ResumeRenderer = {
   async render({ document, outputPath, jobId }) {
     const tempDir = await mkdtemp(
-      join(tmpdir(), `forsa-resume-render-${jobId}-`),
+      join(tmpdir(), `boussole-resume-render-${jobId}-`),
     );
 
     try {

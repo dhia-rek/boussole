@@ -4,7 +4,7 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GhostwriterDrawer } from "./GhostwriterDrawer";
 
-const DISPLAY_MODE_STORAGE_KEY = "forsa.ghostwriter.display-mode.v1";
+const DISPLAY_MODE_STORAGE_KEY = "boussole.ghostwriter.display-mode.v1";
 
 const panelLifecycle = vi.hoisted(() => ({
   mounts: 0,

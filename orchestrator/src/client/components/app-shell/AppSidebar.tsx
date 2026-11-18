@@ -10,7 +10,7 @@ import { SETTINGS_LINK } from "../navigation";
 import { NavAccountMenu } from "./NavAccountMenu";
 import { NavGroups, NavLinkItem } from "./NavLinks";
 
-export const SIDEBAR_COLLAPSED_STORAGE_KEY = "forsa.sidebar.collapsed";
+export const SIDEBAR_COLLAPSED_STORAGE_KEY = "boussole.sidebar.collapsed";
 
 function readCollapsed(): boolean {
   try {

@@ -111,7 +111,7 @@ export interface JobTracerLinksResponse {
 
 export type TracerReadinessStatus = "ready" | "unconfigured" | "unavailable";
 
-export interface ForsaPublicAvailabilityResponse {
+export interface BoussolePublicAvailabilityResponse {
   status: TracerReadinessStatus;
   isPubliclyAvailable: boolean;
   publicBaseUrl: string | null;
@@ -122,7 +122,7 @@ export interface ForsaPublicAvailabilityResponse {
 }
 
 export interface TracerReadinessResponse
-  extends ForsaPublicAvailabilityResponse {
+  extends BoussolePublicAvailabilityResponse {
   canEnable: boolean;
 }
 

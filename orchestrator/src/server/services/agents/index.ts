@@ -1,5 +1,5 @@
 /**
- * Runs Forsa's LangChain Deep Agents (application agent, preference learner)
+ * Runs Boussole's LangChain Deep Agents (application agent, preference learner)
  * as tenant-scoped background jobs with live progress.
  *
  * - One running agent per tenant (in-process lock + stale-row recovery).
@@ -104,7 +104,7 @@ async function recoverInterruptedRuns(): Promise<void> {
     if (activeRuns.has(run.id)) continue;
     await agentRunsRepo.updateAgentRun(run.id, {
       status: "failed",
-      error: "Interrupted: Forsa restarted while this run was in progress.",
+      error: "Interrupted: Boussole restarted while this run was in progress.",
       finishedAt: new Date().toISOString(),
     });
   }

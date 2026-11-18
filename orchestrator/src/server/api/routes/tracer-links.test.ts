@@ -179,7 +179,7 @@ describe.sequential("Tracer links routes", () => {
 
   it("returns tracer readiness contract", async () => {
     const realFetch = global.fetch;
-    const healthUrl = "https://my-forsa.example.com/health";
+    const healthUrl = "https://my-boussole.example.com/health";
     const mockFetch = vi.fn(async (input: any, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url === healthUrl) {
@@ -191,8 +191,8 @@ describe.sequential("Tracer links routes", () => {
       return realFetch(input, init);
     });
 
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://my-forsa.example.com";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://my-boussole.example.com";
     vi.stubGlobal("fetch", mockFetch);
 
     try {
@@ -214,13 +214,13 @@ describe.sequential("Tracer links routes", () => {
       expect(body.data?.status).toBe("ready");
       expect(body.data?.isPubliclyAvailable).toBe(true);
       expect(body.data?.canEnable).toBe(true);
-      expect(body.data?.publicBaseUrl).toBe("https://my-forsa.example.com");
+      expect(body.data?.publicBaseUrl).toBe("https://my-boussole.example.com");
     } finally {
       vi.unstubAllGlobals();
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });
@@ -232,7 +232,7 @@ describe.sequential("Tracer links routes", () => {
         BASIC_AUTH_USER: "admin",
         BASIC_AUTH_PASSWORD: "secret",
         JWT_SECRET: "an-explicit-jwt-secret-with-at-least-32-chars",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
       },
     }));
 

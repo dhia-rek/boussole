@@ -45,7 +45,7 @@ describe.sequential("post-application message upsert transition semantics", () =
 
   beforeEach(async () => {
     vi.resetModules();
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-post-app-msgs-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-post-app-msgs-"));
     process.env.DATA_DIR = tempDir;
     process.env.NODE_ENV = "test";
 

@@ -752,12 +752,12 @@ describe.sequential("Jobs API routes", () => {
       jobDescription: "Test description",
     });
 
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://my-forsa.example.com";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://my-boussole.example.com";
     const realFetch = global.fetch;
     const mockFetch = vi.fn(async (input: any, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === "https://my-forsa.example.com/health") {
+      if (url === "https://my-boussole.example.com/health") {
         return new Response("unavailable", { status: 503 });
       }
       return realFetch(input, init);
@@ -780,9 +780,9 @@ describe.sequential("Jobs API routes", () => {
     } finally {
       vi.unstubAllGlobals();
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });
@@ -799,12 +799,12 @@ describe.sequential("Jobs API routes", () => {
     });
     await updateJob(job.id, { tracerLinksEnabled: true });
 
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://my-forsa.example.com";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://my-boussole.example.com";
     const realFetch = global.fetch;
     const mockFetch = vi.fn(async (input: any, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === "https://my-forsa.example.com/health") {
+      if (url === "https://my-boussole.example.com/health") {
         return new Response("unavailable", { status: 503 });
       }
       return realFetch(input, init);
@@ -827,15 +827,15 @@ describe.sequential("Jobs API routes", () => {
       expect(body.data.title).toBe("Tracer Already On (Edited)");
       expect(body.data.tracerLinksEnabled).toBe(true);
       expect(mockFetch).not.toHaveBeenCalledWith(
-        "https://my-forsa.example.com/health",
+        "https://my-boussole.example.com/health",
         expect.anything(),
       );
     } finally {
       vi.unstubAllGlobals();
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });
@@ -854,7 +854,7 @@ describe.sequential("Jobs API routes", () => {
     expect(typeof body.meta.requestId).toBe("string");
   });
 
-  it("prefers FORSA_PUBLIC_BASE_URL over forwarded headers for generate-pdf origin", async () => {
+  it("prefers BOUSSOLE_PUBLIC_BASE_URL over forwarded headers for generate-pdf origin", async () => {
     const { createJob } = await import("@server/repositories/jobs");
     const { generateFinalPdf } = await import("@server/pipeline/index");
     const job = await createJob({
@@ -865,8 +865,8 @@ describe.sequential("Jobs API routes", () => {
       jobDescription: "Test description",
     });
 
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://canonical.forsa.example";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://canonical.boussole.example";
 
     try {
       const res = await fetch(`${baseUrl}/api/jobs/${job.id}/generate-pdf`, {
@@ -880,13 +880,13 @@ describe.sequential("Jobs API routes", () => {
       expect(res.status).toBe(200);
       expect(vi.mocked(generateFinalPdf)).toHaveBeenCalledWith(job.id, {
         analyticsOrigin: "generate_pdf",
-        requestOrigin: "https://canonical.forsa.example",
+        requestOrigin: "https://canonical.boussole.example",
       });
     } finally {
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });
@@ -1108,8 +1108,8 @@ describe.sequential("Jobs API routes", () => {
     });
     await updateJob(ready.id, { status: "ready" });
     const { processJob } = await import("@server/pipeline/index");
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://canonical.forsa.example";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://canonical.boussole.example";
 
     try {
       const res = await fetch(`${baseUrl}/api/jobs/actions`, {
@@ -1128,16 +1128,16 @@ describe.sequential("Jobs API routes", () => {
       expect(vi.mocked(processJob)).toHaveBeenCalledWith(discovered.id, {
         analyticsOrigin: "move_to_ready",
         force: false,
-        requestOrigin: "https://canonical.forsa.example",
+        requestOrigin: "https://canonical.boussole.example",
       });
       expect(
         body.data.results.find((r: any) => r.jobId === ready.id).error.code,
       ).toBe("INVALID_REQUEST");
     } finally {
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });
@@ -1153,8 +1153,8 @@ describe.sequential("Jobs API routes", () => {
       jobDescription: "Test description",
     });
 
-    const previousBaseUrl = process.env.FORSA_PUBLIC_BASE_URL;
-    process.env.FORSA_PUBLIC_BASE_URL = "https://canonical.forsa.example";
+    const previousBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL;
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://canonical.boussole.example";
     try {
       const res = await fetch(`${baseUrl}/api/jobs/${job.id}/process`, {
         method: "POST",
@@ -1166,13 +1166,13 @@ describe.sequential("Jobs API routes", () => {
       expect(vi.mocked(processJob)).toHaveBeenCalledWith(job.id, {
         analyticsOrigin: "move_to_ready",
         force: false,
-        requestOrigin: "https://canonical.forsa.example",
+        requestOrigin: "https://canonical.boussole.example",
       });
     } finally {
       if (previousBaseUrl === undefined) {
-        delete process.env.FORSA_PUBLIC_BASE_URL;
+        delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
       } else {
-        process.env.FORSA_PUBLIC_BASE_URL = previousBaseUrl;
+        process.env.BOUSSOLE_PUBLIC_BASE_URL = previousBaseUrl;
       }
     }
   });

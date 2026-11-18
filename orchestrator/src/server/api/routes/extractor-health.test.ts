@@ -82,7 +82,7 @@ describe.sequential("Extractor health API routes", () => {
     await stopServer({ server, closeDb, tempDir });
     ({ server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
         BASIC_AUTH_USER: "admin",
         BASIC_AUTH_PASSWORD: "secret",
       },

@@ -17,7 +17,7 @@ describe.sequential("post-application job emails service", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-job-emails-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-job-emails-"));
     process.env.DATA_DIR = tempDir;
     process.env.NODE_ENV = "test";
 

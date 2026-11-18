@@ -9,7 +9,7 @@ describe.sequential("product analytics repository", () => {
   let closeDb: (() => void) | null = null;
 
   beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-analytics-repo-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-analytics-repo-"));
     vi.resetModules();
     process.env = {
       ...originalEnv,

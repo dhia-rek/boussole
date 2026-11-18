@@ -236,7 +236,7 @@ describe.sequential("Company research API", () => {
         BASIC_AUTH_USER: "admin",
         BASIC_AUTH_PASSWORD: "secret",
         JWT_SECRET: "an-explicit-jwt-secret-with-at-least-32-chars",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
       },
     }));
     await useFakeResearch();

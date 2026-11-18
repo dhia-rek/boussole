@@ -9,9 +9,9 @@ type StoredLegacyAuthCredentials = AuthCredentials & {
   storedAt?: number;
 };
 
-const LEGACY_SESSION_AUTH_KEY = "forsa.basicAuthCredentials";
-const LEGACY_SESSION_JWT_KEY = "forsa.jwtToken";
-const SESSION_AUTH_TOKEN_KEY = "forsa.authToken";
+const LEGACY_SESSION_AUTH_KEY = "boussole.basicAuthCredentials";
+const LEGACY_SESSION_JWT_KEY = "boussole.jwtToken";
+const SESSION_AUTH_TOKEN_KEY = "boussole.authToken";
 const LEGACY_SESSION_AUTH_TTL_MS = 5 * 60 * 1000;
 
 function decodeBase64UrlJsonSegment(

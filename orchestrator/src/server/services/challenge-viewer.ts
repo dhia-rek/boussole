@@ -167,10 +167,10 @@ function writeUpgradeRejection(
 }
 
 async function startViewer(): Promise<ViewerStatus> {
-  if (process.env.FORSA_CHALLENGE_VIEWER === "disabled") {
+  if (process.env.BOUSSOLE_CHALLENGE_VIEWER === "disabled") {
     return {
       available: false,
-      reason: "Challenge viewer is disabled by FORSA_CHALLENGE_VIEWER.",
+      reason: "Challenge viewer is disabled by BOUSSOLE_CHALLENGE_VIEWER.",
     };
   }
 

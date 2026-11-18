@@ -45,7 +45,7 @@ const baseDocument: LatexResumeDocument = {
 };
 
 async function createTempDir(): Promise<string> {
-  return await mkdtemp(join(tmpdir(), "forsa-latex-render-test-"));
+  return await mkdtemp(join(tmpdir(), "boussole-latex-render-test-"));
 }
 
 function tectonicAvailable(): boolean {

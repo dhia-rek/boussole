@@ -319,12 +319,14 @@ vi.mock("./resume-renderer", () => ({
 }));
 
 const mockTracerLinks = vi.hoisted(() => ({
-  resolveTracerPublicBaseUrl: vi.fn().mockReturnValue("https://forsa.example"),
-  getForsaPublicAvailability: vi.fn().mockResolvedValue({
+  resolveTracerPublicBaseUrl: vi
+    .fn()
+    .mockReturnValue("https://boussole.example"),
+  getBoussolePublicAvailability: vi.fn().mockResolvedValue({
     status: "ready",
     isPubliclyAvailable: true,
-    publicBaseUrl: "https://forsa.example",
-    healthUrl: "https://forsa.example/health",
+    publicBaseUrl: "https://boussole.example",
+    healthUrl: "https://boussole.example/health",
     checkedAt: 1,
     lastSuccessAt: 1,
     reason: null,
@@ -333,8 +335,8 @@ const mockTracerLinks = vi.hoisted(() => ({
     status: "ready",
     isPubliclyAvailable: true,
     canEnable: true,
-    publicBaseUrl: "https://forsa.example",
-    healthUrl: "https://forsa.example/health",
+    publicBaseUrl: "https://boussole.example",
+    healthUrl: "https://boussole.example/health",
     checkedAt: 1,
     lastSuccessAt: 1,
     reason: null,
@@ -345,7 +347,7 @@ const mockTracerLinks = vi.hoisted(() => ({
 }));
 
 vi.mock("./tracer-links", () => ({
-  getForsaPublicAvailability: mockTracerLinks.getForsaPublicAvailability,
+  getBoussolePublicAvailability: mockTracerLinks.getBoussolePublicAvailability,
   getTracerReadiness: mockTracerLinks.getTracerReadiness,
   resolveTracerPublicBaseUrl: mockTracerLinks.resolveTracerPublicBaseUrl,
   rewriteResumeLinksWithTracer: mockTracerLinks.rewriteResumeLinksWithTracer,
@@ -413,7 +415,7 @@ vi.mock("./resume-data", async () => {
           await mockTracerLinks.rewriteResumeLinksWithTracer({
             jobId: args.jobId,
             resumeData: data,
-            publicBaseUrl: "https://forsa.example",
+            publicBaseUrl: "https://boussole.example",
             companyName: args.tracerLinks.companyName ?? null,
           });
         }
@@ -440,13 +442,13 @@ describe("PDF Service Tailoring Logic", () => {
     mocks.readFile.mockResolvedValue(JSON.stringify(mockProfile));
     mockResumeRenderer.clearLastResumeJson();
     mockTracerLinks.resolveTracerPublicBaseUrl.mockReturnValue(
-      "https://forsa.example",
+      "https://boussole.example",
     );
-    mockTracerLinks.getForsaPublicAvailability.mockResolvedValue({
+    mockTracerLinks.getBoussolePublicAvailability.mockResolvedValue({
       status: "ready",
       isPubliclyAvailable: true,
-      publicBaseUrl: "https://forsa.example",
-      healthUrl: "https://forsa.example/health",
+      publicBaseUrl: "https://boussole.example",
+      healthUrl: "https://boussole.example/health",
       checkedAt: 1,
       lastSuccessAt: 1,
       reason: null,
@@ -455,8 +457,8 @@ describe("PDF Service Tailoring Logic", () => {
       status: "ready",
       isPubliclyAvailable: true,
       canEnable: true,
-      publicBaseUrl: "https://forsa.example",
-      healthUrl: "https://forsa.example/health",
+      publicBaseUrl: "https://boussole.example",
+      healthUrl: "https://boussole.example/health",
       checkedAt: 1,
       lastSuccessAt: 1,
       reason: null,
@@ -556,11 +558,11 @@ describe("PDF Service Tailoring Logic", () => {
   it("rewrites links when tracer links are enabled", async () => {
     await generatePdf("job-with-tracer", {}, "desc", undefined, undefined, {
       tracerLinksEnabled: true,
-      requestOrigin: "https://forsa.example",
+      requestOrigin: "https://boussole.example",
     });
 
     expect(mockTracerLinks.resolveTracerPublicBaseUrl).toHaveBeenCalledWith({
-      requestOrigin: "https://forsa.example",
+      requestOrigin: "https://boussole.example",
     });
     expect(mockTracerLinks.rewriteResumeLinksWithTracer).toHaveBeenCalledTimes(
       1,

@@ -62,14 +62,14 @@ describe("cookies", () => {
 
   describe("getCloudflareCookieStorageDir", () => {
     it("stores cookies under DATA_DIR when configured", () => {
-      process.env.DATA_DIR = "/tmp/forsa-data";
+      process.env.DATA_DIR = "/tmp/boussole-data";
       expect(getCloudflareCookieStorageDir()).toBe(
-        join("/tmp/forsa-data", "cloudflare-cookies"),
+        join("/tmp/boussole-data", "cloudflare-cookies"),
       );
     });
 
     it("uses explicit storage dirs for direct callers", () => {
-      process.env.DATA_DIR = "/tmp/forsa-data";
+      process.env.DATA_DIR = "/tmp/boussole-data";
       expect(getCloudflareCookieStorageDir("/tmp/custom-cookies")).toBe(
         "/tmp/custom-cookies",
       );

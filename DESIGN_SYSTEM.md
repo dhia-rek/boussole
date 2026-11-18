@@ -1,4 +1,4 @@
-# Forsa Design System
+# Boussole Design System
 
 An Apple-inspired design system focused on clarity, refinement, and exceptional user experience.
 

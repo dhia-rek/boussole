@@ -67,7 +67,7 @@ export function scriptedApplicationReply(prompt: string): string {
             'UNSUPPORTED: "led a team of 10"\nRULES: none\nVERDICT: fix-needed',
         });
   }
-  if (prompt.includes("You coordinate Forsa's application agents")) {
+  if (prompt.includes("You coordinate Boussole's application agents")) {
     const tasks = called(prompt, "task");
     if (tasks === 0) {
       return toolCalls([

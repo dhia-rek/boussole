@@ -162,7 +162,7 @@ export function buildDecisionEvidence(records: DecisionRecord[]): string {
   ].join("\n");
 }
 
-const LEARNER_SYSTEM_PROMPT = `You maintain Forsa's memory of a job seeker's preferences. You get their recent decisions on job postings (APPLIED or SKIPPED, with outcomes when known) and the current memory file.
+const LEARNER_SYSTEM_PROMPT = `You maintain Boussole's memory of a job seeker's preferences. You get their recent decisions on job postings (APPLIED or SKIPPED, with outcomes when known) and the current memory file.
 Rewrite the memory file as Markdown bullet points under two headings, "## Prefers" and "## Avoids", plus "## Signals from outcomes" only when outcomes exist.
 - Each bullet states one concrete preference (role type, domain, seniority, contract, location/remote, company type) and ends with its evidence in parentheses, e.g. "(applied 5, skipped 0)".
 - Only state what the evidence supports; drop bullets of the current memory that the evidence no longer supports.

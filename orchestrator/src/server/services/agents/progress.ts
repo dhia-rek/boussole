@@ -39,7 +39,7 @@ function parseToolInput(input: string): Record<string, unknown> | null {
 }
 
 export class AgentProgressHandler extends BaseCallbackHandler {
-  name = "forsa_agent_progress";
+  name = "boussole_agent_progress";
   toolCalls = 0;
   private readonly taskRuns = new Map<string, string>();
 

@@ -5,7 +5,7 @@ import { ATS_COMPANIES, type AtsCompany } from "./companies";
 
 const FETCH_TIMEOUT_MS = 20_000;
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; ForsaJobSearch/1.0; personal job search)";
+  "Mozilla/5.0 (compatible; BoussoleJobSearch/1.0; personal job search)";
 /** Boards fetched in parallel; batches are spaced by `pauseMs`. */
 const BOARD_CONCURRENCY = 4;
 const DEFAULT_PAUSE_MS = 200;

@@ -1,5 +1,5 @@
 /**
- * Types for Forsa's LangChain Deep Agents layer (application agent and
+ * Types for Boussole's LangChain Deep Agents layer (application agent and
  * preference learner). Runs are stored per tenant in `agent_runs`.
  */
 

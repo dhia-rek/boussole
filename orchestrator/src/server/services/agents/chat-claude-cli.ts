@@ -1,7 +1,7 @@
 /**
  * LangChain chat model backed by the Claude Code CLI.
  *
- * Forsa runs every AI task through the owner's own `claude` login (no API
+ * Boussole runs every AI task through the owner's own `claude` login (no API
  * key). LangChain / Deep Agents need a chat model with tool calling, so this
  * class adds tool calling on top of plain CLI text generation with a strict
  * JSON protocol:
@@ -61,7 +61,7 @@ export type ClaudeCliRunner = (args: {
 }) => Promise<string>;
 
 export type ChatClaudeCliFields = BaseChatModelParams & {
-  /** Model spec as configured in Forsa, e.g. "opus:medium". */
+  /** Model spec as configured in Boussole, e.g. "opus:medium". */
   model?: string | null;
   /** Per CLI call. Defaults to AGENT_CLI_TIMEOUT_MS or 5 minutes. */
   timeoutMs?: number;
@@ -182,7 +182,7 @@ export function buildToolPrompt(
 ): string {
   const { system, transcript } = renderTranscript(messages);
   return [
-    "You are the reasoning engine of an AI agent running inside Forsa, a personal job-search app.",
+    "You are the reasoning engine of an AI agent running inside Boussole, a personal job-search app.",
     "You cannot run commands or use built-in tools. You act only by replying with JSON as described at the end.",
     system ? `\n# Instructions\n${system}` : "",
     `\n# Tools\n${JSON.stringify(tools, null, 2)}`,

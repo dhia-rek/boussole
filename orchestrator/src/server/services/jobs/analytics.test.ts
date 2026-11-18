@@ -95,12 +95,14 @@ describe("trackApplicationAcceptedIfNeeded", () => {
       nextOutcome: "offer_accepted",
       previousOutcome: null,
       source: "adzuna",
-      requestOrigin: "https://forsa.example.com",
+      requestOrigin: "https://boussole.example.com",
     });
     expect(mocks.trackCanonicalActivationEvent).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ requestOrigin: "https://forsa.example.com" }),
+      expect.objectContaining({
+        requestOrigin: "https://boussole.example.com",
+      }),
     );
   });
 

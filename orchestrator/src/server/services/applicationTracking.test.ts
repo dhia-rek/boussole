@@ -13,7 +13,7 @@ describe.sequential("Application Tracking Service", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-service-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-service-test-"));
     process.env.DATA_DIR = tempDir;
     process.env.NODE_ENV = "test";
 

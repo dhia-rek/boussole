@@ -25,7 +25,7 @@ type GhostwriterDrawerProps = {
 type DisplayMode = "drawer" | "fullscreen";
 
 const DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
-const DISPLAY_MODE_STORAGE_KEY = "forsa.ghostwriter.display-mode.v1";
+const DISPLAY_MODE_STORAGE_KEY = "boussole.ghostwriter.display-mode.v1";
 
 function getIsDesktopViewport(): boolean {
   if (typeof window === "undefined") return false;

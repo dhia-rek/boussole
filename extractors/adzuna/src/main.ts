@@ -1,13 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { parseSearchTerms } from "forsa-shared/utils/search-terms";
+import { parseSearchTerms } from "boussole-shared/utils/search-terms";
 import {
   toNumberOrNull,
   toStringOrNull,
-} from "forsa-shared/utils/type-conversion";
+} from "boussole-shared/utils/type-conversion";
 
 const API_BASE = "https://api.adzuna.com/v1/api";
-const FORSA_PROGRESS_PREFIX = "FORSA_PROGRESS ";
+const BOUSSOLE_PROGRESS_PREFIX = "BOUSSOLE_PROGRESS ";
 const DEFAULT_SEARCH_TERM = "web developer";
 
 type AdzunaCompany = { display_name?: unknown };
@@ -53,8 +53,8 @@ function requireEnv(name: string): string {
 }
 
 function emitProgress(payload: Record<string, unknown>): void {
-  if (process.env.FORSA_EMIT_PROGRESS !== "1") return;
-  console.log(`${FORSA_PROGRESS_PREFIX}${JSON.stringify(payload)}`);
+  if (process.env.BOUSSOLE_EMIT_PROGRESS !== "1") return;
+  console.log(`${BOUSSOLE_PROGRESS_PREFIX}${JSON.stringify(payload)}`);
 }
 
 function formatSalary(job: AdzunaJob): string | null {

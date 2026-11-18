@@ -76,7 +76,7 @@ describe.sequential("Demo mode API behavior", () => {
     const { server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
         DEMO_MODE: "true",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
         BASIC_AUTH_USER: "",
         BASIC_AUTH_PASSWORD: "",
       },
@@ -101,7 +101,7 @@ describe.sequential("Demo mode API behavior", () => {
     const { server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
         DEMO_MODE: "true",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
         BASIC_AUTH_USER: "",
         BASIC_AUTH_PASSWORD: "",
       },
@@ -127,7 +127,7 @@ describe.sequential("Demo mode API behavior", () => {
     const { server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
         DEMO_MODE: "true",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
       },
     });
 
@@ -140,7 +140,7 @@ describe.sequential("Demo mode API behavior", () => {
             title: "Demo Imported Job",
             employer: "Demo Corp",
             jobDescription: "Demo description",
-            jobUrl: "https://demo.forsa.local/jobs/imported",
+            jobUrl: "https://demo.boussole.local/jobs/imported",
           },
         }),
       });
@@ -166,7 +166,7 @@ describe.sequential("Demo mode API behavior", () => {
     const { server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
         DEMO_MODE: "true",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
       },
     });
 
@@ -179,7 +179,7 @@ describe.sequential("Demo mode API behavior", () => {
             title: "Demo Imported Job",
             employer: "Demo Corp",
             jobDescription: "Demo description",
-            jobUrl: "https://demo.forsa.local/jobs/imported-pdf",
+            jobUrl: "https://demo.boussole.local/jobs/imported-pdf",
           },
         }),
       });
@@ -219,7 +219,7 @@ describe.sequential("Demo mode API behavior", () => {
     const { server, baseUrl, closeDb, tempDir } = await startServer({
       env: {
         DEMO_MODE: "true",
-        FORSA_TEST_AUTH_BYPASS: "0",
+        BOUSSOLE_TEST_AUTH_BYPASS: "0",
         BASIC_AUTH_USER: "",
         BASIC_AUTH_PASSWORD: "",
       },

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Forsa container entrypoint.
+# Boussole container entrypoint.
 #
 # The Cloudflare challenge viewer is started lazily by the server only when a
 # challenge needs human interaction. Keeping it out of startup avoids carrying

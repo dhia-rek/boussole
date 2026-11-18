@@ -85,7 +85,7 @@ describe("SignInPage", () => {
 
   it("prefills a remembered username but still requires a password", async () => {
     localStorage.setItem(
-      "forsa.rememberedAuthUsers",
+      "boussole.rememberedAuthUsers",
       JSON.stringify([
         {
           username: "remembered-admin",

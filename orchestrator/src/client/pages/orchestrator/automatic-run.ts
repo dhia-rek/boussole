@@ -83,7 +83,7 @@ export const AUTOMATIC_PRESETS: Record<
   },
 };
 
-export const RUN_MEMORY_STORAGE_KEY = "forsa.pipeline.run-memory.v1";
+export const RUN_MEMORY_STORAGE_KEY = "boussole.pipeline.run-memory.v1";
 
 export function getRunMemoryStorageKey(): string {
   return getAuthScopedStorageKey(RUN_MEMORY_STORAGE_KEY);

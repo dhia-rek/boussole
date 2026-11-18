@@ -35,24 +35,24 @@ cd orchestrator
 ./scripts/share.sh
 ```
 
-The script checks passwords, updates the database, builds the web app, starts Boussole in production mode on port `3005` (`FORSA_SHARE_PORT` to change it) and opens the tunnel. Open the `https://….trycloudflare.com` address it prints. Press `Ctrl+C` to stop everything.
+The script checks passwords, updates the database, builds the web app, starts Boussole in production mode on port `3005` (`BOUSSOLE_SHARE_PORT` to change it) and opens the tunnel. Open the `https://….trycloudflare.com` address it prints. Press `Ctrl+C` to stop everything.
 
 ### 3. Optional: a stable address with your domain
 
 Quick tunnels have [documented limits](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/): the address changes every time, there is no uptime guarantee, at most 200 requests can be in flight, and Server-Sent Events are not supported (the jobs page's live progress and Ghostwriter streaming won't update live; the top pipeline bar still refreshes by polling).
 
-For a stable address such as `forsa.yourdomain.com` with live updates:
+For a stable address such as `boussole.yourdomain.com` with live updates:
 
 1. Create a free Cloudflare account and add your domain to it.
-2. Run `cloudflared tunnel login`, then `cloudflared tunnel create forsa`, then `cloudflared tunnel route dns forsa forsa.yourdomain.com`.
-3. Start with `FORSA_TUNNEL_NAME=forsa ./scripts/share.sh`.
+2. Run `cloudflared tunnel login`, then `cloudflared tunnel create boussole`, then `cloudflared tunnel route dns boussole boussole.yourdomain.com`.
+3. Start with `BOUSSOLE_TUNNEL_NAME=boussole ./scripts/share.sh`.
 4. Recommended: in Cloudflare Zero Trust, add an **Access** application for that hostname with an email one-time-code policy, so only you get past Cloudflare to the sign-in page.
 
 ### Security built into Boussole
 
 - **Sign-in throttling**: after 10 failed attempts for a username, or 30 from one address, within 15 minutes, sign-in answers `429 TOO_MANY_REQUESTS` with `Retry-After` until the window passes. Behind a local tunnel the visitor's address comes from Cloudflare's `CF-Connecting-IP`. Restarting the server clears the counters.
 - **Browser headers** on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` that allows the camera and microphone only for Boussole (mock interviews), and `Strict-Transport-Security` when served over HTTPS.
-- **No cross-site API access**: other websites cannot call the API from a browser. Set `FORSA_CORS_ORIGINS` (comma-separated origins) only if you build a separate front end.
+- **No cross-site API access**: other websites cannot call the API from a browser. Set `BOUSSOLE_CORS_ORIGINS` (comma-separated origins) only if you build a separate front end.
 - **Secrets stay local**: `.env` and `orchestrator/data/` are never committed; settings store the legacy basic-auth password only as a scrypt hash.
 
 ## Common problems

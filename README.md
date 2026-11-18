@@ -33,7 +33,7 @@ A self-hosted, AI-powered job-search workbench: it searches the job boards for y
 
 ## What is Boussole?
 
-*Boussole* is French for *compass*. It is a job-search workbench you run on your own machine (it started life as Forsa, which is why some environment variables and package names still say `forsa`).
+*Boussole* is French for *compass*. It is a job-search workbench you run on your own machine (it started life as Boussole, which is why some environment variables and package names still say `boussole`).
 
 Every day it:
 
@@ -90,7 +90,7 @@ boussole/
 └── docs-site/               # Docusaurus documentation
 ```
 
-The orchestrator runs each source, reads progress over a `FORSA_PROGRESS` stdout protocol, scores and tailors with the configured model, and stores everything in SQLite. The React client talks to a typed REST API and receives live updates over Server-Sent Events.
+The orchestrator runs each source, reads progress over a `BOUSSOLE_PROGRESS` stdout protocol, scores and tailors with the configured model, and stores everything in SQLite. The React client talks to a typed REST API and receives live updates over Server-Sent Events.
 
 ### Design decisions
 
@@ -161,7 +161,7 @@ Copy `.env.example` to `.env`; everything is optional unless a feature needs it.
 | `CLAUDE_CODE_OAUTH_TOKEN` | AI on a server | From `claude setup-token`; on your own computer, running `claude` once is enough. |
 | `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_OAUTH_CLIENT_SECRET` | Tracking inbox | Gmail OAuth credentials. |
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Adzuna source | Adzuna developer credentials. |
-| `FORSA_CORS_ORIGINS` | Separate front end | Origins allowed to call the API cross-site (closed by default). |
+| `BOUSSOLE_CORS_ORIGINS` | Separate front end | Origins allowed to call the API cross-site (closed by default). |
 | `DEMO_MODE` | Public demo | Fictional data, simulated integrations, periodic reset. |
 
 See [`.env.example`](./.env.example) for the full annotated list.

@@ -28,7 +28,7 @@ const WTTJ_API = "https://api.welcometothejungle.com/api/v1";
 export const WTTJ_SITEMAP_INDEX_URL = `${WTTJ_SITE}/sitemaps/index.xml.gz`;
 
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; ForsaJobSearch/1.0; personal job search)";
+  "Mozilla/5.0 (compatible; BoussoleJobSearch/1.0; personal job search)";
 const REQUEST_TIMEOUT_MS = 30_000;
 const SITEMAP_CONCURRENCY = 3;
 const DETAIL_CONCURRENCY = 3;

@@ -79,11 +79,13 @@ describe("API client auth flow", () => {
 
     vi.spyOn(global, "fetch").mockResolvedValueOnce(jwtLoginSuccess());
 
-    const storedBefore = sessionStorage.getItem("forsa.basicAuthCredentials");
+    const storedBefore = sessionStorage.getItem(
+      "boussole.basicAuthCredentials",
+    );
     expect(storedBefore).toContain('"password"');
 
     const promise = api.restoreAuthSessionFromLegacyCredentials();
-    expect(sessionStorage.getItem("forsa.basicAuthCredentials")).toBeNull();
+    expect(sessionStorage.getItem("boussole.basicAuthCredentials")).toBeNull();
     await expect(promise).resolves.toBe(true);
   });
 

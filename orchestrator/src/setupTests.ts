@@ -13,7 +13,7 @@ import { installDomMeasurementMocks } from "@/client/test/dom-measurement";
 // configures its own DATA_DIR, point the app at a throwaway directory before
 // any module opens the SQLite file.
 if (!process.env.DATA_DIR) {
-  const isolatedDataDir = mkdtempSync(join(tmpdir(), "forsa-test-"));
+  const isolatedDataDir = mkdtempSync(join(tmpdir(), "boussole-test-"));
   process.env.DATA_DIR = isolatedDataDir;
   afterAll(() => {
     rmSync(isolatedDataDir, { recursive: true, force: true });

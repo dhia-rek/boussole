@@ -15,7 +15,7 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 const DEFAULT_VALIDATION_TIMEOUT_MS = 60_000;
 const MAX_STDERR_LINES = 40;
 
-/** Claude model aliases accepted by the CLI. Forsa stores `google/...` ids for
+/** Claude model aliases accepted by the CLI. Boussole stores `google/...` ids for
  *  other providers, which are meaningless here — we only pass `--model` when the
  *  configured value is actually a Claude model, otherwise the CLI default is used. */
 export const CLAUDE_CLI_SUGGESTED_MODELS: string[] = [
@@ -71,7 +71,7 @@ export function parseClaudeCliModelSpec(model: string | null): {
 }
 
 /**
- * Environment of the Claude Code session that may have launched Forsa (e.g.
+ * Environment of the Claude Code session that may have launched Boussole (e.g.
  * `npm run dev` started from Claude Code). A nested `claude -p` must not
  * attach to that session, so these are dropped; auth-related variables
  * (ANTHROPIC_*, CLAUDE_CODE_OAUTH_TOKEN, …) are kept.
@@ -120,7 +120,7 @@ function formatStructuredPrompt(args: {
     .join("\n\n");
 
   return [
-    "You are generating a structured JSON response for Forsa.",
+    "You are generating a structured JSON response for Boussole.",
     "Do not run commands or tools. Answer directly.",
     "Return only valid JSON with no markdown fences or extra text.",
     "The response must follow this schema exactly:",
@@ -153,7 +153,7 @@ async function runClaudeCliOnce(args: {
     "--output-format",
     "text",
     "--no-session-persistence",
-    // Forsa only needs text generation. Deny every tool so the CLI never tries
+    // Boussole only needs text generation. Deny every tool so the CLI never tries
     // to read/write files or run commands in the workspace.
     "--disallowedTools",
     "Bash Edit Write Read Glob Grep WebFetch WebSearch Task NotebookEdit",

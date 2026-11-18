@@ -2,6 +2,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { JobLocationEvidence } from "@shared/types/jobs";
+import { parseSearchTerms } from "boussole-shared/utils/search-terms";
+import {
+  toNumberOrNull,
+  toStringOrNull,
+} from "boussole-shared/utils/type-conversion";
 import {
   createLaunchOptions,
   getCloudflareCookieStorageDir,
@@ -11,11 +16,6 @@ import {
   readCookieJar,
   saveCookies,
 } from "browser-utils";
-import { parseSearchTerms } from "forsa-shared/utils/search-terms";
-import {
-  toNumberOrNull,
-  toStringOrNull,
-} from "forsa-shared/utils/type-conversion";
 import { firefox, type Page } from "playwright";
 import {
   normalizeCountryKey,
@@ -30,7 +30,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_URL = "https://hiring.cafe";
-const FORSA_PROGRESS_PREFIX = "FORSA_PROGRESS ";
+const BOUSSOLE_PROGRESS_PREFIX = "BOUSSOLE_PROGRESS ";
 const DEFAULT_MAX_JOBS_PER_TERM = 200;
 const DEFAULT_SEARCH_TERM = "web developer";
 const DEFAULT_DATE_FETCHED_PAST_N_DAYS = 30;
@@ -86,8 +86,8 @@ interface NominatimResult {
 type HiringCafeWorkplaceType = "Remote" | "Hybrid" | "Onsite";
 
 function emitProgress(payload: Record<string, unknown>): void {
-  if (process.env.FORSA_EMIT_PROGRESS !== "1") return;
-  console.log(`${FORSA_PROGRESS_PREFIX}${JSON.stringify(payload)}`);
+  if (process.env.BOUSSOLE_EMIT_PROGRESS !== "1") return;
+  console.log(`${BOUSSOLE_PROGRESS_PREFIX}${JSON.stringify(payload)}`);
 }
 
 function parsePositiveInt(input: string | undefined, fallback: number): number {
@@ -330,7 +330,7 @@ async function resolveCityLocationContext(args: {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "forsa-hiringcafe-extractor/1.0",
+        "User-Agent": "boussole-hiringcafe-extractor/1.0",
       },
       signal: AbortSignal.timeout(8_000),
     });
@@ -681,7 +681,7 @@ async function run(): Promise<void> {
         // run starts fresh with the solver's new UA/cookies.
         await invalidateCookies(EXTRACTOR_ID, STORAGE_DIR);
         // Signal the orchestrator that a human needs to solve this challenge.
-        // The FORSA_PROGRESS line is parsed by run.ts to set challengeRequired.
+        // The BOUSSOLE_PROGRESS line is parsed by run.ts to set challengeRequired.
         emitProgress({ event: "challenge_required", url: BASE_URL });
         throw new CloudflareChallengeError(BASE_URL);
       }

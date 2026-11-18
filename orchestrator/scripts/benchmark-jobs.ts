@@ -333,7 +333,7 @@ async function main() {
   const cwd = process.cwd();
   const liveDataDir = resolveSourceDataDir(cwd);
   const liveDbPath = join(liveDataDir, "jobs.db");
-  const tempDataDir = await mkdtemp(join(tmpdir(), "forsa-bench-"));
+  const tempDataDir = await mkdtemp(join(tmpdir(), "boussole-bench-"));
   const tempDbPath = join(tempDataDir, "jobs.db");
 
   let restoreConsole: (() => void) | null = null;

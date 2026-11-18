@@ -1,16 +1,16 @@
 # =============================================================================
-# Forsa - Docker Compose Configuration
+# Boussole - Docker Compose Configuration
 # =============================================================================
 
 services:
-  forsa:
+  boussole:
     build:
       context: .
       dockerfile: Dockerfile
       secrets:
         - github_token
     image: ghcr.io/dhia-rek/boussole:latest
-    container_name: forsa
+    container_name: boussole
     ports:
       - "3005:3001"
     volumes:

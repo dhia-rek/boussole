@@ -11,7 +11,7 @@ export const DEFAULT_PIPELINE_SOURCES: JobSource[] = [
   "linkedin",
   "indeed",
 ];
-export const PIPELINE_SOURCES_STORAGE_KEY = "forsa.pipeline.sources";
+export const PIPELINE_SOURCES_STORAGE_KEY = "boussole.pipeline.sources";
 
 export const orderedSources: JobSource[] = [
   ...PIPELINE_EXTRACTOR_SOURCE_IDS,

@@ -18,7 +18,7 @@ import {
 const srcDir = dirname(fileURLToPath(import.meta.url));
 const EXTRACTOR_DIR = join(srcDir, "..");
 const DATASET_PATH = join(EXTRACTOR_DIR, "storage/datasets/default/jobs.json");
-const FORSA_PROGRESS_PREFIX = "FORSA_PROGRESS ";
+const BOUSSOLE_PROGRESS_PREFIX = "BOUSSOLE_PROGRESS ";
 const require = createRequire(import.meta.url);
 const TSX_CLI_PATH = resolveTsxCliPath();
 
@@ -77,8 +77,8 @@ function canRunNpmCommand(): boolean {
 }
 
 function parseAdzunaProgressLine(line: string): AdzunaProgressEvent | null {
-  if (!line.startsWith(FORSA_PROGRESS_PREFIX)) return null;
-  const raw = line.slice(FORSA_PROGRESS_PREFIX.length).trim();
+  if (!line.startsWith(BOUSSOLE_PROGRESS_PREFIX)) return null;
+  const raw = line.slice(BOUSSOLE_PROGRESS_PREFIX.length).trim();
 
   let parsed: Record<string, unknown>;
   try {
@@ -221,7 +221,7 @@ export async function runAdzuna(
       await new Promise<void>((resolve, reject) => {
         const extractorEnv = {
           ...process.env,
-          FORSA_EMIT_PROGRESS: "1",
+          BOUSSOLE_EMIT_PROGRESS: "1",
           ADZUNA_APP_ID: appId,
           ADZUNA_APP_KEY: appKey,
           ADZUNA_COUNTRY: country,

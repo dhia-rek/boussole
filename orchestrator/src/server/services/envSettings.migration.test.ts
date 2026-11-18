@@ -11,7 +11,7 @@ describe.sequential("envSettings overrides", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-env-migration-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-env-migration-test-"));
     process.env = {
       ...originalEnv,
       DATA_DIR: tempDir,

@@ -60,12 +60,12 @@ function createMockResponse(): Response & {
 
 describe.sequential("Auth read-only enforcement", () => {
   beforeEach(() => {
-    process.env.FORSA_TEST_AUTH_BYPASS = "0";
+    process.env.BOUSSOLE_TEST_AUTH_BYPASS = "0";
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
-    process.env.FORSA_TEST_AUTH_BYPASS = "0";
+    process.env.BOUSSOLE_TEST_AUTH_BYPASS = "0";
     vi.clearAllMocks();
   });
 

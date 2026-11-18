@@ -888,7 +888,7 @@ export const agentMemories = sqliteTable(
       .notNull()
       .default("tenant_default")
       .references(() => tenants.id, { onDelete: "cascade" }),
-    /** JSON-encoded namespace array, e.g. ["forsa","memories"]. */
+    /** JSON-encoded namespace array, e.g. ["boussole","memories"]. */
     namespace: text("namespace").notNull(),
     key: text("key").notNull(),
     value: text("value", { mode: "json" }).notNull(),

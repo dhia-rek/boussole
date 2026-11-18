@@ -27,7 +27,7 @@ const fsMocks = vi.hoisted(() => ({
 
 vi.mock("@server/repositories/design-resume", () => repo);
 vi.mock("@server/config/dataDir", () => ({
-  getDataDir: vi.fn(() => "/tmp/forsa-test"),
+  getDataDir: vi.fn(() => "/tmp/boussole-test"),
 }));
 vi.mock("@server/repositories/settings", () => ({
   getSetting: vi.fn(),
@@ -359,7 +359,7 @@ describe("design resume service", () => {
 
     const deletedPath = fsMocks.unlink.mock.calls[0]?.[0];
     expect(deletedPath?.replace(/\\/g, "/")).toBe(
-      "/tmp/forsa-test/design-resume/assets/asset-1.png",
+      "/tmp/boussole-test/design-resume/assets/asset-1.png",
     );
   });
 
@@ -442,7 +442,7 @@ describe("design resume service", () => {
       originalName: "photo.png",
       mimeType: "image/png",
       byteSize: 123,
-      storagePath: "/tmp/forsa-test/design-resume/assets/photo.png",
+      storagePath: "/tmp/boussole-test/design-resume/assets/photo.png",
       createdAt: "2026-04-07T00:00:00.000Z",
       updatedAt: "2026-04-07T00:00:00.000Z",
     });
@@ -462,7 +462,7 @@ describe("design resume service", () => {
       originalName: "photo.png",
       mimeType: "image/png",
       byteSize: 123,
-      storagePath: "/tmp/forsa-test/design-resume/assets/photo.png",
+      storagePath: "/tmp/boussole-test/design-resume/assets/photo.png",
       createdAt: "2026-04-07T00:00:00.000Z",
       updatedAt: "2026-04-07T00:00:00.000Z",
     });
@@ -508,7 +508,7 @@ describe("design resume service", () => {
       originalName: "photo.png",
       mimeType: "image/png",
       byteSize: 123,
-      storagePath: "/tmp/forsa-test/design-resume/assets/asset-1.png",
+      storagePath: "/tmp/boussole-test/design-resume/assets/asset-1.png",
       createdAt: "2026-04-07T00:00:00.000Z",
       updatedAt: "2026-04-07T00:00:00.000Z",
     });
@@ -522,7 +522,7 @@ describe("design resume service", () => {
 
     expect(repo.deleteDesignResumeAsset).not.toHaveBeenCalled();
     expect(fsMocks.unlink).not.toHaveBeenCalledWith(
-      "/tmp/forsa-test/design-resume/assets/asset-1.png",
+      "/tmp/boussole-test/design-resume/assets/asset-1.png",
     );
   });
 });

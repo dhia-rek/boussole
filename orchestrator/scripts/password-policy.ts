@@ -1,4 +1,4 @@
-/** Passwords that must never protect a Forsa reachable from the internet. */
+/** Passwords that must never protect a Boussole reachable from the internet. */
 export const EASY_PASSWORDS = [
   "admin",
   "password",
@@ -10,7 +10,7 @@ export const EASY_PASSWORDS = [
   "letmein",
   "changeme",
   "secret",
-  "forsa",
+  "boussole",
 ];
 
 export const MIN_PASSWORD_LENGTH = 12;

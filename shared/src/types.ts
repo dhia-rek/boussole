@@ -1,5 +1,5 @@
 /**
- * Shared types for the forsa orchestrator.
+ * Shared types for the boussole orchestrator.
  *
  * Types are organized by domain in the `./types/` subdirectory.
  * This file re-exports everything for backward compatibility.

@@ -79,7 +79,7 @@ export function buildTailoringRulesText(profile: ResumeProfile): string {
   const originals = getOriginalTailoringValues(profile);
   const notes = formatCandidateNotes(profile);
   return [
-    "Tailoring rules (Forsa enforces them again after you answer):",
+    "Tailoring rules (Boussole enforces them again after you answer):",
     formatTailoringRulesForPrompt(rules) || "- No special rules.",
     `Current headline: "${originals.headline}"`,
     rules.summary.mode === "keep"
@@ -143,7 +143,7 @@ export function buildApplicationTools(
   const getLearnedPreferences = tool(async () => preferences, {
     name: "get_learned_preferences",
     description:
-      "What Forsa learned from the candidate's past apply/skip decisions (may be empty).",
+      "What Boussole learned from the candidate's past apply/skip decisions (may be empty).",
     schema: z.object({}),
   });
   const saveApplicationPack = tool(
@@ -168,7 +168,7 @@ export function buildApplicationTools(
   };
 }
 
-const ORCHESTRATOR_PROMPT = `You coordinate Forsa's application agents for ONE job posting. Keep every step short.
+const ORCHESTRATOR_PROMPT = `You coordinate Boussole's application agents for ONE job posting. Keep every step short.
 1. Call \`task\` with subagent_type "job-analyst" (description: "Analyse the job posting.").
 2. In ONE reply, call \`task\` twice: "cv-tailor" and "cover-letter-writer". Paste the analyst's findings into both descriptions.
 3. Call \`task\` with "critic". Paste the proposed headline, emphasis and full cover letter into the description.

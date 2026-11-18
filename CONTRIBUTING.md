@@ -1,6 +1,6 @@
-# Contributing to Forsa
+# Contributing to Boussole
 
-Thanks for helping improve Forsa. This guide covers the contributor workflow. For setup, environment variables, and deployment, see the documentation under `docs-site/docs/`.
+Thanks for helping improve Boussole. This guide covers the contributor workflow. For setup, environment variables, and deployment, see the documentation under `docs-site/docs/`.
 
 ## What You Can Contribute
 
@@ -72,7 +72,7 @@ Examples:
 
 ```
 feat(extractors): add Naukri salary parsing
-fix(orchestrator): honor FORSA_PUBLIC_BASE_URL in pipeline runs
+fix(orchestrator): honor BOUSSOLE_PUBLIC_BASE_URL in pipeline runs
 docs: clarify Gmail OAuth setup
 ```
 
@@ -80,7 +80,7 @@ Keep the summary under ~72 characters. Explain the *why* in the body, not the *w
 
 ## Running the Linter (Biome)
 
-Forsa uses [Biome](https://biomejs.org/) for linting and formatting.
+Boussole uses [Biome](https://biomejs.org/) for linting and formatting.
 
 ```bash
 # Check (CI-parity, fails on issues)

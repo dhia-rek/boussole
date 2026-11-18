@@ -15,7 +15,7 @@ describe.sequential("database migrations", () => {
   });
 
   it("boots when an older pipeline_runs table lacks config_snapshot", async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-migrate-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-migrate-"));
     const script = `
       import { join } from "node:path";
       import { pathToFileURL } from "node:url";
@@ -60,7 +60,7 @@ describe.sequential("database migrations", () => {
   });
 
   it("creates tenant foreign keys for tenant-scoped core tables", async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-migrate-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-migrate-"));
     const script = `
       import { join } from "node:path";
       import { pathToFileURL } from "node:url";
@@ -100,7 +100,7 @@ describe.sequential("database migrations", () => {
   });
 
   it("backfills legacy PDF rows as generated", async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-migrate-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-migrate-"));
     const script = `
       import { join } from "node:path";
       import { pathToFileURL } from "node:url";
@@ -144,7 +144,7 @@ describe.sequential("database migrations", () => {
   });
 
   it("adds the tracer-link composite unique index to legacy tables", async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-migrate-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-migrate-"));
     const script = `
       import { join } from "node:path";
       import { pathToFileURL } from "node:url";

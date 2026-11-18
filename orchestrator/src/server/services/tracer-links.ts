@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { logger } from "@infra/logger";
 import { trackServerProductEvent } from "@infra/product-analytics";
 import type {
-  ForsaPublicAvailabilityResponse,
+  BoussolePublicAvailabilityResponse,
   JobTracerLinksResponse,
   TracerAnalyticsResponse,
   TracerReadinessResponse,
@@ -29,7 +29,7 @@ const TRACER_READINESS_CACHE_TTL_MS = 5 * 60_000;
 type TracerReadinessCacheEntry = {
   baseUrl: string | null;
   checkedAt: number;
-  response: ForsaPublicAvailabilityResponse;
+  response: BoussolePublicAvailabilityResponse;
 };
 
 let tracerReadinessCache: TracerReadinessCacheEntry | null = null;
@@ -129,19 +129,21 @@ function isLocalOrPrivateHostname(hostnameRaw: string): boolean {
 function resolveTracerReadinessBaseUrl(args: {
   requestOrigin?: string | null;
 }): string | null {
-  const fromEnv = normalizeBaseUrl(process.env.FORSA_PUBLIC_BASE_URL ?? null);
+  const fromEnv = normalizeBaseUrl(
+    process.env.BOUSSOLE_PUBLIC_BASE_URL ?? null,
+  );
   if (fromEnv) return fromEnv;
   return normalizeBaseUrl(args.requestOrigin);
 }
 
 function makePublicAvailabilityResponse(
-  status: ForsaPublicAvailabilityResponse["status"],
+  status: BoussolePublicAvailabilityResponse["status"],
   args: {
     baseUrl: string | null;
     checkedAt: number;
     reason: string | null;
   },
-): ForsaPublicAvailabilityResponse {
+): BoussolePublicAvailabilityResponse {
   return {
     status,
     isPubliclyAvailable: status === "ready",
@@ -381,12 +383,12 @@ export function resolveTracerPublicBaseUrl(args: {
 }): string | null {
   const fromRequest = normalizeBaseUrl(args.requestOrigin);
   if (fromRequest) return fromRequest;
-  return normalizeBaseUrl(process.env.FORSA_PUBLIC_BASE_URL ?? null);
+  return normalizeBaseUrl(process.env.BOUSSOLE_PUBLIC_BASE_URL ?? null);
 }
 
-export async function getForsaPublicAvailability(
+export async function getBoussolePublicAvailability(
   args: { requestOrigin?: string | null; force?: boolean } = {},
-): Promise<ForsaPublicAvailabilityResponse> {
+): Promise<BoussolePublicAvailabilityResponse> {
   const baseUrl = resolveTracerReadinessBaseUrl({
     requestOrigin: args.requestOrigin,
   });
@@ -403,14 +405,14 @@ export async function getForsaPublicAvailability(
     return cached.response;
   }
 
-  let response: ForsaPublicAvailabilityResponse;
+  let response: BoussolePublicAvailabilityResponse;
 
   if (!baseUrl) {
     response = makePublicAvailabilityResponse("unconfigured", {
       baseUrl: null,
       checkedAt,
       reason:
-        "No public Forsa base URL is configured. Set FORSA_PUBLIC_BASE_URL.",
+        "No public Boussole base URL is configured. Set BOUSSOLE_PUBLIC_BASE_URL.",
     });
   } else {
     let hostname: string | null = null;
@@ -495,7 +497,7 @@ export async function getForsaPublicAvailability(
 export async function getTracerReadiness(
   args: { requestOrigin?: string | null; force?: boolean } = {},
 ): Promise<TracerReadinessResponse> {
-  const availability = await getForsaPublicAvailability(args);
+  const availability = await getBoussolePublicAvailability(args);
   return {
     ...availability,
     canEnable: availability.isPubliclyAvailable,

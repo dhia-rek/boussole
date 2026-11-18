@@ -115,7 +115,7 @@ export async function prepareTailoredResumeForPdf(args: {
     });
     if (!tracerBaseUrl) {
       throw new Error(
-        "Tracer links are enabled but no public base URL is available. Set FORSA_PUBLIC_BASE_URL.",
+        "Tracer links are enabled but no public base URL is available. Set BOUSSOLE_PUBLIC_BASE_URL.",
       );
     }
     if (!args.jobId) {

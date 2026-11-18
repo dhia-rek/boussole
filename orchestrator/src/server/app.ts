@@ -31,7 +31,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export function createAuthGuard() {
   const testAuthBypassEnabled =
     process.env.NODE_ENV === "test" &&
-    process.env.FORSA_TEST_AUTH_BYPASS === "1";
+    process.env.BOUSSOLE_TEST_AUTH_BYPASS === "1";
 
   async function getAuthorizationContext(req: express.Request): Promise<{
     userId: string;
@@ -195,9 +195,9 @@ export function createAuthGuard() {
   };
 }
 
-/** Origins allowed to call the API cross-origin (`FORSA_CORS_ORIGINS`, comma-separated). */
+/** Origins allowed to call the API cross-origin (`BOUSSOLE_CORS_ORIGINS`, comma-separated). */
 export function resolveCorsOrigins(
-  raw: string | undefined = process.env.FORSA_CORS_ORIGINS,
+  raw: string | undefined = process.env.BOUSSOLE_CORS_ORIGINS,
 ): string[] | false {
   const origins = (raw ?? "")
     .split(",")
@@ -210,7 +210,7 @@ export function createApp() {
   const app = express();
   const authGuard = createAuthGuard();
   // The web app calls the API from its own origin (Vite proxies in dev), so
-  // cross-origin access is off unless FORSA_CORS_ORIGINS lists origins.
+  // cross-origin access is off unless BOUSSOLE_CORS_ORIGINS lists origins.
   const corsMiddleware = cors({ origin: resolveCorsOrigins() });
 
   const handleTracerRedirect = async (

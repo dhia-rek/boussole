@@ -124,13 +124,15 @@ vi.mock("./tracer-links", () => ({
     status: "ready",
     isPubliclyAvailable: true,
     canEnable: true,
-    publicBaseUrl: "https://forsa.example",
-    healthUrl: "https://forsa.example/health",
+    publicBaseUrl: "https://boussole.example",
+    healthUrl: "https://boussole.example/health",
     checkedAt: 1,
     lastSuccessAt: 1,
     reason: null,
   }),
-  resolveTracerPublicBaseUrl: vi.fn().mockReturnValue("https://forsa.example"),
+  resolveTracerPublicBaseUrl: vi
+    .fn()
+    .mockReturnValue("https://boussole.example"),
   rewriteResumeLinksWithTracer: vi
     .fn()
     .mockResolvedValue({ rewrittenLinks: 0 }),

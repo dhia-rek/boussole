@@ -171,19 +171,19 @@ describe("usePipelineSources", () => {
 
   it("loads and saves sources using workspace-scoped storage keys", () => {
     const sessionStorage = ensureSessionStorage();
-    sessionStorage.setItem("forsa.authToken", makeAuthToken("tenant-one"));
+    sessionStorage.setItem("boussole.authToken", makeAuthToken("tenant-one"));
     ensureStorage().setItem(
       getPipelineSourcesStorageKey(),
       JSON.stringify(["wttj"]),
     );
 
-    sessionStorage.setItem("forsa.authToken", makeAuthToken("tenant-two"));
+    sessionStorage.setItem("boussole.authToken", makeAuthToken("tenant-two"));
     ensureStorage().setItem(
       getPipelineSourcesStorageKey(),
       JSON.stringify(["linkedin"]),
     );
 
-    sessionStorage.setItem("forsa.authToken", makeAuthToken("tenant-one"));
+    sessionStorage.setItem("boussole.authToken", makeAuthToken("tenant-one"));
     const enabledSources = ["wttj", "linkedin"] as const;
     const { result } = renderHook(() => usePipelineSources(enabledSources));
 
@@ -215,7 +215,7 @@ describe("usePipelineSources", () => {
   it("migrates legacy stored sources into the workspace-scoped key", () => {
     const sessionStorage = ensureSessionStorage();
     const localStorage = ensureStorage();
-    sessionStorage.setItem("forsa.authToken", makeAuthToken("tenant-one"));
+    sessionStorage.setItem("boussole.authToken", makeAuthToken("tenant-one"));
     localStorage.setItem(
       PIPELINE_SOURCES_STORAGE_KEY,
       JSON.stringify(["wttj"]),

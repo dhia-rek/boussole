@@ -21,7 +21,7 @@ describe("remembered auth users", () => {
       { username: "sam", displayName: null },
       { username: "admin", displayName: "Admin" },
     ]);
-    expect(localStorage.getItem("forsa.rememberedAuthUsers")).not.toContain(
+    expect(localStorage.getItem("boussole.rememberedAuthUsers")).not.toContain(
       "password",
     );
   });

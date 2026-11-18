@@ -79,7 +79,7 @@ export function requestContextMiddleware(): RequestHandler {
   return (req, res, next) => {
     const requestIdHeader = req.header("x-request-id")?.trim();
     const analyticsSessionId =
-      req.header("x-forsa-analytics-session-id")?.trim() || undefined;
+      req.header("x-boussole-analytics-session-id")?.trim() || undefined;
     const requestUserAgent = req.header("user-agent")?.trim() || undefined;
     const requestId =
       requestIdHeader && requestIdHeader.length > 0

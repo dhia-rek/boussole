@@ -10,7 +10,7 @@ describe.sequential("tracer-links repository", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-tracer-repo-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-tracer-repo-test-"));
     process.env = {
       ...originalEnv,
       DATA_DIR: tempDir,

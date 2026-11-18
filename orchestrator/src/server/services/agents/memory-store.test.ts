@@ -29,25 +29,25 @@ describe("SqliteAgentStore", () => {
   it("keeps items per tenant and deletes on null", async () => {
     const memory = new store.SqliteAgentStore();
     await asTenant("tenant-a", () =>
-      memory.put(["forsa", "memories"], "/a.md", { content: "A" }),
+      memory.put(["boussole", "memories"], "/a.md", { content: "A" }),
     );
 
     expect(
       await asTenant("tenant-a", () =>
-        memory.get(["forsa", "memories"], "/a.md"),
+        memory.get(["boussole", "memories"], "/a.md"),
       ),
     ).toMatchObject({ key: "/a.md", value: { content: "A" } });
     expect(
       await asTenant("tenant-b", () =>
-        memory.get(["forsa", "memories"], "/a.md"),
+        memory.get(["boussole", "memories"], "/a.md"),
       ),
     ).toBeNull();
 
     await asTenant("tenant-a", () =>
-      memory.put(["forsa", "memories"], "/a.md", { content: "A2" }),
+      memory.put(["boussole", "memories"], "/a.md", { content: "A2" }),
     );
     const updated = await asTenant("tenant-a", () =>
-      memory.get(["forsa", "memories"], "/a.md"),
+      memory.get(["boussole", "memories"], "/a.md"),
     );
     expect(updated?.value).toEqual({ content: "A2" });
     expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(
@@ -55,11 +55,11 @@ describe("SqliteAgentStore", () => {
     );
 
     await asTenant("tenant-a", () =>
-      memory.delete(["forsa", "memories"], "/a.md"),
+      memory.delete(["boussole", "memories"], "/a.md"),
     );
     expect(
       await asTenant("tenant-a", () =>
-        memory.get(["forsa", "memories"], "/a.md"),
+        memory.get(["boussole", "memories"], "/a.md"),
       ),
     ).toBeNull();
   });

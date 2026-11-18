@@ -15,7 +15,7 @@ const SOLVED_PAGE = `data:text/html,${encodeURIComponent(`<!DOCTYPE html>
   h1 { font-size:2rem; font-weight:600; margin-bottom:0.5rem; }
   p { color:#a1a1aa; font-size:1.1rem; }
 </style></head><body>
-  <div><h1>Challenge solved</h1><p>You can close this tab and return to Forsa.</p></div>
+  <div><h1>Challenge solved</h1><p>You can close this tab and return to Boussole.</p></div>
 </body></html>`)}`;
 
 /**

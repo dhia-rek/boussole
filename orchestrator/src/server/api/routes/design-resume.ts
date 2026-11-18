@@ -33,7 +33,7 @@ const jsonPointerSchema = z
   });
 
 function resolveRequestOrigin(req: Request): string | null {
-  const configuredBaseUrl = process.env.FORSA_PUBLIC_BASE_URL?.trim();
+  const configuredBaseUrl = process.env.BOUSSOLE_PUBLIC_BASE_URL?.trim();
   if (configuredBaseUrl) {
     try {
       const parsed = new URL(configuredBaseUrl);

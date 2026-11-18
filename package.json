@@ -1,8 +1,8 @@
 {
-  "name": "forsa",
+  "name": "boussole",
   "version": "1.0.0",
   "private": true,
-  "description": "Forsa — one search across every job board, one click to tailor your CV, one place to track every application.",
+  "description": "Boussole — one search across every job board, one click to tailor your CV, one place to track every application.",
   "author": "Dhia Rekik (https://dhiarekik.me)",
   "license": "MIT",
   "homepage": "https://github.com/dhia-rek/boussole#readme",

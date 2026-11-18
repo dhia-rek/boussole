@@ -138,11 +138,11 @@ const DEFAULT_CHALLENGE_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 
 /**
  * How long a paused pipeline waits for a human to solve anti-bot challenges
- * before skipping the challenged sources (FORSA_CHALLENGE_TIMEOUT_MS). Without
+ * before skipping the challenged sources (BOUSSOLE_CHALLENGE_TIMEOUT_MS). Without
  * a bound, an unattended run (cron, auto-pipeline.sh) would wait forever.
  */
 export function resolveChallengeWaitTimeoutMs(
-  raw = process.env.FORSA_CHALLENGE_TIMEOUT_MS,
+  raw = process.env.BOUSSOLE_CHALLENGE_TIMEOUT_MS,
 ): number {
   const parsed = Number.parseInt(raw?.trim() ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0

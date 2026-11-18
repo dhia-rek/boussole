@@ -48,7 +48,7 @@ describe.sequential("demo seed baseline", () => {
       await writeFile(pdfPath, Buffer.from("%PDF-1.4\nDemo PDF\n%%EOF\n"));
       return { success: true, pdfPath };
     });
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-demo-seed-test-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-demo-seed-test-"));
     process.env = {
       ...originalEnv,
       DATA_DIR: tempDir,
@@ -102,7 +102,7 @@ describe.sequential("demo seed baseline", () => {
       source: "manual",
       title: "Mutated Job",
       employer: "Mutated Employer",
-      jobUrl: "https://demo.forsa.local/jobs/mutated",
+      jobUrl: "https://demo.boussole.local/jobs/mutated",
       status: "discovered",
     });
     await setSetting("model", "sonnet");

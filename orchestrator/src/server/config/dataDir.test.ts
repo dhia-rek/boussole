@@ -23,7 +23,7 @@ describe("getDataDir", () => {
   });
 
   it("publishes the resolved fallback as DATA_DIR", async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "forsa-data-dir-"));
+    tempDir = await mkdtemp(join(tmpdir(), "boussole-data-dir-"));
     const dataDir = join(tempDir, "data");
     await mkdir(dataDir);
     process.chdir(tempDir);

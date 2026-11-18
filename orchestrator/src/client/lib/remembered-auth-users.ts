@@ -4,7 +4,7 @@ export type RememberedAuthUser = {
   rememberedAt: number;
 };
 
-const REMEMBERED_AUTH_USERS_KEY = "forsa.rememberedAuthUsers";
+const REMEMBERED_AUTH_USERS_KEY = "boussole.rememberedAuthUsers";
 const MAX_REMEMBERED_AUTH_USERS = 8;
 
 function normalizeUsername(username: string): string {

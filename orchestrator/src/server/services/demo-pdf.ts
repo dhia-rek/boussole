@@ -20,12 +20,12 @@ function buildDemoDesignResume(): DesignResumeJson {
     ...document.basics,
     name: "Avery Stone",
     headline: "Senior Backend Engineer",
-    email: "avery@demo.forsa.local",
+    email: "avery@demo.boussole.local",
     phone: "+1 (555) 010-2026",
     location: "New York, NY",
     website: {
-      url: "https://demo.forsa.local",
-      label: "forsa demo",
+      url: "https://demo.boussole.local",
+      label: "boussole demo",
     },
     customFields: [],
   };
@@ -48,7 +48,7 @@ function buildDemoDesignResume(): DesignResumeJson {
           position: "Senior Backend Engineer",
           location: "Remote",
           period: "2023 - Present",
-          website: { url: "https://demo.forsa.local", label: "company" },
+          website: { url: "https://demo.boussole.local", label: "company" },
           description:
             "Led tenant-safe workflow services, queue processing, and request tracing improvements across internal operations tooling.",
           roles: [],
@@ -60,7 +60,7 @@ function buildDemoDesignResume(): DesignResumeJson {
           position: "Software Engineer",
           location: "Chicago, IL",
           period: "2020 - 2023",
-          website: { url: "https://demo.forsa.local", label: "company" },
+          website: { url: "https://demo.boussole.local", label: "company" },
           description:
             "Built API integrations, operational dashboards, and incident-reduction tooling for customer support workflows.",
           roles: [],

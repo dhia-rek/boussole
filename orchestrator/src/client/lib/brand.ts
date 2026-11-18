@@ -1,4 +1,4 @@
-/** Product identity shown to people (internal ids and env vars keep "forsa"). */
+/** Product identity shown to people (internal ids and env vars keep "boussole"). */
 export const BRAND = {
   name: "Boussole",
   taglineFr: "Arrêtez de chercher. Commencez à viser.",

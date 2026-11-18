@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as tracerLinksRepo from "../repositories/tracer-links";
 import {
   _resetTracerReadinessCacheForTests,
-  getForsaPublicAvailability,
+  getBoussolePublicAvailability,
   getTracerReadiness,
   resolveTracerPublicBaseUrl,
   resolveTracerRedirect,
@@ -21,22 +21,22 @@ vi.mock("../repositories/tracer-links", () => ({
 }));
 
 describe("tracer-links service", () => {
-  const originalEnv = process.env.FORSA_PUBLIC_BASE_URL;
+  const originalEnv = process.env.BOUSSOLE_PUBLIC_BASE_URL;
 
   beforeEach(() => {
     vi.clearAllMocks();
     _resetTracerReadinessCacheForTests();
     vi.unstubAllGlobals();
-    delete process.env.FORSA_PUBLIC_BASE_URL;
+    delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
   });
 
   afterEach(() => {
     _resetTracerReadinessCacheForTests();
     vi.unstubAllGlobals();
     if (originalEnv === undefined) {
-      delete process.env.FORSA_PUBLIC_BASE_URL;
+      delete process.env.BOUSSOLE_PUBLIC_BASE_URL;
     } else {
-      process.env.FORSA_PUBLIC_BASE_URL = originalEnv;
+      process.env.BOUSSOLE_PUBLIC_BASE_URL = originalEnv;
     }
   });
 
@@ -99,23 +99,23 @@ describe("tracer-links service", () => {
     const result = await rewriteResumeLinksWithTracer({
       jobId: "job-1",
       resumeData,
-      publicBaseUrl: "https://forsa.example.com",
+      publicBaseUrl: "https://boussole.example.com",
       companyName: "Amazon",
     });
 
     expect(result.rewrittenLinks).toBe(3);
     expect(resumeData.basics.url.href).toBe(
-      "https://forsa.example.com/cv/tok-1",
+      "https://boussole.example.com/cv/tok-1",
     );
     expect(resumeData.basics.url.label).toBe("Portfolio");
     expect(resumeData.sections.projects.items[0].url.href).toBe(
-      "https://forsa.example.com/cv/tok-2",
+      "https://boussole.example.com/cv/tok-2",
     );
     expect(resumeData.sections.projects.items[0].url.label).toBe(
-      "https://forsa.example.com/cv/tok-2",
+      "https://boussole.example.com/cv/tok-2",
     );
     expect(resumeData.sections.profiles.items[0].url.href).toBe(
-      "https://forsa.example.com/cv/tok-3",
+      "https://boussole.example.com/cv/tok-3",
     );
     expect(resumeData.sections.profiles.items[0].url.label).toBe("GitHub");
 
@@ -148,7 +148,7 @@ describe("tracer-links service", () => {
   });
 
   it("resolves public base url from request origin first, then env fallback", () => {
-    process.env.FORSA_PUBLIC_BASE_URL = "https://fallback.example.com/";
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://fallback.example.com/";
 
     expect(
       resolveTracerPublicBaseUrl({
@@ -209,7 +209,7 @@ describe("tracer-links service", () => {
     expect(readiness.isPubliclyAvailable).toBe(false);
     expect(readiness.canEnable).toBe(false);
     expect(readiness.publicBaseUrl).toBeNull();
-    expect(readiness.reason).toMatch(/no public forsa base url/i);
+    expect(readiness.reason).toMatch(/no public boussole base url/i);
   });
 
   it("reports unavailable readiness for localhost/private origins", async () => {
@@ -224,11 +224,11 @@ describe("tracer-links service", () => {
   });
 
   it("reports ready readiness when health check succeeds", async () => {
-    process.env.FORSA_PUBLIC_BASE_URL = "https://my-forsa.example.com";
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://my-boussole.example.com";
     const realFetch = global.fetch;
     const mockFetch = vi.fn(async (input: any, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === "https://my-forsa.example.com/health") {
+      if (url === "https://my-boussole.example.com/health") {
         return new Response(JSON.stringify({ status: "ok" }), {
           status: 200,
           headers: {
@@ -248,9 +248,9 @@ describe("tracer-links service", () => {
     expect(readiness.status).toBe("ready");
     expect(readiness.isPubliclyAvailable).toBe(true);
     expect(readiness.canEnable).toBe(true);
-    expect(readiness.publicBaseUrl).toBe("https://my-forsa.example.com");
+    expect(readiness.publicBaseUrl).toBe("https://my-boussole.example.com");
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://my-forsa.example.com/health",
+      "https://my-boussole.example.com/health",
       expect.objectContaining({
         method: "GET",
       }),
@@ -258,7 +258,7 @@ describe("tracer-links service", () => {
   });
 
   it("exposes public availability as a reusable helper", async () => {
-    process.env.FORSA_PUBLIC_BASE_URL = "https://my-forsa.example.com";
+    process.env.BOUSSOLE_PUBLIC_BASE_URL = "https://my-boussole.example.com";
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -271,14 +271,14 @@ describe("tracer-links service", () => {
       ),
     );
 
-    const availability = await getForsaPublicAvailability({
+    const availability = await getBoussolePublicAvailability({
       requestOrigin: null,
       force: true,
     });
 
     expect(availability.status).toBe("ready");
     expect(availability.isPubliclyAvailable).toBe(true);
-    expect(availability.publicBaseUrl).toBe("https://my-forsa.example.com");
+    expect(availability.publicBaseUrl).toBe("https://my-boussole.example.com");
   });
 
   it("classifies browser-like bot user agents as bot family", async () => {

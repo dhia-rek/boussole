@@ -13,7 +13,7 @@ Special thanks: initial implementation inspiration came from [umur957/hiring-caf
 - `HIRING_CAFE_LOCATION_QUERY` (optional city, e.g. `Leeds`)
 - `HIRING_CAFE_LOCATION_RADIUS_MILES` (default: `1` when city is set)
 - `HIRING_CAFE_OUTPUT_JSON` (default: `storage/datasets/default/jobs.json`)
-- `FORSA_EMIT_PROGRESS=1` to emit `FORSA_PROGRESS ` lines on stdout (parsed by `src/run.ts`)
+- `BOUSSOLE_EMIT_PROGRESS=1` to emit `BOUSSOLE_PROGRESS ` lines on stdout (parsed by `src/run.ts`)
 - `HIRING_CAFE_HEADLESS=false` to run headed
 
 ## Notes

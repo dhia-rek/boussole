@@ -149,7 +149,7 @@ jobs:
         id: docker-meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/forsa
+          images: ghcr.io/${{ github.repository_owner }}/boussole
           tags: |
             type=raw,value=v${{ inputs.version }}
             type=raw,value=latest

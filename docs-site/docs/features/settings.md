@@ -261,7 +261,7 @@ curl -X POST "http://localhost:3001/api/backups"
 ### Tracer links cannot be enabled
 
 - Open **Settings → Tracer Links** and click **Verify now**.
-- Ensure `FORSA_PUBLIC_BASE_URL` is set for background/pipeline usage.
+- Ensure `BOUSSOLE_PUBLIC_BASE_URL` is set for background/pipeline usage.
 - Ensure the configured host is publicly reachable and `/health` responds.
 
 ## Related pages

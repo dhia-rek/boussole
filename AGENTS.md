@@ -1,10 +1,10 @@
-# Forsa — Agent & Extractor Architecture and Engineering Standards
+# Boussole — Agent & Extractor Architecture and Engineering Standards
 
-This document orients automated agents and contributors working in the Forsa codebase. It describes how the system is structured and the operability/privacy standards that server-side code must follow.
+This document orients automated agents and contributors working in the Boussole codebase. It describes how the system is structured and the operability/privacy standards that server-side code must follow.
 
 ## System Overview
 
-Forsa is an npm-workspaces monorepo with one runtime application (the **orchestrator**) that drives a fleet of **extractors**.
+Boussole is an npm-workspaces monorepo with one runtime application (the **orchestrator**) that drives a fleet of **extractors**.
 
 - **Orchestrator** (`orchestrator/`) — Express API + React/Vite client + SQLite. Owns the pipeline: search → score → tailor → export → track. It spawns extractors as subprocesses and persists results.
 - **Extractors** (`extractors/*`) — independent job-source scrapers for a search in France (Welcome to the Jungle, company career pages, JobSpy for LinkedIn/Indeed/Glassdoor, Adzuna, Hiring Cafe, startup.jobs, Wellfound, Brave Search) plus a shared `browser-utils` helper. Each is its own workspace exposing a `manifest` (declares id, required env vars, capabilities) and a `run` entrypoint.
@@ -16,8 +16,8 @@ Every extractor must:
 
 1. Export a `manifest` describing its `id`, `requiredEnvVars`, and capabilities.
 2. Expose a `run` entrypoint the orchestrator can spawn.
-3. Emit progress to stdout using the `FORSA_PROGRESS ` line prefix (the orchestrator parses these lines for live progress). Gate emission behind `FORSA_EMIT_PROGRESS=1` where applicable.
-4. Read configuration only from documented `FORSA_*` / source-specific environment variables.
+3. Emit progress to stdout using the `BOUSSOLE_PROGRESS ` line prefix (the orchestrator parses these lines for live progress). Gate emission behind `BOUSSOLE_EMIT_PROGRESS=1` where applicable.
+4. Read configuration only from documented `BOUSSOLE_*` / source-specific environment variables.
 
 The progress protocol is a stdout contract: the prefix string must stay identical on the emitting side (extractor) and the parsing side (`run.ts` / orchestrator). Never change one side without the other.
 
@@ -34,7 +34,7 @@ When adding a new extractor workspace under `extractors/`:
 
 ## Server-Side Engineering Standards
 
-Forsa uses strict operability and privacy defaults for server-side code.
+Boussole uses strict operability and privacy defaults for server-side code.
 
 ### API Response Contract
 

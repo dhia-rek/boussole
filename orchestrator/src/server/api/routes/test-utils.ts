@@ -159,7 +159,7 @@ export async function startServer(options?: {
   vi.unstubAllGlobals();
   restoreNativeFetch();
   vi.resetModules();
-  const tempDir = await mkdtemp(join(tmpdir(), "forsa-api-test-"));
+  const tempDir = await mkdtemp(join(tmpdir(), "boussole-api-test-"));
   const envOverrides = options?.env ?? {};
   const nextEnv = { ...originalEnv };
   for (const key of isolatedEnvKeys) {
@@ -169,7 +169,7 @@ export async function startServer(options?: {
     ...nextEnv,
     DATA_DIR: tempDir,
     NODE_ENV: "test",
-    FORSA_TEST_AUTH_BYPASS: "1",
+    BOUSSOLE_TEST_AUTH_BYPASS: "1",
     MODEL: "test-model",
     JOBSPY_SEARCH_TERMS: "alpha|beta",
     // Never reach the developer's real Claude Code CLI from route tests: any

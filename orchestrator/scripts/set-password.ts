@@ -1,5 +1,5 @@
 /**
- * Change a Forsa login password from the terminal (input stays hidden).
+ * Change a Boussole login password from the terminal (input stays hidden).
  *
  *   cd orchestrator && npx tsx scripts/set-password.ts admin
  *

@@ -138,7 +138,7 @@ Some job sites (for example Hiring Cafe) sometimes put an anti-bot check in fron
 - **Solve**: a browser window opens; pass the check and the search continues with that site.
 - **Skip and continue without …**: the search continues right away without that site.
 
-If you do neither, the search continues by itself after 10 minutes (`FORSA_CHALLENGE_TIMEOUT_MS`, in milliseconds) without that site.
+If you do neither, the search continues by itself after 10 minutes (`BOUSSOLE_CHALLENGE_TIMEOUT_MS`, in milliseconds) without that site.
 
 ### A score shows "≈" and "estimate"
 

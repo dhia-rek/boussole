@@ -2,7 +2,7 @@
  * LangGraph `BaseStore` over the `agent_memories` table.
  *
  * Deep Agents' `StoreBackend` persists its files (the `/memories/` folder)
- * in a BaseStore. This implementation keeps every item in Forsa's SQLite
+ * in a BaseStore. This implementation keeps every item in Boussole's SQLite
  * database, scoped to the tenant of the current request context — the
  * tenant is read on every operation, never cached on the instance.
  *
@@ -32,7 +32,7 @@ const { agentMemories } = schema;
 type MemoryRow = typeof agentMemories.$inferSelect;
 
 /** Namespace holding the Deep Agents `/memories/` files. */
-export const AGENT_MEMORY_NAMESPACE = ["forsa", "memories"];
+export const AGENT_MEMORY_NAMESPACE = ["boussole", "memories"];
 /** The learned-preferences file, as agents see it. */
 export const PREFERENCES_PATH = "/memories/preferences.md";
 /** Same file inside the store-backed `/memories/` route. */

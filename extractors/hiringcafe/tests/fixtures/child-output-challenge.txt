@@ -2,7 +2,7 @@
 > hiringcafe-extractor@0.0.1 start
 > tsx src/main.ts
 
-FORSA_PROGRESS {"event":"challenge_required","url":"https://hiring.cafe"}
+BOUSSOLE_PROGRESS {"event":"challenge_required","url":"https://hiring.cafe"}
 Hiring Cafe extractor failed: Cloudflare challenge at https://hiring.cafe could not be passed by the headless browser
 npm error Lifecycle script `start` failed with error:
 npm error code 1

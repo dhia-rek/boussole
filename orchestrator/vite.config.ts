@@ -57,7 +57,7 @@ export default defineConfig({
       "@server": path.resolve(__dirname, "./src/server"),
       "@infra": path.resolve(__dirname, "./src/server/infra"),
       "@shared": path.resolve(__dirname, "../shared/src"),
-      "forsa-shared": path.resolve(__dirname, "../shared/src"),
+      "boussole-shared": path.resolve(__dirname, "../shared/src"),
     },
   },
   server: {

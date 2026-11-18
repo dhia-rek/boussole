@@ -151,7 +151,7 @@ describe("runApplicationAgent", () => {
 
   it("fails when the agents never save a pack", async () => {
     const cli = createScriptedCli((prompt) =>
-      prompt.includes("You coordinate Forsa's application agents")
+      prompt.includes("You coordinate Boussole's application agents")
         ? JSON.stringify({ final: "I could not do it." })
         : JSON.stringify({ final: "n/a" }),
     );

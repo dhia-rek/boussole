@@ -18,7 +18,7 @@ Implementation split:
 
 ## Why it exists
 
-startup.jobs adds a startup-focused board to forsa without introducing another bespoke scraper in this repository.
+startup.jobs adds a startup-focused board to boussole without introducing another bespoke scraper in this repository.
 
 Using the published package also keeps the integration small and makes it easier to evolve the scraping logic independently from the app.
 

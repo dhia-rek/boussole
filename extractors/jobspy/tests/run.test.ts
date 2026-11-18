@@ -10,7 +10,7 @@ import {
 describe("parseJobSpyProgressLine", () => {
   it("parses term_start progress lines", () => {
     const event = parseJobSpyProgressLine(
-      'FORSA_PROGRESS {"event":"term_start","termIndex":1,"termTotal":3,"searchTerm":"engineer"}',
+      'BOUSSOLE_PROGRESS {"event":"term_start","termIndex":1,"termTotal":3,"searchTerm":"engineer"}',
     );
 
     expect(event).toEqual({
@@ -23,7 +23,7 @@ describe("parseJobSpyProgressLine", () => {
 
   it("parses term_complete progress lines", () => {
     const event = parseJobSpyProgressLine(
-      'FORSA_PROGRESS {"event":"term_complete","termIndex":2,"termTotal":3,"searchTerm":"frontend","jobsFoundTerm":17}',
+      'BOUSSOLE_PROGRESS {"event":"term_complete","termIndex":2,"termTotal":3,"searchTerm":"frontend","jobsFoundTerm":17}',
     );
 
     expect(event).toEqual({
@@ -36,8 +36,8 @@ describe("parseJobSpyProgressLine", () => {
   });
 
   it("returns null for malformed payloads", () => {
-    expect(parseJobSpyProgressLine("FORSA_PROGRESS {bad json")).toBeNull();
-    expect(parseJobSpyProgressLine("FORSA_PROGRESS {}")).toBeNull();
+    expect(parseJobSpyProgressLine("BOUSSOLE_PROGRESS {bad json")).toBeNull();
+    expect(parseJobSpyProgressLine("BOUSSOLE_PROGRESS {}")).toBeNull();
   });
 
   it("returns null for non-progress lines", () => {

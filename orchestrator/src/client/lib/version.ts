@@ -1,7 +1,7 @@
 declare const __APP_VERSION__: string;
 
 const GITHUB_REPO = "dhia-rek/boussole";
-const STORAGE_KEY = "forsa_version_check";
+const STORAGE_KEY = "boussole_version_check";
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const FAILED_CHECK_RETRY_MS = 6 * 60 * 60 * 1000; // 6 hours
 

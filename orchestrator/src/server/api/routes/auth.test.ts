@@ -14,7 +14,7 @@ describe.sequential("Auth routes", () => {
     BASIC_AUTH_USER: "admin",
     BASIC_AUTH_PASSWORD: "secret",
     JWT_SECRET: "an-explicit-jwt-secret-with-at-least-32-chars",
-    FORSA_TEST_AUTH_BYPASS: "0",
+    BOUSSOLE_TEST_AUTH_BYPASS: "0",
   };
 
   afterEach(async () => {
@@ -124,7 +124,7 @@ describe.sequential("Auth routes", () => {
         env: {
           BASIC_AUTH_USER: "admin",
           BASIC_AUTH_PASSWORD: "secret",
-          FORSA_TEST_AUTH_BYPASS: "0",
+          BOUSSOLE_TEST_AUTH_BYPASS: "0",
         },
       }));
 
@@ -196,7 +196,7 @@ describe.sequential("Auth routes", () => {
       ({ server, baseUrl, closeDb, tempDir } = await startServer({
         env: {
           DEMO_MODE: "true",
-          FORSA_TEST_AUTH_BYPASS: "0",
+          BOUSSOLE_TEST_AUTH_BYPASS: "0",
           BASIC_AUTH_USER: "",
           BASIC_AUTH_PASSWORD: "",
         },

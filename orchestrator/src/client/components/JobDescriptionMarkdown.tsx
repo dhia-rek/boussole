@@ -13,9 +13,9 @@ const getSafeHref = (href?: string) => {
   if (!href) return undefined;
 
   try {
-    const url = new URL(href, "https://forsa.local");
+    const url = new URL(href, "https://boussole.local");
     if (
-      url.origin === "https://forsa.local" &&
+      url.origin === "https://boussole.local" &&
       !href.startsWith("http://") &&
       !href.startsWith("https://") &&
       !href.startsWith("mailto:")

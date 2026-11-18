@@ -5,7 +5,7 @@
   "ignore": ["docs-site/src/css/custom.css"],
   "ignoreDependencies": [
     "vitest",
-    "forsa-shared",
+    "boussole-shared",
     "@docusaurus/plugin-content-docs"
   ],
   "workspaces": {

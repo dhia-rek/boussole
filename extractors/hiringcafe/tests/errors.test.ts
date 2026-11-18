@@ -52,7 +52,7 @@ function createFakeChild(lines: string[], exitCode: number) {
     for (const line of lines) {
       // main.ts prints failures with console.error and progress on stdout.
       const target =
-        line.startsWith("FORSA_PROGRESS ") || line.startsWith(">")
+        line.startsWith("BOUSSOLE_PROGRESS ") || line.startsWith(">")
           ? child.stdout
           : child.stderr;
       target.write(`${line}\n`);

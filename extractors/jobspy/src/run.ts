@@ -19,7 +19,7 @@ const srcDir = dirname(fileURLToPath(import.meta.url));
 const EXTRACTOR_DIR = join(srcDir, "..");
 const JOBSPY_SCRIPT = join(EXTRACTOR_DIR, "scrape_jobs.py");
 const OUTPUT_DIR = join(EXTRACTOR_DIR, "storage/imports");
-const FORSA_PROGRESS_PREFIX = "FORSA_PROGRESS ";
+const BOUSSOLE_PROGRESS_PREFIX = "BOUSSOLE_PROGRESS ";
 
 export type JobSpyProgressEvent =
   | {
@@ -39,8 +39,8 @@ export type JobSpyProgressEvent =
 export function parseJobSpyProgressLine(
   line: string,
 ): JobSpyProgressEvent | null {
-  if (!line.startsWith(FORSA_PROGRESS_PREFIX)) return null;
-  const raw = line.slice(FORSA_PROGRESS_PREFIX.length).trim();
+  if (!line.startsWith(BOUSSOLE_PROGRESS_PREFIX)) return null;
+  const raw = line.slice(BOUSSOLE_PROGRESS_PREFIX.length).trim();
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw) as Record<string, unknown>;

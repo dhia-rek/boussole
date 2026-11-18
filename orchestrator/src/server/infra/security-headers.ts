@@ -13,7 +13,7 @@ function isHttpsRequest(req: Request): boolean {
 /**
  * Baseline browser protections for every response: no MIME sniffing, no
  * framing by other sites, a tight referrer policy, camera/microphone only
- * for Forsa itself (mock interviews), and HSTS once served over HTTPS.
+ * for Boussole itself (mock interviews), and HSTS once served over HTTPS.
  */
 export function securityHeaders() {
   return (req: Request, res: Response, next: NextFunction) => {
