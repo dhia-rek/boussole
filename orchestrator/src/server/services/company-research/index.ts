@@ -6,18 +6,16 @@
  * tracked in memory by workspace + job, so a run cut short by a server restart
  * shows up as "interrupted" instead of "running" forever.
  */
-import { conflict } from "@infra/errors";
 import { logger } from "@infra/logger";
-import { runWithRequestContext } from "@infra/request-context";
 import { sanitizeUnknown } from "@infra/sanitize";
 import * as researchRepo from "@server/repositories/company-research";
-import { getActiveTenantId } from "@server/tenancy/context";
 import type {
   CompanyResearch,
   CompanyResearchBrief,
   CompanyResearchFact,
   Job,
 } from "@shared/types";
+import { createJobRunTracker } from "../job-runs";
 import {
   resolveActiveAiProvider,
   resolveModelForProvider,
@@ -34,8 +32,7 @@ import { runWebResearch, type WebResearchRequest } from "./web-research";
 export const INTERRUPTED_MESSAGE =
   "The research was interrupted (the server restarted). Run it again.";
 
-const activeRuns = new Map<string, Promise<void>>();
-const runKey = (tenantId: string, jobId: string) => `${tenantId}:${jobId}`;
+const runs = createJobRunTracker("Research is already running for this job.");
 
 export type CompanyResearchDeps = {
   webResearch?: (request: WebResearchRequest) => Promise<unknown>;
@@ -50,7 +47,7 @@ export function __setCompanyResearchDepsForTests(deps: CompanyResearchDeps) {
 }
 
 export function isCompanyResearchRunning(jobId: string): boolean {
-  return activeRuns.has(runKey(getActiveTenantId(), jobId));
+  return runs.isRunning(jobId);
 }
 
 /** The job's latest research; a "running" row with no live run is failed. */
@@ -143,42 +140,19 @@ export async function startCompanyResearch(
   job: Job,
   deps: CompanyResearchDeps = testDeps,
 ): Promise<CompanyResearch> {
-  const tenantId = getActiveTenantId();
-  const key = runKey(tenantId, job.id);
-  if (activeRuns.has(key)) {
-    throw conflict("Research is already running for this job.");
-  }
-  // Claim the slot before the first await so a double click cannot start two.
-  let release: () => void = () => undefined;
-  activeRuns.set(
-    key,
-    new Promise<void>((resolve) => {
-      release = resolve;
-    }),
+  const research = await runs.start(
+    job.id,
+    async () => {
+      const provider = await resolveActiveAiProvider();
+      const model = (await resolveModelForProvider(provider)) || null;
+      return researchRepo.startCompanyResearchRow({
+        jobId: job.id,
+        provider,
+        model,
+      });
+    },
+    (started) => researchJob(job, started, deps),
   );
-
-  let research: CompanyResearch;
-  try {
-    const provider = await resolveActiveAiProvider();
-    const model = (await resolveModelForProvider(provider)) || null;
-    research = await researchRepo.startCompanyResearchRow({
-      jobId: job.id,
-      provider,
-      model,
-    });
-  } catch (error) {
-    activeRuns.delete(key);
-    release();
-    throw error;
-  }
-
-  const run = runWithRequestContext({ tenantId, jobId: job.id }, () =>
-    researchJob(job, research, deps),
-  ).finally(() => {
-    activeRuns.delete(key);
-    release();
-  });
-  activeRuns.set(key, run);
   logger.info("Company research started", {
     jobId: job.id,
     provider: research.provider,
@@ -186,9 +160,9 @@ export async function startCompanyResearch(
   return research;
 }
 
-/** Waits for a running research (tests and graceful shutdown). */
+/** Waits for a running research (tests). */
 export async function waitForCompanyResearch(jobId: string): Promise<void> {
-  await activeRuns.get(runKey(getActiveTenantId(), jobId));
+  await runs.wait(jobId);
 }
 
 /**

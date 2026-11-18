@@ -737,6 +737,38 @@ export const companyResearch = sqliteTable(
   }),
 );
 
+/** One CV check per job (the latest run), see services/cv-check. */
+export const cvChecks = sqliteTable(
+  "cv_checks",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["running", "done", "failed"] }).notNull(),
+    provider: text("provider").notNull(),
+    model: text("model"),
+    cvId: text("cv_id"),
+    cvTitle: text("cv_title"),
+    cvLanguage: text("cv_language"),
+    cvRevision: integer("cv_revision"),
+    resultJson: text("result_json"),
+    error: text("error"),
+    startedAt: text("started_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => ({
+    tenantJobUnique: uniqueIndex("idx_cv_checks_tenant_job_unique").on(
+      table.tenantId,
+      table.jobId,
+    ),
+  }),
+);
+
 export const tracerClickEvents = sqliteTable(
   "tracer_click_events",
   {
@@ -898,3 +930,4 @@ export type TracerClickEventRow = typeof tracerClickEvents.$inferSelect;
 export type NewTracerClickEventRow = typeof tracerClickEvents.$inferInsert;
 export type CompanyResearchRow = typeof companyResearch.$inferSelect;
 export type NewCompanyResearchRow = typeof companyResearch.$inferInsert;
+export type CvCheckRow = typeof cvChecks.$inferSelect;
