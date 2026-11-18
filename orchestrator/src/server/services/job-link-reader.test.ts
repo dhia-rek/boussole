@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchPublicUrl = vi.fn();
-vi.mock("@infra/public-url", () => ({ fetchPublicUrl }));
+vi.mock("@infra/public-url", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@infra/public-url")>()),
+  fetchPublicUrl,
+}));
 
 const {
   formatJobPosting,

@@ -6,8 +6,11 @@
  *   2. the page's schema.org JobPosting data (most career sites embed it),
  *   3. the page's text (done by the route).
  */
-import { fetchPublicUrl } from "@infra/public-url";
+import { fetchPublicUrl, readTextWithLimit } from "@infra/public-url";
 import { convert } from "html-to-text";
+
+/** A company's whole careers feed (Workable) stays well below this. */
+const MAX_FEED_BYTES = 5 * 1024 * 1024;
 
 export type JobPostingFields = {
   title?: string;
@@ -197,7 +200,7 @@ async function fetchJson(
   });
   if (!response.ok) return null;
   try {
-    return await response.json();
+    return JSON.parse(await readTextWithLimit(response, MAX_FEED_BYTES));
   } catch {
     return null;
   }
