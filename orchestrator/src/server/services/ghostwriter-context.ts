@@ -14,6 +14,7 @@ import type { Job, ResumeProfile } from "@shared/types";
 import * as jobsRepo from "../repositories/jobs";
 import * as settingsRepo from "../repositories/settings";
 import { buildAiProfileView, formatCandidateNotes } from "./ai-profile-context";
+import { getVerifiedResearchFacts } from "./company-research";
 import {
   detectLanguageFromText,
   detectProfileLanguage,
@@ -74,7 +75,10 @@ function compactJoin(parts: Array<string | null | undefined>): string {
   return parts.filter(Boolean).join("\n");
 }
 
-function buildJobSnapshot(job: Job): string {
+function buildJobSnapshot(
+  job: Job,
+  companyFacts: Array<{ claim: string; source: string }> = [],
+): string {
   const snapshot = {
     event: "job.completed",
     sentAt: new Date().toISOString(),
@@ -95,6 +99,8 @@ function buildJobSnapshot(job: Job): string {
       tailoredSkills: truncate(job.tailoredSkills, 1200),
       jobDescription: truncate(job.jobDescription, MAX_JOB_DESCRIPTION),
     },
+    // Only facts Boussole confirmed on their source page (Company research).
+    ...(companyFacts.length > 0 ? { verifiedCompanyFacts: companyFacts } : {}),
   };
 
   return JSON.stringify(snapshot, null, 2);
@@ -310,16 +316,24 @@ export async function buildJobChatPromptContext(
     stopSlopEnabled,
     selectedNotesSnapshot,
     selectedEmailsSnapshot,
+    companyFacts,
   ] = await Promise.all([
     buildSystemPrompt(style, profile, job.jobDescription ?? ""),
     isStopSlopEnabled(),
     buildSelectedNotesSnapshot(jobId, selectedNoteIds),
     buildSelectedEmailsSnapshot(jobId, selectedEmailIds),
+    getVerifiedResearchFacts(jobId).catch((error: unknown) => {
+      logger.warn("Failed to load company research for job chat context", {
+        jobId,
+        error: sanitizeUnknown(error),
+      });
+      return [];
+    }),
   ]);
   const systemPrompt = stopSlopEnabled
     ? `${baseSystemPrompt}\n\n${STOP_SLOP_GHOSTWRITER_PROMPT}`
     : baseSystemPrompt;
-  const jobSnapshot = buildJobSnapshot(job);
+  const jobSnapshot = buildJobSnapshot(job, companyFacts);
 
   if (!jobSnapshot.trim()) {
     throw badRequest("Unable to build job context");
@@ -334,6 +348,7 @@ export async function buildJobChatPromptContext(
       profileChars: profileSnapshot.length,
       selectedNotesChars: selectedNotesSnapshot.length,
       selectedEmailsChars: selectedEmailsSnapshot.length,
+      verifiedCompanyFactCount: companyFacts.length,
       selectedNoteCount:
         normalizeGhostwriterSelectedNoteIds(selectedNoteIds).length,
       selectedEmailCount:

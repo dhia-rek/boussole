@@ -73,6 +73,7 @@ import {
 } from "../components/LogEventModal";
 import { TooltipWhenDisabled } from "../components/TooltipWhenDisabled";
 import { JobTimeline } from "./job/Timeline";
+import { CompanyResearchCard } from "./job-page/CompanyResearchCard";
 import { JobEmailsPanel } from "./job-page/JobEmailsPanel";
 import { JobNotesCard } from "./job-page/JobNotesCard";
 import {
@@ -591,6 +592,8 @@ export const JobPage: React.FC = () => {
                 />
 
                 <JobBriefPane job={job} />
+
+                <CompanyResearchCard jobId={job.id} />
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <article className="rounded-xl border border-border/50 bg-card/75 p-4">
