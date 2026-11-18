@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { agentsRouter } from "./routes/agents";
 import { aiAccountRouter } from "./routes/ai-account";
+import { aiActivityRouter } from "./routes/ai-activity";
 import { authRouter } from "./routes/auth";
 import { backupRouter } from "./routes/backup";
 import { databaseRouter } from "./routes/database";
@@ -49,6 +50,7 @@ apiRouter.use("/workspaces", workspacesRouter);
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/spontaneous", spontaneousRouter);
 apiRouter.use("/guide", guideRouter);
+apiRouter.use("/ai-activity", aiActivityRouter);
 apiRouter.use("/agents", agentsRouter);
 apiRouter.use("/ai-account", aiAccountRouter);
 apiRouter.use("/", extractorHealthRouter);

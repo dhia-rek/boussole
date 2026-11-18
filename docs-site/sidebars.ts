@@ -42,6 +42,7 @@ const sidebars: SidebarsConfig = {
         "features/cv-check",
         "features/spontaneous-applications",
         "features/mock-interview",
+        "features/ai-activity",
         "features/ghostwriter",
         "features/in-progress-board",
         "features/post-application-tracking",

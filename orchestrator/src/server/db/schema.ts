@@ -738,6 +738,36 @@ export const companyResearch = sqliteTable(
 );
 
 /** One CV check per job (the latest run), see services/cv-check. */
+/** Every AI request, for the AI activity page (last 300 per workspace). */
+export const aiActivity = sqliteTable(
+  "ai_activity",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id")
+      .notNull()
+      .default("tenant_default")
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model"),
+    jobId: text("job_id"),
+    status: text("status", { enum: ["running", "ok", "error"] }).notNull(),
+    promptChars: integer("prompt_chars").notNull(),
+    responseChars: integer("response_chars"),
+    promptPreview: text("prompt_preview").notNull(),
+    responsePreview: text("response_preview"),
+    error: text("error"),
+    startedAt: text("started_at").notNull(),
+    durationMs: integer("duration_ms"),
+  },
+  (table) => ({
+    tenantStarted: index("idx_ai_activity_tenant_started").on(
+      table.tenantId,
+      table.startedAt,
+    ),
+  }),
+);
+
 export const cvChecks = sqliteTable(
   "cv_checks",
   {

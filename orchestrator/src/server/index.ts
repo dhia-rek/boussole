@@ -12,6 +12,7 @@ import { deleteExpiredOrRevokedAuthSessions } from "./repositories/auth-sessions
 import { markInterruptedPipelineRuns } from "./repositories/pipeline";
 import * as settingsRepo from "./repositories/settings";
 import { initializeActivationAnalyticsSafely } from "./services/activation-funnel";
+import { markInterruptedAiCalls } from "./services/ai-activity";
 import { enqueueStaleReadyPdfsForAllWorkspaces } from "./services/auto-pdf-regeneration";
 import {
   getBackupSettings,
@@ -62,6 +63,7 @@ async function startServer() {
 
   // Before accepting requests: runs left "running" by a restart are dead.
   try {
+    markInterruptedAiCalls();
     const interrupted = markInterruptedPipelineRuns();
     if (interrupted > 0) {
       logger.info("Marked interrupted pipeline runs as failed", {

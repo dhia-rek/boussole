@@ -26,6 +26,7 @@ describe("navigation", () => {
       "/design-resume",
       "/overview",
       "/tracer-links",
+      "/ai-activity",
       "/settings",
     ]);
   });
