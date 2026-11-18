@@ -502,6 +502,28 @@ const migrations = [
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_company_research_tenant_job_unique
     ON company_research(tenant_id, job_id)`,
 
+  `CREATE TABLE IF NOT EXISTS cv_checks (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT 'tenant_default',
+    job_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running', 'done', 'failed')),
+    provider TEXT NOT NULL,
+    model TEXT,
+    cv_id TEXT,
+    cv_title TEXT,
+    cv_language TEXT,
+    cv_revision INTEGER,
+    result_json TEXT,
+    error TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_cv_checks_tenant_job_unique
+    ON cv_checks(tenant_id, job_id)`,
+
   `CREATE TABLE IF NOT EXISTS tracer_links (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL DEFAULT 'tenant_default',

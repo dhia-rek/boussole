@@ -117,6 +117,22 @@ export async function startCompanyResearch(
   );
 }
 
+export async function getCvCheck(
+  id: string,
+): Promise<import("@shared/types").CvCheck | null> {
+  return fetchApi<import("@shared/types").CvCheck | null>(
+    withQuery(`/jobs/${id}/cv-check`, { t: Date.now() }),
+  );
+}
+
+export async function startCvCheck(
+  id: string,
+): Promise<import("@shared/types").CvCheck> {
+  return fetchApi<import("@shared/types").CvCheck>(`/jobs/${id}/cv-check`, {
+    method: "POST",
+  });
+}
+
 export async function getJobEmails(
   id: string,
   options?: { limit?: number },
