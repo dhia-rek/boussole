@@ -48,6 +48,34 @@ export async function postApplicationGmailOauthExchange(input: {
   );
 }
 
+/**
+ * Connects an IMAP mailbox (iCloud Mail by default) with an app-specific
+ * password. The server signs in once to check it before saving.
+ */
+export async function postApplicationImapConnect(input: {
+  accountKey?: string;
+  email: string;
+  appPassword: string;
+  host?: string;
+  port?: number;
+}): Promise<PostApplicationProviderActionResponse> {
+  return fetchApi<PostApplicationProviderActionResponse>(
+    "/post-application/providers/imap/actions/connect",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        ...(input.accountKey ? { accountKey: input.accountKey } : {}),
+        payload: {
+          email: input.email,
+          appPassword: input.appPassword,
+          ...(input.host ? { host: input.host } : {}),
+          ...(input.port ? { port: input.port } : {}),
+        },
+      }),
+    },
+  );
+}
+
 export async function postApplicationProviderStatus(input?: {
   provider?: PostApplicationProvider;
   accountKey?: string;
