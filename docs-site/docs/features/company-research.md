@@ -32,7 +32,7 @@ A cover letter or interview answer that names the company's real products, numbe
    - relevance and specificity of 3 or more
    - no sign of the wrong company
 
-   Otherwise it is **Needs review**, with the reasons listed under "Check before using".
+   Otherwise it is **Needs review**, with the reasons listed under "Check before using". The rule's own reasons come first, for example *"Only 2 of 6 facts could be confirmed on their source page."*, then the AI review's remarks.
 
 Only facts with a ✓ are passed to [Ghostwriter](/docs/features/ghostwriter) when it writes your cover letter. If the review thinks the facts are about a different company, none are passed.
 
@@ -46,7 +46,7 @@ Only facts with a ✓ are passed to [Ghostwriter](/docs/features/ghostwriter) wh
 6. Expand a fact's source to see the exact quote, and open the page if you want to read more.
 7. Open Ghostwriter and ask for a cover letter. It now knows the confirmed facts.
 
-Click **Research again** at any time. The new brief replaces the old one.
+Click **Research again** at any time. The current brief stays visible (dimmed) while the new run works, and is replaced only when the new run succeeds. If the re-run fails, you keep the previous brief, and Ghostwriter keeps using its confirmed facts.
 
 ### What is sent where
 
@@ -68,7 +68,7 @@ Click **Research again** at any time. The new brief replaces the old one.
 
 ## Common problems
 
-- **"… is not signed in for this workspace."** Sign in under **Settings → AI account**, then click **Try again**.
+- **"… is not signed in for this workspace."** Shown right away, before anything runs. Sign in under **Settings → AI account**, then click **Research company** again.
 - **Many facts marked "?"** The cited sites block automated reads (common for LinkedIn and some job boards). The facts may still be true. Open the source and check yourself. Quotes from the job posting are also checked against the job description Boussole already stored.
 - **"Needs review" with a wrong company.** The company name is shared by several organisations. Add the company's website to the job (edit job details) and research again.
 - **"The research did not finish within 8 minutes."** Try again, or pick a faster model or a lower effort under **Settings → AI account**.

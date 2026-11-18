@@ -10,6 +10,7 @@ export * from "./types/ai-account";
 export * from "./types/api";
 export * from "./types/chat";
 export * from "./types/company-research";
+export * from "./types/cv-check";
 export * from "./types/design-resume";
 export * from "./types/design-resume-print";
 export * from "./types/extractors";

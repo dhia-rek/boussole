@@ -166,3 +166,29 @@ export function decideVerdict(
     !judgement.wrongCompany;
   return passed ? "passed" : "needs_review";
 }
+
+/** Plain reasons for a "needs review" verdict, from the fixed rule above. */
+export function explainVerdict(judgement: CompanyResearchJudgement): string[] {
+  const reasons: string[] = [];
+  const { factCount, verifiedCount } = judgement;
+  if (factCount > 0) {
+    const ratio = verifiedCount / factCount;
+    if (verifiedCount < MIN_VERIFIED_FACTS || ratio < MIN_VERIFIED_RATIO) {
+      reasons.push(
+        `Only ${verifiedCount} of ${factCount} facts could be confirmed on their source page.`,
+      );
+    }
+  }
+  if (judgement.wrongCompany) {
+    reasons.push(
+      "Some facts may describe a different company with the same name.",
+    );
+  }
+  if (judgement.relevance !== null && judgement.relevance < MIN_SCORE) {
+    reasons.push(`Low relevance to this job (${judgement.relevance}/5).`);
+  }
+  if (judgement.specificity !== null && judgement.specificity < MIN_SCORE) {
+    reasons.push(`Facts are generic (specificity ${judgement.specificity}/5).`);
+  }
+  return reasons;
+}
