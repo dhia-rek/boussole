@@ -33,7 +33,11 @@ export class InMemoryJobQueue implements JobQueue {
       const existingId = this.dedupeIndex.get(indexKey);
       if (existingId) {
         const existingJob = this.jobs.get(existingId);
-        if (existingJob) {
+        // Only a job still waiting absorbs a duplicate. One already running
+        // works from the state it read when it started, so a request made
+        // meanwhile must run after it (e.g. a PDF rebuild asked for while the
+        // previous rebuild was rendering older content).
+        if (existingJob && existingJob.state === "pending") {
           return {
             id: existingJob.id,
             queue,
@@ -138,9 +142,11 @@ export class InMemoryJobQueue implements JobQueue {
       this.queueOrder.splice(index, 1);
     }
     if (record.dedupeKey) {
-      this.dedupeIndex.delete(
-        this.toDedupeIndexKey(record.queue, record.dedupeKey),
-      );
+      const indexKey = this.toDedupeIndexKey(record.queue, record.dedupeKey);
+      // A newer job may have taken over this key while this one ran.
+      if (this.dedupeIndex.get(indexKey) === jobId) {
+        this.dedupeIndex.delete(indexKey);
+      }
     }
   }
 

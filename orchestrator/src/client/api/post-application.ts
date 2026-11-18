@@ -228,3 +228,13 @@ export async function getPostApplicationRunMessages(input: {
     ),
   );
 }
+
+/** Whether Gmail connect is set up on this server (no secrets returned). */
+export async function getGmailOauthConfig(): Promise<{
+  configured: boolean;
+  redirectUri: string;
+}> {
+  return fetchApi<{ configured: boolean; redirectUri: string }>(
+    "/post-application/providers/gmail/oauth/config",
+  );
+}

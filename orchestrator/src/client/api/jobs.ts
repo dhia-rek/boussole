@@ -307,10 +307,62 @@ export async function summarizeJob(
   });
 }
 
-export async function generateJobPdf(id: string): Promise<Job> {
-  return fetchApi<Job>(`/jobs/${id}/generate-pdf`, {
-    method: "POST",
-  });
+const PDF_WAIT_INTERVAL_MS = 2000;
+const PDF_WAIT_TIMEOUT_MS = 3 * 60 * 1000;
+const PDF_MAX_ATTEMPTS = 3;
+
+function isPdfAlreadyGenerating(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError &&
+    error.status === 409 &&
+    /already in progress/i.test(error.message)
+  );
+}
+
+/** Waits until no PDF build is running for the job, then returns it. */
+async function waitForPdfBuild(
+  id: string,
+  options: { intervalMs: number; timeoutMs: number },
+): Promise<Job> {
+  const deadline = Date.now() + options.timeoutMs;
+  for (;;) {
+    await new Promise((resolve) => setTimeout(resolve, options.intervalMs));
+    const job = await getJob(id);
+    if (!job.pdfRegenerating) return job;
+    if (Date.now() > deadline) {
+      throw new Error(
+        "The PDF is still being generated. Check again in a minute.",
+      );
+    }
+  }
+}
+
+/**
+ * Builds the job's PDF. Saving tailoring can already have started an
+ * automatic build; instead of failing with "already in progress", wait for
+ * it, and build again if what it rendered is already outdated.
+ */
+export async function generateJobPdf(
+  id: string,
+  options: { intervalMs?: number; timeoutMs?: number } = {},
+): Promise<Job> {
+  const wait = {
+    intervalMs: options.intervalMs ?? PDF_WAIT_INTERVAL_MS,
+    timeoutMs: options.timeoutMs ?? PDF_WAIT_TIMEOUT_MS,
+  };
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await fetchApi<Job>(`/jobs/${id}/generate-pdf`, {
+        method: "POST",
+      });
+    } catch (error) {
+      if (!isPdfAlreadyGenerating(error) || attempt >= PDF_MAX_ATTEMPTS) {
+        throw error;
+      }
+      const job = await waitForPdfBuild(id, wait);
+      if (job.pdfFreshness !== "stale") return job;
+    }
+  }
 }
 
 export async function markAsApplied(

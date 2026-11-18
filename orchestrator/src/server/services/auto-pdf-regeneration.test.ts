@@ -23,6 +23,10 @@ vi.mock("@server/repositories/jobs", () => ({
   getJobById: vi.fn(),
 }));
 
+vi.mock("@server/repositories/users", () => ({
+  listAllTenantIds: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@server/tenancy/context", () => ({
   getActiveTenantId: vi.fn(() => "tenant-test"),
 }));
@@ -36,6 +40,7 @@ vi.mock("./pdf-fingerprint", () => ({
 
 import {
   enqueueAutoPdfRegenerationForReadyJobs,
+  enqueueStaleReadyPdfsForAllWorkspaces,
   shouldEnqueueTailoringAutoPdfRegeneration,
 } from "./auto-pdf-regeneration";
 
@@ -168,5 +173,27 @@ describe("auto PDF regeneration", () => {
     expect(shouldEnqueueTailoringAutoPdfRegeneration(previous, next)).toBe(
       false,
     );
+  });
+
+  it("re-queues outdated Ready PDFs of every workspace at startup", async () => {
+    mocks.getReadyJobsWithGeneratedPdfs.mockResolvedValue([
+      createJob({ id: "job-stale", status: "ready", pdfFingerprint: "old" }),
+      createJob({ id: "job-fresh", status: "ready", pdfFingerprint: "fresh" }),
+    ]);
+    const total = await enqueueStaleReadyPdfsForAllWorkspaces(async () => [
+      "tenant-a",
+      "tenant-b",
+    ]);
+    expect(total).toBe(2);
+    expect(mocks.enqueue).toHaveBeenCalledTimes(2);
+    expect(
+      mocks.enqueue.mock.calls.map(([, payload]) => [
+        payload.jobId,
+        payload.reason,
+      ]),
+    ).toEqual([
+      ["job-stale", "startup"],
+      ["job-stale", "startup"],
+    ]);
   });
 });

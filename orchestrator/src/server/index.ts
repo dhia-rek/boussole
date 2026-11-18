@@ -6,10 +6,12 @@ import "./config/env";
 import { logger } from "@infra/logger";
 import { sanitizeUnknown } from "@infra/sanitize";
 import { createApp } from "./app";
+import { isDemoMode } from "./config/demo";
 import { initializeExtractorRegistry } from "./extractors/registry";
 import { deleteExpiredOrRevokedAuthSessions } from "./repositories/auth-sessions";
 import * as settingsRepo from "./repositories/settings";
 import { initializeActivationAnalyticsSafely } from "./services/activation-funnel";
+import { enqueueStaleReadyPdfsForAllWorkspaces } from "./services/auto-pdf-regeneration";
 import {
   getBackupSettings,
   setBackupSettings,
@@ -21,6 +23,7 @@ import { applyStoredEnvOverrides } from "./services/envSettings";
 import { initializeHistoricalServerEventReplaySafely } from "./services/historical-product-analytics";
 
 const AUTH_SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+const STARTUP_PDF_REQUEUE_DELAY_MS = 30 * 1000;
 
 async function cleanupAuthSessions(trigger: "startup" | "interval") {
   try {
@@ -114,6 +117,18 @@ async function startServer() {
       logger.warn("Failed to initialize backup service", {
         error: sanitizeUnknown(error),
       });
+    }
+
+    // Re-queue outdated "Ready" PDFs the in-memory queue lost on restart.
+    // Delayed so startup traffic settles first; never in the public demo.
+    if (!isDemoMode()) {
+      setTimeout(() => {
+        void enqueueStaleReadyPdfsForAllWorkspaces().catch((error) => {
+          logger.warn("Startup PDF re-queue failed", {
+            error: sanitizeUnknown(error),
+          });
+        });
+      }, STARTUP_PDF_REQUEUE_DELAY_MS).unref();
     }
 
     try {

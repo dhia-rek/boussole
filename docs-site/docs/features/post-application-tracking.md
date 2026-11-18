@@ -52,6 +52,8 @@ GMAIL_OAUTH_REDIRECT_URI=https://your-domain.com/oauth/gmail/callback
 
 Then connect in UI via **Tracking Inbox → Connect Gmail**.
 
+Until these are set, **Tracking Inbox** shows "Gmail isn't set up on this Boussole yet" with the three setup steps and the exact redirect URI to register in Google Cloud, and **Connect** stays disabled. Meanwhile, track replies by hand on the [Applications board](/docs/features/in-progress-board).
+
 Detailed setup guide:
 
 - [Gmail OAuth Setup](/docs/getting-started/gmail-oauth-setup)

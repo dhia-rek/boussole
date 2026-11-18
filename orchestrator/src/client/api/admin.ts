@@ -32,8 +32,8 @@ export async function inferManualJob(input: {
 
 export async function importManualJob(input: {
   job: ManualJobDraft;
-}): Promise<Job> {
-  return fetchApi<Job>("/manual-jobs/import", {
+}): Promise<Job & { alreadyInList?: boolean }> {
+  return fetchApi<Job & { alreadyInList?: boolean }>("/manual-jobs/import", {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -13,6 +13,7 @@ import {
   MOCK_INTERVIEW_ROUNDS,
 } from "@shared/types";
 import {
+  Flag,
   Loader2,
   Mic,
   MicOff,
@@ -20,13 +21,48 @@ import {
   Send,
   Sparkles,
   Video,
+  VideoOff,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  detectInterviewLang,
+  type InterviewLang,
+  rankVoices,
+  splitForSpeech,
+} from "./interview-voice";
+
+const VOICE_ON_KEY = "boussole.mockInterview.voiceOn";
+const voiceChoiceKey = (lang: InterviewLang) =>
+  `boussole.mockInterview.voice.${lang}`;
+
+function readStored(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Private mode or blocked storage: the choice just isn't remembered.
+  }
+}
+
+function getSynth(): SpeechSynthesis | null {
+  return typeof window !== "undefined" && "speechSynthesis" in window
+    ? window.speechSynthesis
+    : null;
+}
 
 type Phase = "setup" | "live" | "evaluating" | "report";
 
@@ -128,6 +164,20 @@ function MockInterviewRoom({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<MockInterviewReport | null>(null);
+  const [mediaNote, setMediaNote] = useState<string | null>(null);
+  const [hasCamera, setHasCamera] = useState(false);
+  const [lang, setLang] = useState<InterviewLang>(() =>
+    detectInterviewLang(job.jobDescription),
+  );
+  const [voiceOn, setVoiceOn] = useState(
+    () => readStored(VOICE_ON_KEY) !== "false",
+  );
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(
+    () => getSynth()?.getVoices() ?? [],
+  );
+  const [voiceURI, setVoiceURI] = useState<string | null>(() =>
+    readStored(voiceChoiceKey(detectInterviewLang(job.jobDescription))),
+  );
 
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const titleId = "mock-interview-title";
@@ -136,8 +186,29 @@ function MockInterviewRoom({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const transcriptRef = useRef<MockInterviewTurn[]>([]);
   const speechSupported = getSpeechRecognitionCtor() !== null;
-  const speechLang =
-    typeof navigator !== "undefined" ? navigator.language : "en-US";
+  // Voice answers are transcribed in the interview's language, not the
+  // browser's (a French interview in an English browser stays French).
+  const speechLang = lang;
+  const rankedVoices = useMemo(() => rankVoices(voices, lang), [voices, lang]);
+  const selectedVoice =
+    rankedVoices.find((voice) => voice.voiceURI === voiceURI) ??
+    rankedVoices[0] ??
+    null;
+
+  // A remembered voice is per language.
+  useEffect(() => {
+    setVoiceURI(readStored(voiceChoiceKey(lang)));
+  }, [lang]);
+
+  // Browsers load their voice list asynchronously.
+  useEffect(() => {
+    const synth = getSynth();
+    if (!synth) return;
+    const load = () => setVoices(synth.getVoices());
+    load();
+    synth.addEventListener?.("voiceschanged", load);
+    return () => synth.removeEventListener?.("voiceschanged", load);
+  }, []);
 
   transcriptRef.current = transcript;
 
@@ -178,17 +249,70 @@ function MockInterviewRoom({
     }
   }, [phase]);
 
-  const speak = useCallback((text: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utterance);
+  const stopSpeaking = useCallback(() => {
+    getSynth()?.cancel();
+    setSpeaking(false);
   }, []);
+
+  const speak = useCallback(
+    (text: string, options: { force?: boolean } = {}) => {
+      const synth = getSynth();
+      if (!synth || (!voiceOn && !options.force)) return;
+      synth.cancel();
+      const chunks = splitForSpeech(text);
+      chunks.forEach((chunk, index) => {
+        const utterance = new SpeechSynthesisUtterance(chunk);
+        utterance.lang = lang;
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        if (index === 0) utterance.onstart = () => setSpeaking(true);
+        if (index === chunks.length - 1)
+          utterance.onend = () => setSpeaking(false);
+        utterance.onerror = () => setSpeaking(false);
+        synth.speak(utterance);
+      });
+    },
+    [lang, selectedVoice, voiceOn],
+  );
+
+  const toggleVoice = useCallback(() => {
+    setVoiceOn((on) => {
+      writeStored(VOICE_ON_KEY, String(!on));
+      if (on) getSynth()?.cancel();
+      return !on;
+    });
+    setSpeaking(false);
+  }, []);
+
+  const chooseVoice = useCallback(
+    (uri: string) => {
+      setVoiceURI(uri);
+      writeStored(voiceChoiceKey(lang), uri);
+    },
+    [lang],
+  );
+
+  const generateReport = useCallback(
+    async (finalTranscript: MockInterviewTurn[]) => {
+      setPhase("evaluating");
+      try {
+        const generated = await requestMockInterviewReport(job.id, {
+          round,
+          transcript: finalTranscript,
+        });
+        setReport(generated);
+      } catch (reportError) {
+        setError(
+          reportError instanceof Error
+            ? reportError.message
+            : "Could not generate the interview report.",
+        );
+      }
+      setPhase("report");
+    },
+    [job.id, round],
+  );
 
   const nextTurn = useCallback(
     async (nextTranscript: MockInterviewTurn[]) => {
@@ -205,25 +329,13 @@ function MockInterviewRoom({
         ];
         setTranscript(withInterviewer);
         setCurrentQuestion(result.message);
+        if (nextTranscript.length === 0) {
+          setLang(detectInterviewLang(result.message));
+        }
         speak(result.message);
 
         if (result.ended) {
-          setPhase("evaluating");
-          try {
-            const generated = await requestMockInterviewReport(job.id, {
-              round,
-              transcript: withInterviewer,
-            });
-            setReport(generated);
-            setPhase("report");
-          } catch (reportError) {
-            setError(
-              reportError instanceof Error
-                ? reportError.message
-                : "Could not generate the interview report.",
-            );
-            setPhase("report");
-          }
+          await generateReport(withInterviewer);
         }
       } catch (turnError) {
         setError(
@@ -235,24 +347,50 @@ function MockInterviewRoom({
         setBusy(false);
       }
     },
-    [job.id, round, speak],
+    [job.id, round, speak, generateReport],
   );
 
+  const finishEarly = useCallback(() => {
+    stopSpeaking();
+    recognitionRef.current?.abort();
+    setListening(false);
+    void generateReport(transcriptRef.current);
+  }, [generateReport, stopSpeaking]);
+
+  // Camera and microphone are optional: without them you type your answers.
   const startInterview = useCallback(async () => {
     setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      streamRef.current = stream;
-      setPhase("live");
-      await nextTurn([]);
-    } catch {
-      setError(
-        "Camera/microphone access was denied. Allow access to start the interview.",
+    setMediaNote(null);
+    const getMedia = navigator.mediaDevices?.getUserMedia?.bind(
+      navigator.mediaDevices,
+    );
+    let stream: MediaStream | null = null;
+    for (const constraints of [
+      { video: true, audio: true },
+      { audio: true },
+    ] as MediaStreamConstraints[]) {
+      if (!getMedia) break;
+      try {
+        stream = await getMedia(constraints);
+        break;
+      } catch {
+        // Denied or no device: try with less, then continue without.
+      }
+    }
+    streamRef.current = stream;
+    const camera = Boolean(stream?.getVideoTracks().length);
+    setHasCamera(camera);
+    if (!stream) {
+      setMediaNote(
+        "Camera and microphone are off. Type your answers; the interview works the same.",
+      );
+    } else if (!camera) {
+      setMediaNote(
+        "Camera is off. You can still answer by voice or by typing.",
       );
     }
+    setPhase("live");
+    await nextTurn([]);
   }, [nextTurn]);
 
   const submitAnswer = useCallback(
@@ -281,6 +419,8 @@ function MockInterviewRoom({
       return;
     }
 
+    // Answering by voice interrupts the interviewer.
+    stopSpeaking();
     const recognition = new Ctor();
     recognition.lang = speechLang;
     recognition.continuous = true;
@@ -304,7 +444,7 @@ function MockInterviewRoom({
     recognitionRef.current = recognition;
     setListening(true);
     recognition.start();
-  }, [listening, speechLang]);
+  }, [listening, speechLang, stopSpeaking]);
 
   const handleClose = () => {
     stopMedia();
@@ -343,16 +483,54 @@ function MockInterviewRoom({
             </div>
           </div>
         </div>
-        <Button size="sm" variant="ghost" onClick={handleClose}>
-          <X className="mr-1.5 h-4 w-4" />
-          End
-        </Button>
+        <div className="flex items-center gap-1">
+          {phase === "live" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={finishEarly}
+              disabled={
+                busy || !transcript.some((turn) => turn.role === "candidate")
+              }
+            >
+              <Flag className="mr-1.5 h-4 w-4" />
+              Finish and get feedback
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={toggleVoice}
+            aria-label={
+              voiceOn
+                ? "Turn the interviewer voice off"
+                : "Turn the interviewer voice on"
+            }
+            aria-pressed={voiceOn}
+          >
+            {voiceOn ? (
+              <Volume2 className="h-4 w-4" />
+            ) : (
+              <VolumeX className="h-4 w-4" />
+            )}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleClose}>
+            <X className="mr-1.5 h-4 w-4" />
+            End
+          </Button>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
         {error ? (
           <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-300">
             {error}
+          </div>
+        ) : null}
+
+        {mediaNote && phase === "live" ? (
+          <div className="rounded-lg border border-border/70 bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+            {mediaNote}
           </div>
         ) : null}
 
@@ -384,10 +562,55 @@ function MockInterviewRoom({
                 </button>
               ))}
             </div>
+            {rankedVoices.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+                <label
+                  htmlFor="mock-interview-voice"
+                  className="text-muted-foreground"
+                >
+                  Interviewer voice
+                </label>
+                <select
+                  id="mock-interview-voice"
+                  value={selectedVoice?.voiceURI ?? ""}
+                  onChange={(event) => chooseVoice(event.target.value)}
+                  className="max-w-[14rem] rounded-md border border-border/70 bg-background px-2 py-1 text-sm"
+                >
+                  {rankedVoices.map((voice) => (
+                    <option key={voice.voiceURI} value={voice.voiceURI}>
+                      {voice.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    speak(
+                      lang === "fr-FR"
+                        ? "Bonjour, merci d'être là. Pouvez-vous vous présenter en quelques mots ?"
+                        : "Hello, thanks for joining. Could you briefly introduce yourself?",
+                      { force: true },
+                    )
+                  }
+                >
+                  <Volume2 className="mr-1.5 h-4 w-4" />
+                  Preview
+                </Button>
+              </div>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Camera and microphone are optional. Without them, you type your
+              answers.{" "}
+              {voiceOn
+                ? "The interviewer reads questions aloud (turn it off with the speaker button)."
+                : "The interviewer voice is off."}
+            </p>
             {!speechSupported ? (
               <p className="text-xs text-amber-400/80">
-                Voice answers are not supported in this browser — you'll type
-                your answers instead. The interviewer still speaks aloud.
+                Voice answers are not supported in this browser, so you'll type
+                your answers.
               </p>
             ) : null}
             <Button onClick={() => void startInterview()} disabled={busy}>
@@ -426,15 +649,22 @@ function MockInterviewRoom({
 
             {/* Candidate panel */}
             <div className="flex min-h-0 flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="min-h-0 w-full flex-1 rounded-xl bg-black object-cover"
-              >
-                <track kind="captions" />
-              </video>
+              {hasCamera ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="min-h-0 w-full flex-1 rounded-xl bg-black object-cover"
+                >
+                  <track kind="captions" />
+                </video>
+              ) : (
+                <div className="flex min-h-[8rem] w-full flex-1 flex-col items-center justify-center gap-2 rounded-xl bg-muted/40 text-sm text-muted-foreground">
+                  <VideoOff className="h-5 w-5" />
+                  Camera off
+                </div>
+              )}
               <textarea
                 value={answerDraft}
                 onChange={(event) => setAnswerDraft(event.target.value)}
@@ -453,7 +683,7 @@ function MockInterviewRoom({
                     variant={listening ? "destructive" : "outline"}
                     size="sm"
                     onClick={toggleListening}
-                    disabled={busy || speaking}
+                    disabled={busy}
                   >
                     {listening ? (
                       <MicOff className="mr-2 h-4 w-4" />

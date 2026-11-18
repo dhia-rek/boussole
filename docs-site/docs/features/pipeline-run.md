@@ -101,6 +101,8 @@ The footer estimate shows expected discovered jobs and resume-processing range.
 
 Manual mode opens direct import flow in the same modal.
 
+You can also click **Add a job** in the **Jobs** header at any time, including while a search is running. Importing a link that is already in your list changes nothing: Boussole says "This job is already in your list" and opens it, so an application you already sent keeps its status.
+
 Use it when you already have a specific job description or link and do not want full discovery.
 
 For accepted input formats, inference behavior, and limits, see [Manual Import Extractor](/docs/extractors/manual).
@@ -129,16 +131,25 @@ For accepted input formats, inference behavior, and limits, see [Manual Import E
 - Use `Fast` preset or lower `Max jobs discovered`.
 - Disable high-cost source combinations where acceptable.
 
+### A site asks to prove you're human
+
+Some job sites (for example Hiring Cafe) sometimes put an anti-bot check in front of their results. The search pauses and the progress card shows the site with two choices:
+
+- **Solve**: a browser window opens; pass the check and the search continues with that site.
+- **Skip and continue without …**: the search continues right away without that site.
+
+If you do neither, the search continues by itself after 10 minutes (`BOUSSOLE_CHALLENGE_TIMEOUT_MS`, in milliseconds) without that site.
+
 ### A score shows "≈" and "estimate"
 
 The AI account could not score the job when the pipeline found it (not signed in, usage limit, timeout). Boussole then keeps a **keyword estimate**: a rough number from generic keywords, not a judgement of your fit. Estimates are shown with a dashed outline and "≈", for example `≈75`.
 
 To get real scores:
 
-- **One job:** open it and click **Rescore with AI** on the Overview.
-- **Many jobs:** in **Jobs**, click **Select all filtered**, then **Rescore** (up to 100 jobs per run).
+- **One job:** open it and click **Recalculate match** on the Overview.
+- **Many jobs:** in **Jobs**, tick the jobs (or **Select all filtered**), then **Recalculate match** (up to 100 jobs at a time).
 
-An explicit rescore never falls back to an estimate. If your AI account still can't answer, the job keeps its current score and you see the reason, for example "Your AI account could not score this job: Not logged in". Fix the account under **Settings → AI account** and rescore.
+Recalculating never falls back to an estimate. If your AI account still can't answer, the job keeps its current score and you see the reason, for example "Your AI account could not score this job: Not logged in". Fix the account under **Settings → AI account** and recalculate.
 
 ### Older jobs look expired or stale
 

@@ -79,6 +79,8 @@ type ChallengeState = {
   challenges: Map<string, PendingChallenge>;
   /** Resolves the Promise that blocks the pipeline in `runPipeline`. */
   resolve: () => void;
+  /** Ends the wait without solving: the challenged sources are skipped. */
+  skip: () => void;
 };
 
 const pipelineStateByTenant = new Map<string, TenantPipelineState>();
@@ -153,16 +155,34 @@ export function resolveChallengeWaitTimeoutMs(
  * false when the wait timed out instead.
  */
 export function waitForChallengesSolved(args: {
-  register: (resolve: () => void) => void;
+  register: (resolve: () => void, skip: () => void) => void;
   timeoutMs: number;
 }): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const timer = setTimeout(() => resolve(false), args.timeoutMs);
-    args.register(() => {
-      clearTimeout(timer);
-      resolve(true);
-    });
+    args.register(
+      () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(false);
+      },
+    );
   });
+}
+
+/**
+ * Stop waiting for anti-bot challenges right away (the person chose "Skip"):
+ * the run continues without the challenged sources instead of idling until
+ * the timeout.
+ */
+export function skipPipelineChallenges(): { skipped: boolean } {
+  const challengeState = getPipelineState().activeChallengeState;
+  if (!challengeState) return { skipped: false };
+  challengeState.skip();
+  return { skipped: true };
 }
 
 // The pipeline async function stays alive in memory while paused — there's no
@@ -329,14 +349,19 @@ export async function runPipeline(
         const challengedSources = pendingChallenges.flatMap((c) => c.sources);
         const challengeTimeoutMs = resolveChallengeWaitTimeoutMs();
 
+        let skippedByUser = false;
         const solved = await waitForChallengesSolved({
           timeoutMs: challengeTimeoutMs,
-          register: (resolve) => {
+          register: (resolve, skip) => {
             tenantState.activeChallengeState = {
               challenges: new Map(
                 pendingChallenges.map((c) => [c.extractorId, c]),
               ),
               resolve,
+              skip: () => {
+                skippedByUser = true;
+                skip();
+              },
             };
           },
         });
@@ -380,14 +405,17 @@ export async function runPipeline(
           // skip those sources instead of blocking the pipeline forever.
           const minutes = Math.round(challengeTimeoutMs / 60_000);
           pipelineLogger.warn(
-            "Challenges were not solved in time, skipping challenged sources",
+            skippedByUser
+              ? "Challenges skipped by the user, skipping challenged sources"
+              : "Challenges were not solved in time, skipping challenged sources",
             { sources: challengedSources, timeoutMs: challengeTimeoutMs },
           );
           sourceErrors = [
             ...sourceErrors,
-            ...pendingChallenges.map(
-              (challenge) =>
-                `${challenge.extractorName}: anti-bot challenge not solved within ${minutes} min; skipped for this run`,
+            ...pendingChallenges.map((challenge) =>
+              skippedByUser
+                ? `${challenge.extractorName}: anti-bot check skipped; source not searched this run`
+                : `${challenge.extractorName}: anti-bot challenge not solved within ${minutes} min; skipped for this run`,
             ),
           ];
           pendingChallenges = [];
