@@ -319,7 +319,9 @@ vi.mock("./resume-renderer", () => ({
 }));
 
 const mockTracerLinks = vi.hoisted(() => ({
-  resolveTracerPublicBaseUrl: vi.fn().mockReturnValue("https://boussole.example"),
+  resolveTracerPublicBaseUrl: vi
+    .fn()
+    .mockReturnValue("https://boussole.example"),
   getBoussolePublicAvailability: vi.fn().mockResolvedValue({
     status: "ready",
     isPubliclyAvailable: true,

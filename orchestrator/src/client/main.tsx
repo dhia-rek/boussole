@@ -1,3 +1,5 @@
+// First: move this browser's saved keys from the app's old name.
+import "./lib/legacy-storage-keys";
 import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import ReactDOM from "react-dom/client";

@@ -129,7 +129,9 @@ function isLocalOrPrivateHostname(hostnameRaw: string): boolean {
 function resolveTracerReadinessBaseUrl(args: {
   requestOrigin?: string | null;
 }): string | null {
-  const fromEnv = normalizeBaseUrl(process.env.BOUSSOLE_PUBLIC_BASE_URL ?? null);
+  const fromEnv = normalizeBaseUrl(
+    process.env.BOUSSOLE_PUBLIC_BASE_URL ?? null,
+  );
   if (fromEnv) return fromEnv;
   return normalizeBaseUrl(args.requestOrigin);
 }
