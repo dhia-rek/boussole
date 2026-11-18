@@ -270,6 +270,8 @@ export type JobListItem = Pick<
   | "appliedAt"
   | "updatedAt"
 > & {
+  /** The score is a keyword estimate, not an AI score (see @shared/scoring). */
+  scoreIsEstimate?: boolean;
   /** How the posting says to apply (see @shared/apply-route). */
   applyChannel?: import("../apply-route").ApplyChannel | null;
 };

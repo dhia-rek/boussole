@@ -175,16 +175,20 @@ export const JobPage: React.FC = () => {
     enabled: Boolean(id),
   });
 
+  // A missing job is explained on the page itself; no toasts for its 404s.
+  const jobMissing =
+    (jobQuery.error as { status?: number } | null)?.status === 404;
+  const toastable = (error: unknown) => (jobMissing ? null : error);
   useQueryErrorToast(
-    jobQuery.error,
+    toastable(jobQuery.error),
     "Failed to load job details. Please try again.",
   );
   useQueryErrorToast(
-    eventsQuery.error,
+    toastable(eventsQuery.error),
     "Failed to load job timeline. Please try again.",
   );
   useQueryErrorToast(
-    tasksQuery.error,
+    toastable(tasksQuery.error),
     "Failed to load job tasks. Please try again.",
   );
 
@@ -205,7 +209,7 @@ export const JobPage: React.FC = () => {
     jobQuery.isLoading || eventsQuery.isLoading || tasksQuery.isLoading;
   const activeMemoryView = normalizeMemoryView(view);
   useQueryErrorToast(
-    activeMemoryView === "note" ? null : notesQuery.error,
+    activeMemoryView === "note" ? null : toastable(notesQuery.error),
     "Failed to load notes. Please try again.",
   );
   const selectedProjectIds = React.useMemo(
@@ -541,6 +545,20 @@ export const JobPage: React.FC = () => {
   const handleBack = React.useCallback(() => {
     navigate(jobPageBackTo ?? getFallbackBackTarget(job));
   }, [job, jobPageBackTo, navigate]);
+  // Below xl the page is one column: the dossier and links come first, so a
+  // section opened from the links (Notes, Documents…) would appear off-screen.
+  // Bring it into view instead.
+  const sectionContentRef = React.useRef<HTMLDivElement>(null);
+  const hasJob = Boolean(job);
+  React.useEffect(() => {
+    if (!hasJob || activeMemoryView === "overview") return;
+    if (window.matchMedia?.("(min-width: 1280px)").matches) return;
+    sectionContentRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [activeMemoryView, hasJob]);
+
   const pageGridClass =
     activeMemoryView === "overview"
       ? "grid items-start gap-4 grid-cols-1 xl:grid-cols-[18rem_minmax(0,1fr)_18rem]"
@@ -571,7 +589,9 @@ export const JobPage: React.FC = () => {
 
       {!job && (
         <div className="rounded-lg border border-dashed border-border/40 p-6 text-sm text-muted-foreground">
-          {isLoading ? "Loading application..." : "Application not found."}
+          {isLoading
+            ? "Loading application..."
+            : "This job doesn't exist or was deleted."}
         </div>
       )}
 
@@ -586,7 +606,7 @@ export const JobPage: React.FC = () => {
             sourceLabel={sourceLabel}
           />
 
-          <div className="space-y-4">
+          <div ref={sectionContentRef} className="scroll-mt-20 space-y-4">
             {activeMemoryView === "overview" && (
               <section className="space-y-4">
                 <HowToApplyCard job={job} baseJobPath={baseJobPath} />

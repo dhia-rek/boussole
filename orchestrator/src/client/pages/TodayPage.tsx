@@ -130,8 +130,8 @@ const TodayHero: React.FC<{ ready: number | null }> = ({ ready }) => {
   const greeting = greetingFor(new Date().getHours());
   return (
     <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-[radial-gradient(120%_140%_at_100%_0%,rgba(155,147,255,0.18),transparent_55%),radial-gradient(90%_120%_at_0%_100%,rgba(255,107,87,0.12),transparent_60%)] px-6 py-7 sm:px-8">
-      <BoussoleMark className="boussole-needle pointer-events-none absolute -right-6 -top-10 size-44 text-brand-periwinkle/20" />
-      <h2 className="relative max-w-3xl font-display text-[clamp(1.7rem,3.4vw,2.6rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
+      <BoussoleMark className="boussole-needle pointer-events-none absolute -right-8 -top-8 size-28 text-brand-periwinkle/20 sm:-right-6 sm:-top-10 sm:size-44" />
+      <h2 className="relative max-w-3xl pr-16 font-display sm:pr-0 text-[clamp(1.7rem,3.4vw,2.6rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
         {greeting}
         {firstName ? `, ${firstName}` : ""}.{" "}
         {ready === null ? null : ready > 0 ? (
@@ -414,11 +414,21 @@ const TopMatchesCard: React.FC<{
                   <span
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
-                      scoreTone(score),
+                      job.scoreIsEstimate && score != null
+                        ? "border-dashed border-muted-foreground/50 text-muted-foreground"
+                        : scoreTone(score),
                     )}
-                    title="Match score"
+                    title={
+                      job.scoreIsEstimate && score != null
+                        ? "Keyword estimate, not an AI score"
+                        : "Match score"
+                    }
                   >
-                    {score ?? "–"}
+                    {score == null
+                      ? "–"
+                      : job.scoreIsEstimate
+                        ? `≈${score}`
+                        : score}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
@@ -518,7 +528,8 @@ export const TodayPage: React.FC = () => {
           <PipelineCard className="lg:col-span-2" />
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          {/* min-w-0: let long, truncated job titles shrink on phones. */}
+          <div className="min-w-0 lg:col-span-2">
             <TopMatchesCard
               jobs={pickTopMatches(readyJobs)}
               total={readyJobs.length}
