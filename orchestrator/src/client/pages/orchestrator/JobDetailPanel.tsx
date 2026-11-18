@@ -581,7 +581,7 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
       <JobHeader
         job={selectedJob}
         jobCTA={
-          <div className="flex shrink-0 gap-2">
+          <div className="flex min-w-0 flex-wrap justify-end gap-2">
             <GhostwriterDrawer
               job={selectedJob}
               triggerLabel="Ask Ghostwriter"
@@ -764,8 +764,8 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                     : "border-amber-500/20 bg-amber-500/[0.04]",
                 )}
               >
-                <div className="flex min-w-0 items-center w-full justify-between">
-                  <div className="flex gap-3">
+                <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-[12rem] flex-1 gap-3">
                     <span
                       className={cn(
                         "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
