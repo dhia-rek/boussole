@@ -8,6 +8,7 @@ import { access, mkdir } from "node:fs/promises";
 import { AppError, type AppErrorCode } from "@infra/errors";
 import { logger } from "@infra/logger";
 import { getDesignResumeAssetById } from "@server/repositories/design-resume";
+import { resolveDesignResumeAssetPath } from "@server/services/design-resume/asset-path";
 import { writingLanguageFromDesignResumeLanguage } from "@shared/design-resume-variants";
 import type {
   DesignResumeAiGuidance,
@@ -88,7 +89,7 @@ async function resolveResumePhotoPath(
     return null; // A malformed picture URL renders the CV without a photo.
   }
   const asset = await getDesignResumeAssetById(assetId);
-  return asset?.storagePath ?? null;
+  return asset ? resolveDesignResumeAssetPath(asset.storagePath) : null;
 }
 
 /**

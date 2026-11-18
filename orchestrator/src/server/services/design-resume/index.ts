@@ -35,6 +35,7 @@ import type {
   DesignResumeVariantSummary,
   ResumeProfile,
 } from "@shared/types";
+import { resolveDesignResumeAssetPath } from "./asset-path";
 
 const DESIGN_RESUME_DIR = join(getDataDir(), "design-resume");
 const DESIGN_RESUME_ASSET_DIR = join(DESIGN_RESUME_DIR, "assets");
@@ -491,7 +492,7 @@ async function ensureStorageDirs(): Promise<void> {
 
 async function deleteAssetFile(storagePath: string): Promise<void> {
   try {
-    await unlink(storagePath);
+    await unlink(resolveDesignResumeAssetPath(storagePath));
   } catch (error) {
     logger.warn("Failed to delete design resume asset", {
       storagePath,
@@ -1010,7 +1011,7 @@ export async function readDesignResumeAssetContent(
     throw notFound("Design Resume asset not found.");
   }
 
-  const content = await readFile(row.storagePath);
+  const content = await readFile(resolveDesignResumeAssetPath(row.storagePath));
   return {
     asset: toDesignResumeAsset(row),
     content,
