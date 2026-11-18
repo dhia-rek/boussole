@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { VirtualListHandle } from "@/client/lib/virtual-list";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerClose, DrawerContent } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useAppShell } from "../components/app-shell/AppShellContext";
 import { KeyboardShortcutBar } from "../components/KeyboardShortcutBar";
 import { KeyboardShortcutDialog } from "../components/KeyboardShortcutDialog";
@@ -517,9 +523,14 @@ export const OrchestratorPage: React.FC = () => {
         <Drawer open={isDetailDrawerOpen} onOpenChange={onDrawerOpenChange}>
           <DrawerContent className="max-h-[90vh]">
             <div className="flex items-center justify-between px-4 pt-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <DrawerTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Job details
-              </div>
+              </DrawerTitle>
+              <DrawerDescription className="sr-only">
+                {visibleSelectedJob
+                  ? `${visibleSelectedJob.title} at ${visibleSelectedJob.employer}`
+                  : "Details of the selected job"}
+              </DrawerDescription>
               <DrawerClose asChild>
                 <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
                   Close
