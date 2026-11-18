@@ -37,6 +37,7 @@ const sidebars: SidebarsConfig = {
         "features/design-resume",
         "features/ai-account",
         "features/ai-agents",
+        "features/company-research",
         "features/ghostwriter",
         "features/in-progress-board",
         "features/post-application-tracking",
