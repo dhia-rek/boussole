@@ -17,14 +17,14 @@ Interviews for AI, data and automation roles quickly go into specifics ("what ex
 
 1. Open a job in **Jobs** and click **Mock interview**. When an application reaches an interview stage, **Today** also shows "Prepare your … with …": **Practice now** opens the interview for that job directly.
 2. Choose the round: **HR / Behavioral**, **Technical**, or **Full loop**.
-3. Optionally pick the **Interviewer voice** and click **Preview**. Boussole picks the most natural voice your computer offers for the interview's language and never picks novelty voices (for example macOS "Grandpa").
+3. Optionally pick the **Interviewer voice** and click **Preview**. Boussole picks the most natural voice your computer offers for the interview's language and never picks novelty voices (for example macOS "Grandpa"). The interviewer takes the voice's first name (for example **Audrey (Premium)** → Audrey) and plays a role that fits the round: a recruiter for **HR / Behavioral**, a team lead for **Technical**, the hiring manager for **Full loop**. Voices without a first name (for example "Google français") give an interviewer without a name.
 4. Click **Start interview**.
 5. Answer each question by typing, or with **Answer by voice** (your speech is transcribed in the interview's language). Answering by voice interrupts the interviewer.
 6. The interview ends by itself, or click **Finish and get feedback** at any time after your first answer.
 
 Camera and microphone are optional. Without them, you type your answers and everything else works the same. The speaker button turns the interviewer voice off or on (remembered on this browser).
 
-The interview is in the language of the job: French for a French posting, English otherwise.
+The interview is in the language of the job: French for a French posting (with "vous"), English otherwise. The interviewer speaks in one to three short sentences per turn, because a voice reads them aloud, and stays in character until the end: no hints or scores during the interview.
 
 ## Common problems
 

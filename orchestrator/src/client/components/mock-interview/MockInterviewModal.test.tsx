@@ -61,6 +61,12 @@ describe("MockInterview", () => {
       await screen.findByText(/Parlez-moi de votre projet/),
     ).toBeInTheDocument();
     expect(screen.getByText("Camera off")).toBeInTheDocument();
+    // French posting: the interviewer is asked to speak French.
+    expect(mocks.turn).toHaveBeenNthCalledWith(1, "job-1", {
+      round: "full",
+      transcript: [],
+      language: "fr",
+    });
 
     const finish = screen.getByRole("button", {
       name: "Finish and get feedback",
@@ -81,5 +87,73 @@ describe("MockInterview", () => {
         expect.objectContaining({ role: "candidate" }),
       ]),
     });
+  });
+
+  it("names the interviewer after the chosen voice", async () => {
+    const spoken: string[] = [];
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        lang = "";
+        voice: unknown = null;
+        onend: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor(readonly text: string) {}
+      },
+    );
+    // Silent fake voice engine.
+    const synth = {
+      getVoices: () => [
+        {
+          name: "Audrey (Premium)",
+          lang: "fr-FR",
+          voiceURI: "audrey",
+          localService: true,
+          default: false,
+        },
+      ],
+      speak: (utterance: { text: string; onend?: (() => void) | null }) => {
+        spoken.push(utterance.text);
+        utterance.onend?.();
+      },
+      cancel: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: synth,
+    });
+    try {
+      render(
+        <MockInterviewButton
+          job={createJob({
+            id: "job-2",
+            title: "Ingénieur données",
+            employer: "SII",
+            jobDescription:
+              "Nous recherchons un ingénieur pour la qualité des données et les agents.",
+          })}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Mock interview/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Start interview" }));
+
+      await waitFor(() =>
+        expect(mocks.turn).toHaveBeenCalledWith("job-2", {
+          round: "full",
+          transcript: [],
+          language: "fr",
+          interviewerName: "Audrey",
+        }),
+      );
+      expect(
+        await screen.findByText(/Audrey · Hiring manager/),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(spoken.length).toBeGreaterThan(0));
+    } finally {
+      Reflect.deleteProperty(window, "speechSynthesis");
+      vi.unstubAllGlobals();
+    }
   });
 });

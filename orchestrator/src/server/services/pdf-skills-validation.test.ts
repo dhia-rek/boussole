@@ -130,7 +130,9 @@ vi.mock("./tracer-links", () => ({
     lastSuccessAt: 1,
     reason: null,
   }),
-  resolveTracerPublicBaseUrl: vi.fn().mockReturnValue("https://boussole.example"),
+  resolveTracerPublicBaseUrl: vi
+    .fn()
+    .mockReturnValue("https://boussole.example"),
   rewriteResumeLinksWithTracer: vi
     .fn()
     .mockResolvedValue({ rewrittenLinks: 0 }),

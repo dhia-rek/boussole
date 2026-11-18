@@ -34,9 +34,17 @@ import { cn } from "@/lib/utils";
 import {
   detectInterviewLang,
   type InterviewLang,
+  personaNameFromVoice,
   rankVoices,
   splitForSpeech,
 } from "./interview-voice";
+
+/** Who the interviewer is, per round (shown next to their name). */
+const INTERVIEWER_ROLE_LABELS: Record<MockInterviewRound, string> = {
+  hr: "Recruiter",
+  technical: "Team lead",
+  full: "Hiring manager",
+};
 
 const VOICE_ON_KEY = "boussole.mockInterview.voiceOn";
 const voiceChoiceKey = (lang: InterviewLang) =>
@@ -191,6 +199,9 @@ export function MockInterviewRoom({
   // browser's (a French interview in an English browser stays French).
   const speechLang = lang;
   const rankedVoices = useMemo(() => rankVoices(voices, lang), [voices, lang]);
+  // Fixed when the interview starts, so the name never changes mid-way.
+  const [interviewerName, setInterviewerName] = useState<string | null>(null);
+  const startedRef = useRef(false);
   const selectedVoice =
     rankedVoices.find((voice) => voice.voiceURI === voiceURI) ??
     rankedVoices[0] ??
@@ -323,6 +334,8 @@ export function MockInterviewRoom({
         const result = await requestMockInterviewTurn(job.id, {
           round,
           transcript: nextTranscript,
+          language: lang.startsWith("fr") ? "fr" : "en",
+          ...(interviewerName ? { interviewerName } : {}),
         });
         const withInterviewer: MockInterviewTurn[] = [
           ...nextTranscript,
@@ -348,7 +361,7 @@ export function MockInterviewRoom({
         setBusy(false);
       }
     },
-    [job.id, round, speak, generateReport],
+    [job.id, round, lang, interviewerName, speak, generateReport],
   );
 
   const finishEarly = useCallback(() => {
@@ -390,9 +403,17 @@ export function MockInterviewRoom({
         "Camera is off. You can still answer by voice or by typing.",
       );
     }
+    setInterviewerName(personaNameFromVoice(selectedVoice?.name));
     setPhase("live");
-    await nextTurn([]);
-  }, [nextTurn]);
+  }, [selectedVoice]);
+
+  // The first question, once the interviewer's name is fixed.
+  useEffect(() => {
+    if (phase !== "live" || transcriptRef.current.length > 0 || busy) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+    void nextTurn([]);
+  }, [phase, busy, nextTurn]);
 
   const submitAnswer = useCallback(
     (text: string) => {
@@ -459,6 +480,7 @@ export function MockInterviewRoom({
     setAnswerDraft("");
     setReport(null);
     setError(null);
+    startedRef.current = false;
     setPhase("setup");
   };
 
@@ -635,13 +657,16 @@ export function MockInterviewRoom({
                   speaking && "scale-105",
                 )}
               >
-                AI
+                {interviewerName ? interviewerName.charAt(0) : "AI"}
                 {speaking ? (
                   <span className="absolute inset-0 animate-ping rounded-full border-2 border-primary/60" />
                 ) : null}
               </div>
               <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                {speaking ? "Interviewer speaking…" : "Interviewer"}
+                {interviewerName
+                  ? `${interviewerName} · ${INTERVIEWER_ROLE_LABELS[round]}`
+                  : "Interviewer"}
+                {speaking ? " · speaking…" : ""}
               </div>
               <p className="max-h-48 overflow-y-auto text-center text-sm leading-6 text-foreground">
                 {currentQuestion || "…"}

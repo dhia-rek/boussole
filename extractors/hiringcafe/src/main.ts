@@ -2,6 +2,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { JobLocationEvidence } from "@shared/types/jobs";
+import { parseSearchTerms } from "boussole-shared/utils/search-terms";
+import {
+  toNumberOrNull,
+  toStringOrNull,
+} from "boussole-shared/utils/type-conversion";
 import {
   createLaunchOptions,
   getCloudflareCookieStorageDir,
@@ -11,11 +16,6 @@ import {
   readCookieJar,
   saveCookies,
 } from "browser-utils";
-import { parseSearchTerms } from "boussole-shared/utils/search-terms";
-import {
-  toNumberOrNull,
-  toStringOrNull,
-} from "boussole-shared/utils/type-conversion";
 import { firefox, type Page } from "playwright";
 import {
   normalizeCountryKey,

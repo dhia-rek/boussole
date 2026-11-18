@@ -31,6 +31,27 @@ const NOVELTY_VOICES =
   /\b(grandpa|grandma|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert|fred|junior|ralph|kathy|eddy|flo|reed|rocko|sandy|shelley)\b/i;
 const NATURAL_HINTS = /premium|enhanced|natural|neural|siri|google/i;
 
+const NOT_A_NAME = /^(google|microsoft|apple|siri|voice|default)$/i;
+
+/**
+ * The interviewer's first name, taken from the chosen voice so the name and
+ * the voice match: "Audrey (Premium)" → "Audrey", "Microsoft Denise Online
+ * (Natural) - French (France)" → "Denise", "Google français" → null.
+ */
+export function personaNameFromVoice(
+  voiceName: string | null | undefined,
+): string | null {
+  if (!voiceName || NOVELTY_VOICES.test(voiceName)) return null;
+  const first =
+    voiceName
+      .replace(/^(microsoft|apple)\s+/i, "")
+      .replace(/\([^)]*\)/g, " ")
+      .split(/[\s-]+/)
+      .find(Boolean) ?? "";
+  if (NOT_A_NAME.test(first)) return null;
+  return /^\p{Lu}[\p{L}']{1,24}$/u.test(first) ? first : null;
+}
+
 export type VoiceLike = Pick<
   SpeechSynthesisVoice,
   "name" | "lang" | "voiceURI" | "localService" | "default"
