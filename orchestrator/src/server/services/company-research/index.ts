@@ -15,17 +15,19 @@ import type {
   CompanyResearchFact,
   Job,
 } from "@shared/types";
+import { resolveReadyAiAccount } from "../job-run-preflight";
 import { createJobRunTracker } from "../job-runs";
-import {
-  resolveActiveAiProvider,
-  resolveModelForProvider,
-} from "../modelSelection";
 import {
   buildResearchPrompt,
   normalizeResearchOutput,
   RESEARCH_JSON_SCHEMA,
 } from "./brief";
-import { decideVerdict, type JudgeLlm, judgeBrief } from "./judge";
+import {
+  decideVerdict,
+  explainVerdict,
+  type JudgeLlm,
+  judgeBrief,
+} from "./judge";
 import { checkFactQuotes, type PageReader } from "./quote-check";
 import { runWebResearch, type WebResearchRequest } from "./web-research";
 
@@ -90,11 +92,20 @@ async function researchJob(
       talkingPoints: output.talkingPoints,
       questionsToAsk: output.questionsToAsk,
     };
-    const judgement = await judgeBrief(job, brief, {
+    const reviewed = await judgeBrief(job, brief, {
       model: research.model ?? "",
       llm: deps.judgeLlm,
     });
-    const verdict = decideVerdict(judgement);
+    const verdict = decideVerdict(reviewed);
+    const judgement =
+      verdict === "passed"
+        ? reviewed
+        : {
+            ...reviewed,
+            issues: Array.from(
+              new Set([...explainVerdict(reviewed), ...reviewed.issues]),
+            ).slice(0, 7),
+          };
     await researchRepo.finishCompanyResearchRow(research.id, {
       status: "done",
       verdict,
@@ -132,9 +143,10 @@ async function researchJob(
 }
 
 /**
- * Starts a research run for the job and returns the "running" record. Throws
- * CONFLICT if one is already running for this workspace and job. Problems
- * during the run (e.g. no AI account signed in) end as a "failed" record.
+ * Starts a research run for the job and returns the "running" record.
+ * UNPROCESSABLE_ENTITY when no AI account is signed in; CONFLICT when a run
+ * is already going for this workspace and job. The previous brief stays
+ * readable until the new run succeeds, so a failed re-run loses nothing.
  */
 export async function startCompanyResearch(
   job: Job,
@@ -143,8 +155,7 @@ export async function startCompanyResearch(
   const research = await runs.start(
     job.id,
     async () => {
-      const provider = await resolveActiveAiProvider();
-      const model = (await resolveModelForProvider(provider)) || null;
+      const { provider, model } = await resolveReadyAiAccount();
       return researchRepo.startCompanyResearchRow({
         jobId: job.id,
         provider,
@@ -166,14 +177,16 @@ export async function waitForCompanyResearch(jobId: string): Promise<void> {
 }
 
 /**
- * Facts Boussole confirmed on their source page, for cover letters. Nothing
- * when the review says the facts are about another company.
+ * Facts Boussole confirmed on their source page, for cover letters, from the
+ * latest successful brief (still valid while a re-run is going or after a
+ * failed one). Nothing when the review says the facts are about another
+ * company.
  */
 export async function getVerifiedResearchFacts(
   jobId: string,
 ): Promise<Array<{ claim: string; source: string }>> {
   const research = await researchRepo.getCompanyResearch(jobId);
-  if (research?.status !== "done" || !research.brief) return [];
+  if (!research?.brief) return [];
   if (research.judgement?.wrongCompany) return [];
   return research.brief.facts
     .filter((fact) => fact.check === "verified")

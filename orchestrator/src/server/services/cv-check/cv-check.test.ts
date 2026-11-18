@@ -4,9 +4,18 @@ import type {
   Job,
 } from "@shared/types";
 import { describe, expect, it } from "vitest";
-import { buildCvDictionary, richTextLines } from "./dictionary";
+import {
+  buildCvDictionary,
+  buildCvDictionaryWithStats,
+  richTextLines,
+} from "./dictionary";
 import { formatCandidateRules } from "./index";
-import { buildCvReviewPrompt, findNewTerms, normalizeCvReview } from "./review";
+import {
+  applyHeadlinePrefix,
+  buildCvReviewPrompt,
+  findNewTerms,
+  normalizeCvReview,
+} from "./review";
 
 function section(items: unknown[], extra: Record<string, unknown> = {}) {
   return { title: "", columns: 1, hidden: false, items, ...extra };
@@ -199,5 +208,95 @@ describe("CV review", () => {
     expect(prompt).toContain('must start with "Senior"');
     expect(prompt).toContain("keeps the summary identical");
     expect(prompt).not.toContain("sam@example.com");
+  });
+});
+
+describe("CV check edge cases", () => {
+  const lines = buildCvDictionary(sampleCv);
+
+  it("never cuts the headline and keeps the candidate's required start", () => {
+    const cut = normalizeCvReview(
+      {
+        lines: [
+          { ref: "L1", verdict: "cut", reason: "Too vague", suggestion: "" },
+        ],
+      },
+      lines,
+    );
+    expect(cut.lines[0]).toMatchObject({
+      verdict: "keep",
+      reason: "Too vague",
+    });
+
+    const reworded = normalizeCvReview(
+      {
+        lines: [
+          {
+            ref: "L1",
+            verdict: "cut",
+            reason: "Name the stack",
+            suggestion: "Data Engineer — Airflow & dbt",
+          },
+        ],
+      },
+      lines,
+      { headlinePrefix: "Senior" },
+    );
+    expect(reworded.lines[0]).toMatchObject({
+      verdict: "reword",
+      suggestion: "Senior Data Engineer — Airflow & dbt",
+    });
+    expect(applyHeadlinePrefix("senior data engineer", "Senior")).toBe(
+      "senior data engineer",
+    );
+  });
+
+  it("counts lines the AI skipped and lines over the limit", () => {
+    const result = normalizeCvReview(
+      { lines: [{ ref: "L1", verdict: "keep", reason: "", suggestion: "" }] },
+      lines,
+      { skippedLineCount: 4 },
+    );
+    expect(result.unreviewedCount).toBe(lines.length - 1);
+    expect(result.skippedLineCount).toBe(4);
+
+    const bullets = Array.from(
+      { length: 160 },
+      (_, index) => `<li><p>Bullet number ${index + 1}</p></li>`,
+    ).join("");
+    const longCv = structuredClone(sampleCv) as unknown as {
+      sections: { experience: { items: Array<{ description: string }> } };
+    };
+    const firstJob = longCv.sections.experience.items[0];
+    if (firstJob) firstJob.description = `<ul>${bullets}</ul>`;
+    const stats = buildCvDictionaryWithStats(
+      longCv as unknown as DesignResumeJson,
+    );
+    expect(stats.lines).toHaveLength(150);
+    expect(stats.skipped).toBe(2 + 160 + 2 - 150);
+  });
+
+  it("drops suggestions on lines that are kept or cut", () => {
+    const result = normalizeCvReview(
+      {
+        lines: [
+          {
+            ref: "L3",
+            verdict: "keep",
+            reason: "",
+            suggestion: "Something else",
+          },
+          {
+            ref: "L4",
+            verdict: "cut",
+            reason: "Off-topic",
+            suggestion: "Other",
+          },
+        ],
+      },
+      lines,
+    );
+    expect(result.lines[2]?.suggestion).toBe("");
+    expect(result.lines[3]?.suggestion).toBe("");
   });
 });

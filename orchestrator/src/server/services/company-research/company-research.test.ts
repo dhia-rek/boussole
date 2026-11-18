@@ -1,7 +1,7 @@
 import type { CompanyResearchJudgement, Job } from "@shared/types";
 import { describe, expect, it, vi } from "vitest";
 import { buildResearchPrompt, normalizeResearchOutput } from "./brief";
-import { decideVerdict, judgeBrief } from "./judge";
+import { decideVerdict, explainVerdict, judgeBrief } from "./judge";
 import {
   checkFactQuotes,
   extractPageText,
@@ -243,6 +243,24 @@ describe("judge", () => {
     expect(decideVerdict(judgement({ wrongCompany: true }))).toBe(
       "needs_review",
     );
+  });
+
+  it("explains a needs-review verdict in plain words", () => {
+    expect(explainVerdict(judgement({}))).toEqual([]);
+    expect(
+      explainVerdict(
+        judgement({
+          factCount: 6,
+          verifiedCount: 2,
+          relevance: 2,
+          wrongCompany: true,
+        }),
+      ),
+    ).toEqual([
+      "Only 2 of 6 facts could be confirmed on their source page.",
+      "Some facts may describe a different company with the same name.",
+      "Low relevance to this job (2/5).",
+    ]);
   });
 
   it("keeps the counts when the AI review fails", async () => {

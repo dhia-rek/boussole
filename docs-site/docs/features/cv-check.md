@@ -27,7 +27,8 @@ A CV written for one kind of job carries lines that are noise for another: an ol
    - a required headline start
    - sections you keep identical for every job
    - notes on sections and items
-4. **No padding.** Suggestions may only rephrase, reorder or reuse what your CV already says. Boussole also checks each suggestion itself. If one contains a number, tool or name that appears nowhere in your CV, it shows a warning: *"Not in your CV: … Use this wording only if it is true."*
+4. **Headline rules are enforced by Boussole, not just asked for.** The headline is never marked "not it" (a CV always has one): at worst you get a rewording. If you set a required headline start (prefix) and a suggested headline drops it, Boussole puts it back.
+5. **No padding.** Suggestions may only rephrase, reorder or reuse what your CV already says. Boussole also checks each suggestion itself. If one contains a number, tool or name that appears nowhere in your CV, it shows a warning: *"Not in your CV: … Use this wording only if it is true."*
 
 ### What is sent to your AI account
 
@@ -53,6 +54,8 @@ Never sent:
 
 If you edit your CV after a check, the panel says **"Your CV changed since this check."**
 
+Click **Check again** at any time. The current check stays visible (dimmed) while the new one runs, and is replaced only when the new one succeeds. A failed re-run keeps the previous check.
+
 ### Defaults and limits
 
 | Item | Value |
@@ -66,7 +69,11 @@ If you edit your CV after a check, the panel says **"Your CV changed since this 
 
 ## Common problems
 
+- **"This job has no description yet."** A check needs the job description (at least 80 characters). Edit the job details, paste the description, and run the check again.
 - **"Import or create your CV first."** Create or import a CV in **Design Resume**.
+- **"… is not signed in for this workspace."** Shown right away. Sign in under **Settings → AI account**.
+- **"The review skipped N lines; they are shown as fitting."** The AI answered for only part of your CV. Click **Check again**.
+- **"Your CV is long: the last N lines were not reviewed."** Only the first 150 lines are checked. Hide old entries you don't send anyway, or shorten bullets.
 - **Suggestions keep a word you no longer want (for example "Intern").** The check follows your AI guidance. Change the headline note or prefix in **Design Resume → AI guidance**, then check again.
 - **Few "reword" verdicts on the summary, skills or projects.** You set those sections to stay identical for every job, so the check only flags lines there that clearly hurt.
 - **"The CV check was interrupted."** The server restarted during the run. Click **Try again**.

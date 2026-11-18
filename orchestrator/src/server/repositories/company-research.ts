@@ -58,44 +58,31 @@ export async function getCompanyResearch(
   return row ? mapRow(row) : null;
 }
 
-/** Replaces the job's previous research with a fresh "running" one. */
+/**
+ * Marks the job's research as running under a new run id. The previous brief,
+ * judgement and verdict are kept until the new run succeeds.
+ */
 export async function startCompanyResearchRow(input: {
   jobId: string;
   provider: AiProvider;
   model: string | null;
 }): Promise<CompanyResearch> {
   const tenantId = getActiveTenantId();
-  const values = {
+  const fields = {
     id: randomUUID(),
-    tenantId,
-    jobId: input.jobId,
     status: "running" as const,
-    verdict: null,
     provider: input.provider,
     model: input.model,
-    briefJson: null,
-    judgementJson: null,
     error: null,
     startedAt: new Date().toISOString(),
     completedAt: null,
   };
   await db
     .insert(companyResearch)
-    .values(values)
+    .values({ ...fields, tenantId, jobId: input.jobId })
     .onConflictDoUpdate({
       target: [companyResearch.tenantId, companyResearch.jobId],
-      set: {
-        id: values.id,
-        status: values.status,
-        verdict: null,
-        provider: values.provider,
-        model: values.model,
-        briefJson: null,
-        judgementJson: null,
-        error: null,
-        startedAt: values.startedAt,
-        completedAt: null,
-      },
+      set: fields,
     });
   const saved = await getCompanyResearch(input.jobId);
   if (!saved) throw new Error("Failed to save company research");
