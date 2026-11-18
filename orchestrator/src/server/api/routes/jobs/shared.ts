@@ -73,6 +73,7 @@ export function toJobListItem(
     outcome: job.outcome,
     closedAt: job.closedAt,
     suitabilityScore: job.suitabilityScore,
+    scoreIsEstimate: job.scoreIsEstimate ?? false,
     applyChannel: job.applyChannel ?? null,
     jobType: job.jobType,
     jobFunction: job.jobFunction,
