@@ -8,3 +8,4 @@ export * from "./mock-interview";
 export * from "./pipeline";
 export * from "./post-application";
 export * from "./settings-profile";
+export * from "./spontaneous";
