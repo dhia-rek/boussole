@@ -16,6 +16,12 @@ import {
 import { processJob } from "@server/pipeline/index";
 import * as jobsRepo from "@server/repositories/jobs";
 import { generateJobBrief } from "@server/services/job-brief";
+import {
+  formatJobPosting,
+  jobPostingFromJsonLd,
+  needsFinalUrl,
+  readJobFromKnownFeed,
+} from "@server/services/job-link-reader";
 import { inferManualJobDetails } from "@server/services/manualJob";
 import { getProfile } from "@server/services/profile";
 import { scoreJobSuitability } from "@server/services/scorer";
@@ -24,6 +30,9 @@ import { JSDOM } from "jsdom";
 import { z } from "zod";
 
 export const manualJobsRouter = Router();
+
+/** Less visible text than this is no job description (an empty shell). */
+const MIN_JOB_TEXT_CHARS = 200;
 
 const manualJobFetchSchema = z.object({
   url: z.string().trim().url().max(2000),
@@ -126,6 +135,16 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
       );
     }
 
+    // Known public feeds first: their pages often show nothing to a server.
+    if (!needsFinalUrl(input.url)) {
+      const posting = await readJobFromKnownFeed(input.url, {
+        signal: controller.signal,
+      });
+      if (posting) {
+        return ok(res, { content: formatJobPosting(posting), url: input.url });
+      }
+    }
+
     const response = await fetchPublicUrl(input.url, {
       signal: controller.signal,
       headers: {
@@ -148,9 +167,29 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
       );
     }
 
+    if (needsFinalUrl(input.url)) {
+      const posting = await readJobFromKnownFeed(input.url, {
+        signal: controller.signal,
+        finalUrl: response.url,
+      });
+      if (posting) {
+        return ok(res, { content: formatJobPosting(posting), url: input.url });
+      }
+    }
+
     const html = await readTextWithLimit(response, MAX_PAGE_BYTES);
     const dom = new JSDOM(html);
     const document = dom.window.document;
+
+    // Most career sites embed the full posting as schema.org JobPosting.
+    const embedded = jobPostingFromJsonLd(
+      [...document.querySelectorAll('script[type="application/ld+json"]')].map(
+        (script) => script.textContent ?? "",
+      ),
+    );
+    if (embedded) {
+      return ok(res, { content: formatJobPosting(embedded), url: input.url });
+    }
 
     // Extract page title (often contains job title)
     const pageTitle =
@@ -208,6 +247,20 @@ manualJobsRouter.post("/fetch", async (req: Request, res: Response) => {
       .replace(/\n\s*\n/g, "\n\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+
+    // An anti-bot or JavaScript-only page: say so instead of an empty form.
+    if (textContent.length < MIN_JOB_TEXT_CHARS) {
+      return fail(
+        res,
+        new AppError({
+          status: 422,
+          code: "UNPROCESSABLE_ENTITY",
+          message:
+            "This page didn't show the job to Boussole (the site needs a browser or blocks automated reading). Paste the job description manually.",
+          details: { upstreamStatus: response.status },
+        }),
+      );
+    }
 
     // Build enriched content with extracted metadata
     let enrichedContent = "";
