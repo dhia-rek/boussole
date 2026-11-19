@@ -204,6 +204,87 @@ describe.sequential("Spontaneous applications API", () => {
     expect(history.data[0]).toMatchObject({ id, jobId });
   });
 
+  it("suggests companies hiring now first, with their own website only", async () => {
+    ({ server, baseUrl, closeDb, tempDir } = await startServer());
+    const { createJob, updateJob } = await import("@server/repositories/jobs");
+    const { db, schema } = await import("@server/db/index");
+    const { eq } = await import("drizzle-orm");
+    const make = async (input: {
+      employer: string;
+      employerUrl: string;
+      score: number;
+      reason: string;
+      daysAgo: number;
+    }) => {
+      const job = await createJob({
+        source: "manual",
+        title: "Data Engineer",
+        employer: input.employer,
+        employerUrl: input.employerUrl,
+        jobUrl: `https://example.com/${input.employer}/${input.daysAgo}`,
+      });
+      await updateJob(job.id, {
+        suitabilityScore: input.score,
+        suitabilityReason: input.reason,
+      });
+      await db
+        .update(schema.jobs)
+        .set({
+          discoveredAt: new Date(
+            Date.now() - input.daysAgo * 86_400_000,
+          ).toISOString(),
+        })
+        .where(eq(schema.jobs.id, job.id));
+    };
+    await make({
+      employer: "OldCo",
+      employerUrl: "https://oldco.example",
+      score: 98,
+      reason: "Great internship match.",
+      daysAgo: 150,
+    });
+    await make({
+      employer: "NewCo",
+      employerUrl: "https://fr.linkedin.com/company/newco",
+      score: 70,
+      reason: "Solid CDI match.",
+      daysAgo: 2,
+    });
+    // An old internship scored 95 doesn't rank a company hiring now.
+    await make({
+      employer: "NewCo",
+      employerUrl: "https://newco.example",
+      score: 95,
+      reason: "Old internship match.",
+      daysAgo: 150,
+    });
+    await make({
+      employer: "EstCo",
+      employerUrl: "https://fr.indeed.comNone",
+      score: 90,
+      reason:
+        "Keyword estimate, not an AI score: your AI account could not score this job when it was found. Rescore it to get a real score.",
+      daysAgo: 1,
+    });
+
+    const suggestions = await fetch(
+      `${baseUrl}/api/spontaneous/suggestions`,
+    ).then((r) => r.json());
+    expect(
+      suggestions.data.map(
+        (s: {
+          company: string;
+          website: string | null;
+          bestScore: number | null;
+        }) => [s.company, s.website, s.bestScore],
+      ),
+    ).toEqual([
+      ["NewCo", "https://newco.example", 70],
+      ["EstCo", null, null],
+      ["OldCo", "https://oldco.example", 98],
+    ]);
+  });
+
   it("rejects bad input with structured errors and never reports an AI failure as success", async () => {
     ({ server, baseUrl, closeDb, tempDir } = await startServer());
     const callJson = await useFakes();
