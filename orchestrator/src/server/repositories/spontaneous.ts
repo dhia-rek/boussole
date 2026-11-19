@@ -1,5 +1,7 @@
 /** Spontaneous applications, scoped to the active workspace. */
 import { randomUUID } from "node:crypto";
+import { isKeywordEstimate } from "@shared/scoring";
+import { companyWebsiteOrNull } from "@shared/spontaneous";
 import type {
   OutreachContact,
   OutreachEmail,
@@ -10,6 +12,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "../db/index";
 import type { SpontaneousOutreachRow } from "../db/schema";
 import { getActiveTenantId } from "../tenancy/context";
+
+/** Same freshness rule as Today and the Jobs list. */
+const RECENT_DAYS = 45;
+const DAY_MS = 86_400_000;
 
 const { spontaneousOutreach } = schema;
 const HISTORY_LIMIT = 30;
@@ -135,6 +141,8 @@ export async function listOutreachSuggestions(): Promise<
       employerUrl: schema.jobs.employerUrl,
       status: schema.jobs.status,
       score: schema.jobs.suitabilityScore,
+      reason: schema.jobs.suitabilityReason,
+      discoveredAt: schema.jobs.discoveredAt,
     })
     .from(schema.jobs)
     .where(eq(schema.jobs.tenantId, tenantId));
@@ -154,9 +162,14 @@ export async function listOutreachSuggestions(): Promise<
       website: string | null;
       jobCount: number;
       bestScore: number | null;
+      /** Best real score among postings found in the last RECENT_DAYS. */
+      bestRecentScore: number | null;
+      /** Has an open posting found in the last RECENT_DAYS. */
+      recent: boolean;
       applied: boolean;
     }
   >();
+  const now = Date.now();
   for (const row of rows) {
     const company = row.employer?.trim();
     if (!company || UNKNOWN_EMPLOYER.test(company)) continue;
@@ -166,6 +179,8 @@ export async function listOutreachSuggestions(): Promise<
       website: null,
       jobCount: 0,
       bestScore: null,
+      bestRecentScore: null,
+      recent: false,
       applied: false,
     };
     if (row.status === "applied" || row.status === "in_progress") {
@@ -173,30 +188,51 @@ export async function listOutreachSuggestions(): Promise<
     }
     if (row.status === "ready" || row.status === "discovered") {
       entry.jobCount += 1;
-      if (
-        row.score != null &&
-        (entry.bestScore == null || row.score > entry.bestScore)
-      ) {
-        entry.bestScore = row.score;
+      const found = Date.parse(row.discoveredAt);
+      const isRecent =
+        Number.isFinite(found) && now - found <= RECENT_DAYS * DAY_MS;
+      if (isRecent) entry.recent = true;
+      // Keyword estimates aren't real scores: they don't rank companies.
+      if (row.score != null && !isKeywordEstimate(row.reason)) {
+        if (entry.bestScore == null || row.score > entry.bestScore) {
+          entry.bestScore = row.score;
+        }
+        if (
+          isRecent &&
+          (entry.bestRecentScore == null || row.score > entry.bestRecentScore)
+        ) {
+          entry.bestRecentScore = row.score;
+        }
       }
     }
-    entry.website = entry.website ?? row.employerUrl ?? null;
+    // Job sources often store a LinkedIn or job-board page, or a broken link.
+    entry.website = entry.website ?? companyWebsiteOrNull(row.employerUrl);
     byCompany.set(key, entry);
   }
-  return Array.from(byCompany.entries())
-    .filter(
-      ([key, entry]) =>
-        !entry.applied && entry.jobCount > 0 && !contacted.has(key),
-    )
-    .map(([, entry]) => ({
-      company: entry.company,
-      website: entry.website,
-      jobCount: entry.jobCount,
-      bestScore: entry.bestScore,
-    }))
-    .sort(
-      (a, b) =>
-        (b.bestScore ?? -1) - (a.bestScore ?? -1) || b.jobCount - a.jobCount,
-    )
-    .slice(0, SUGGESTION_LIMIT);
+  return (
+    Array.from(byCompany.entries())
+      .filter(
+        ([key, entry]) =>
+          !entry.applied && entry.jobCount > 0 && !contacted.has(key),
+      )
+      // A company hiring now is ranked by its recent postings only.
+      .map(([, entry]) => ({
+        ...entry,
+        bestScore: entry.recent ? entry.bestRecentScore : entry.bestScore,
+      }))
+      // Companies hiring now first, then by best real match score.
+      .sort(
+        (a, b) =>
+          Number(b.recent) - Number(a.recent) ||
+          (b.bestScore ?? -1) - (a.bestScore ?? -1) ||
+          b.jobCount - a.jobCount,
+      )
+      .slice(0, SUGGESTION_LIMIT)
+      .map((entry) => ({
+        company: entry.company,
+        website: entry.website,
+        jobCount: entry.jobCount,
+        bestScore: entry.bestScore,
+      }))
+  );
 }

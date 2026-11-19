@@ -10,6 +10,7 @@ import { sanitizeUnknown } from "@infra/sanitize";
 import * as jobsRepo from "@server/repositories/jobs";
 import { getSetting } from "@server/repositories/settings";
 import * as outreachRepo from "@server/repositories/spontaneous";
+import { companyWebsiteOrNull } from "@shared/spontaneous";
 import type { AiProvider, SpontaneousOutreach } from "@shared/types";
 import { transitionStage } from "../applicationTracking";
 import type { PageReader } from "../company-research/quote-check";
@@ -77,8 +78,7 @@ export async function getOutreachOrThrow(
 }
 
 function normalizeWebsite(value: string | null | undefined): string | null {
-  const domain = domainOf(value?.trim() || null);
-  return domain ? `https://${domain}` : null;
+  return companyWebsiteOrNull(value);
 }
 
 async function findContacts(
