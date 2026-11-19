@@ -511,6 +511,9 @@ describe("JobDetailPanel", () => {
     expect(
       within(getApplyPanel()).getByRole("button", { name: /mark applied/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /prepare with the agent team/i }),
+    ).toHaveAttribute("href", "/apply/job-7?step=message&with=agents");
     for (const name of [
       /ask ghostwriter/i,
       /mock interview/i,

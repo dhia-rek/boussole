@@ -35,6 +35,11 @@ vi.mock("../components/JobBriefPane", () => ({
   JobBriefPane: () => <div>job brief</div>,
   parseJobBrief: () => null,
 }));
+vi.mock("../components/agents/AgentTeamPanel", () => ({
+  AgentTeamPanel: ({ jobId }: { jobId: string }) => (
+    <div data-testid="agent-team">agent team for {jobId}</div>
+  ),
+}));
 vi.mock("../components/ghostwriter/GhostwriterPanel", () => ({
   GhostwriterPanel: ({ initialPrompt }: { initialPrompt?: string | null }) => (
     <div data-testid="ghostwriter">{initialPrompt ?? "no prompt"}</div>
@@ -144,6 +149,19 @@ describe("GuidedApplyPage", () => {
     expect(screen.getByTestId("ghostwriter")).toHaveTextContent("no prompt");
     fireEvent.click(screen.getByRole("button", { name: /Write my email/ }));
     expect(screen.getByTestId("ghostwriter")).toHaveTextContent(EMAIL_PROMPT);
+  });
+
+  it("lets the agent team write instead of Ghostwriter", async () => {
+    renderApply("/apply/j1?step=message&with=agents");
+    expect(await screen.findByTestId("agent-team")).toHaveTextContent(
+      "agent team for j1",
+    );
+    expect(screen.queryByTestId("ghostwriter")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ghostwriter (chat)" }));
+    expect(screen.getByTestId("ghostwriter")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agent team (full pack)" }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 
   it("shows the done screen once applied", async () => {

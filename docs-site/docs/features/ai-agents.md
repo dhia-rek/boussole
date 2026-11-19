@@ -28,6 +28,15 @@ The regular pipeline (search → score → tailor → export) uses one prompt pe
 
 ## How to use it
 
+### In the app
+
+1. Open a job (New or Ready) and choose **⋯ → Prepare with the agent team** in its panel, or in **Apply step by step**, go to **Your message** and switch to **Agent team (full pack)**.
+2. Click **Prepare with the agent team**. You see the five members (Team lead, Job analyst, CV tailor, Letter writer, Critic) go from waiting to working to done, with what each one is doing and the time so far. **Stop** cancels the run.
+3. When the team finishes (about 2 to 3 minutes), the result appears: the **cover letter** (**Copy the letter**), the **suggested CV headline**, **what to put forward in your CV**, **the critic's review** with the claims it fixed, **Watch out** (remaining risks), and **the job, as the analyst reads it**.
+4. Coming back to the job later shows the last result; **Run the team again** starts a new run. Every AI request of a run is listed in [AI activity](/docs/features/ai-activity).
+
+### Requirements and API
+
 Requirements:
 
 - Settings → AI provider is **Claude (CLI)**, and the `claude` command is installed and signed in on the machine running Boussole.
