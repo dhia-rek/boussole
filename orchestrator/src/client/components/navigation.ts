@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bot,
   Columns3,
   FilePenLine,
   Home,
@@ -69,6 +70,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { to: "/overview", label: "Analytics", icon: BarChart3 },
       { to: "/tracer-links", label: "Tracer links", icon: Link2 },
+      { to: "/ai-activity", label: "AI activity", icon: Bot },
     ],
   },
 ];

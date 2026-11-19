@@ -19,6 +19,7 @@ import { OnboardingGate } from "./components/OnboardingGate";
 import { useDemoInfo } from "./hooks/useDemoInfo";
 import { setAuthNavigator } from "./lib/auth-navigation";
 import { isPublicPath } from "./lib/public-paths";
+import { AiActivityPage } from "./pages/AiActivityPage";
 import { DesignResumePage } from "./pages/DesignResumePage";
 import { GmailOauthCallbackPage } from "./pages/GmailOauthCallbackPage";
 import { GuidedApplyPage } from "./pages/GuidedApplyPage";
@@ -154,6 +155,7 @@ export const App: React.FC = () => {
             <Route path="/sign-in" element={<SignInPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/tracer-links" element={<TracerLinksPage />} />
+            <Route path="/ai-activity" element={<AiActivityPage />} />
             <Route path="/spontaneous" element={<SpontaneousPage />} />
             <Route path="/tracking-inbox" element={<TrackingInboxPage />} />
             <Route path="/jobs/:tab" element={<OrchestratorPage />} />

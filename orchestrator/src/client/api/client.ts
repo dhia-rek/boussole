@@ -1,5 +1,6 @@
 export * from "./admin";
 export * from "./ai-account";
+export * from "./ai-activity";
 export * from "./auth";
 export * from "./auth-session";
 export * from "./ghostwriter";
