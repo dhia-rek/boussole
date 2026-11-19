@@ -144,13 +144,16 @@ export const JobHeader: React.FC<JobHeaderProps> = ({
             tooltipClassName="max-w-xs"
             className={jobStatusTooltip ? "cursor-help" : undefined}
           />
-          <StatusIndicator
-            dotColor={tracerStatus.dotColor}
-            label={tracerStatus.label}
-            tooltip={tracerStatusTooltip}
-            tooltipClassName="max-w-xs"
-            className={tracerStatusTooltip ? "cursor-help" : undefined}
-          />
+          {/* Off is the default on most setups: only "on" is worth a chip. */}
+          {job.tracerLinksEnabled ? (
+            <StatusIndicator
+              dotColor={tracerStatus.dotColor}
+              label={tracerStatus.label}
+              tooltip={tracerStatusTooltip}
+              tooltipClassName="max-w-xs"
+              className={tracerStatusTooltip ? "cursor-help" : undefined}
+            />
+          ) : null}
 
           <AppliedDuplicatePill match={job.appliedDuplicateMatch} />
 

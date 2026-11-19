@@ -1,4 +1,10 @@
 /** Guided mode: the one next thing to do, then a few after it. */
+
+/**
+ * Postings found longer ago than this are mostly closed: guided mode never
+ * suggests them and the Jobs list hides them unless asked.
+ */
+export const FRESH_JOB_DAYS = 45;
 export type GuideStepKind =
   | "add_cv"
   | "prepare_interview"

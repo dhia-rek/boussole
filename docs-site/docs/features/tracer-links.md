@@ -99,7 +99,7 @@ By enabling and using this feature, you accept full responsibility for any conse
 
 ### I cannot enable tracer links
 
-On a Boussole that runs on your own computer (`localhost`), tracer links stay off: a recruiter clicking a link in your CV must be able to reach your Boussole, and your computer is not reachable from the internet. The Tailoring tab says so in **Tracer Links**. Everything else works normally.
+On a Boussole that runs on your own computer (`localhost`), tracer links stay off: a recruiter clicking a link in your CV must be able to reach your Boussole, and your computer is not reachable from the internet. The **Your CV** tab of a job says so in **Tracer Links**. Everything else works normally.
 
 Cause:
 

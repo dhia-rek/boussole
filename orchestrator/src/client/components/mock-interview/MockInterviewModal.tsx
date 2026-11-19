@@ -123,6 +123,11 @@ type MockInterviewButtonProps = {
   triggerLabel?: string;
   triggerClassName?: string;
   triggerVariant?: React.ComponentProps<typeof Button>["variant"];
+  /** Controlled mode, for opening it from a menu item. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** No button of its own (opened through `open`). */
+  hideTrigger?: boolean;
 };
 
 export const MockInterviewButton: React.FC<MockInterviewButtonProps> = ({
@@ -130,21 +135,28 @@ export const MockInterviewButton: React.FC<MockInterviewButtonProps> = ({
   triggerLabel = "Mock interview",
   triggerClassName,
   triggerVariant = "ghost",
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
 
   return (
     <>
-      <Button
-        size="sm"
-        variant={triggerVariant}
-        className={triggerClassName}
-        disabled={!job}
-        onClick={() => setOpen(true)}
-      >
-        <Video className="mr-2 h-3.5 w-3.5" />
-        {triggerLabel}
-      </Button>
+      {hideTrigger ? null : (
+        <Button
+          size="sm"
+          variant={triggerVariant}
+          className={triggerClassName}
+          disabled={!job}
+          onClick={() => setOpen(true)}
+        >
+          <Video className="mr-2 h-3.5 w-3.5" />
+          {triggerLabel}
+        </Button>
+      )}
       {open && job
         ? createPortal(
             <MockInterviewRoom job={job} onClose={() => setOpen(false)} />,

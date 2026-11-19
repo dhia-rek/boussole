@@ -20,6 +20,11 @@ type GhostwriterDrawerProps = {
   triggerLabel?: string;
   triggerClassName?: string;
   triggerVariant?: React.ComponentProps<typeof Button>["variant"];
+  /** Controlled mode, for opening it from a menu item. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** No button of its own (opened through `open`). */
+  hideTrigger?: boolean;
 };
 
 type DisplayMode = "drawer" | "fullscreen";
@@ -48,8 +53,13 @@ export const GhostwriterDrawer: React.FC<GhostwriterDrawerProps> = ({
   triggerLabel = "Ghostwriter",
   triggerClassName,
   triggerVariant = "outline",
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [displayMode, setDisplayMode] = useState<DisplayMode>(() =>
     getStoredDisplayMode(),
   );
@@ -93,17 +103,19 @@ export const GhostwriterDrawer: React.FC<GhostwriterDrawerProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          size="sm"
-          variant={triggerVariant}
-          className={cn("h-8 gap-1.5 text-xs", triggerClassName)}
-          disabled={!job}
-        >
-          <PanelRightOpen className="h-3.5 w-3.5" />
-          {triggerLabel}
-        </Button>
-      </SheetTrigger>
+      {hideTrigger ? null : (
+        <SheetTrigger asChild>
+          <Button
+            size="sm"
+            variant={triggerVariant}
+            className={cn("h-8 gap-1.5 text-xs", triggerClassName)}
+            disabled={!job}
+          >
+            <PanelRightOpen className="h-3.5 w-3.5" />
+            {triggerLabel}
+          </Button>
+        </SheetTrigger>
+      )}
 
       <SheetContent side="right" className={panelClassName}>
         <div className="border-b border-border/50 p-4">

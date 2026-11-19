@@ -484,13 +484,40 @@ describe("JobDetailPanel", () => {
       onJobUpdated,
     });
 
-    const skipButton = await screen.findByRole("button", {
-      name: /skip this job/i,
-    });
-    fireEvent.click(skipButton);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /skip this job/i }),
+    );
 
     await waitFor(() => expect(api.skipJob).toHaveBeenCalledWith("job-1"));
     expect(onJobUpdated).toHaveBeenCalled();
+  });
+
+  it("keeps one main action in the header and the rest in the menu", async () => {
+    await renderJobDetailPanel({
+      activeTab: "ready",
+      activeJobs: [],
+      selectedJob: createJob({ id: "job-7", status: "ready" }),
+      onSelectJobId: vi.fn(),
+      onJobUpdated: vi.fn().mockResolvedValue(undefined),
+    });
+
+    expect(
+      screen.getByRole("link", { name: "Apply step by step" }),
+    ).toHaveAttribute("href", "/apply/job-7");
+    // Mark Applied lives in the Apply tab only.
+    expect(
+      screen.getAllByRole("button", { name: /mark applied/i }),
+    ).toHaveLength(1);
+    expect(
+      within(getApplyPanel()).getByRole("button", { name: /mark applied/i }),
+    ).toBeInTheDocument();
+    for (const name of [
+      /ask ghostwriter/i,
+      /mock interview/i,
+      /skip this job/i,
+    ]) {
+      expect(screen.getByRole("menuitem", { name })).toBeInTheDocument();
+    }
   });
 
   it("forwards tailoring dirty state to refresh pause callback", async () => {
@@ -505,7 +532,7 @@ describe("JobDetailPanel", () => {
       onPauseRefreshChange,
     });
 
-    fireEvent.mouseDown(screen.getByRole("tab", { name: /tailoring/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /your cv/i }));
     fireEvent.click(await screen.findByText("Mark tailoring dirty"));
     fireEvent.click(screen.getByText("Mark tailoring clean"));
 
