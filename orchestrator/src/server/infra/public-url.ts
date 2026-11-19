@@ -197,6 +197,9 @@ export type PublicFetchResponse = {
   } | null;
 };
 
+/** What fetchPublicUrl returns: the response, plus where redirects ended. */
+export type PublicFetchResult = PublicFetchResponse & { finalUrl: string };
+
 export type PublicFetchInit = {
   headers?: Record<string, string>;
   signal?: AbortSignal;
@@ -227,7 +230,7 @@ export async function fetchPublicUrl(
     fetchImpl?: FetchImpl;
     resolveHost?: ResolveHost;
   } = {},
-): Promise<PublicFetchResponse> {
+): Promise<PublicFetchResult> {
   const maxRedirects = options.maxRedirects ?? 3;
   const fetchImpl = options.fetchImpl ?? fetchThroughPublicAgent;
   const resolveHost = options.resolveHost ?? resolveWithDns;
@@ -258,7 +261,13 @@ export async function fetchPublicUrl(
       );
       continue;
     }
-    return response;
+    return {
+      ok: response.ok,
+      status: response.status,
+      headers: response.headers,
+      body: response.body,
+      finalUrl: target.toString(),
+    };
   }
   throw new UnsafeUrlError("This address redirects too many times.");
 }
