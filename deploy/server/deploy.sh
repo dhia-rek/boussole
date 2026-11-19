@@ -13,6 +13,11 @@ main() {
   local home="${BOUSSOLE_HOME:-/opt/boussole}"
   local repo="$home/repo"
   local compose="$repo/deploy/server/compose.yml"
+  # Server-only additions (extra volumes, settings) live outside the code.
+  local files=(-f "$compose")
+  if [[ -f "$home/compose.override.yml" ]]; then
+    files+=(-f "$home/compose.override.yml")
+  fi
   local github_repo="${BOUSSOLE_GITHUB_REPO:-dhia-rek/boussole}"
   local branch="${BOUSSOLE_BRANCH:-main}"
   local port="${BOUSSOLE_PORT:-3005}"
@@ -59,12 +64,12 @@ main() {
     docker tag boussole:current boussole:previous
   fi
 
-  if ! BOUSSOLE_HOME="$home" docker compose -f "$compose" build --quiet; then
+  if ! BOUSSOLE_HOME="$home" docker compose "${files[@]}" build --quiet; then
     log "build failed for ${target:0:7}; keeping the running version"
     echo "$target" >"$home/failed-commit"
     return 1
   fi
-  BOUSSOLE_HOME="$home" docker compose -f "$compose" up -d
+  BOUSSOLE_HOME="$home" docker compose "${files[@]}" up -d
 
   if wait_healthy "$port"; then
     echo "$target" >"$home/deployed-commit"
@@ -78,7 +83,7 @@ main() {
   echo "$target" >"$home/failed-commit"
   if docker image inspect boussole:previous >/dev/null 2>&1; then
     docker tag boussole:previous boussole:current
-    BOUSSOLE_HOME="$home" docker compose -f "$compose" up -d --no-build
+    BOUSSOLE_HOME="$home" docker compose "${files[@]}" up -d --no-build
     if [[ -n "$current" ]]; then
       git -C "$repo" checkout --quiet --detach "$current"
     fi

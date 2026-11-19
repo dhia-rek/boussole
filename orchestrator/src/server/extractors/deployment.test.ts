@@ -124,6 +124,21 @@ describe("Docker build inputs", () => {
     expect(sources.filter((source) => !existsInRepo(source))).toEqual([]);
   });
 
+  it("ships a Playwright Firefox for when Camoufox is unavailable", async () => {
+    const dockerfile = await readFile(join(repoRoot, "Dockerfile"), "utf8");
+    expect(dockerfile).toContain("npx --no-install playwright install firefox");
+    expect(dockerfile).toContain(
+      "COPY --from=node-deps /ms-playwright /ms-playwright",
+    );
+    const fetchScript = await readFile(
+      join(repoRoot, "scripts", "camoufox-fetch.mjs"),
+      "utf8",
+    );
+    expect(fetchScript).toMatch(
+      /try \{\s*await new CamoufoxFetcher\(\)\.install\(\);/,
+    );
+  });
+
   it("syncs only folders that exist in compose dev mode", async () => {
     const compose = await readFile(
       join(repoRoot, "docker-compose.yml"),

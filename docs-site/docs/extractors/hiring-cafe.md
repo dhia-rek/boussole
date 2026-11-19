@@ -60,7 +60,8 @@ npm --workspace hiringcafe-extractor run start
 
 ### Hiring Cafe returns 429 / Vercel security checkpoint
 
-- The extractor first attempts Camoufox-backed Firefox and falls back to vanilla Firefox startup if Camoufox is unstable locally.
+- The extractor first attempts Camoufox-backed Firefox and falls back to vanilla Firefox startup if Camoufox is unstable or missing.
+- Camoufox's original download source (`github.com/daijro/camoufox`) disappeared in November 2026, so new Docker images may not include it. On a server, keep a copy as described in [Run Boussole 24/7 on your server](/docs/getting-started/deploy-server).
 - If upstream blocks continue, retry later or reduce run concurrency at the pipeline level by selecting fewer sources.
 
 ### Hiring Cafe does not appear in sources
