@@ -86,3 +86,72 @@ describe("extractor deployment config", () => {
     );
   });
 });
+
+/** Sources of every Dockerfile `COPY` that reads from the build context. */
+function dockerfileCopySources(dockerfile: string): string[] {
+  const sources: string[] = [];
+  for (const line of dockerfile.replace(/\\\n/g, " ").split("\n")) {
+    const match = /^\s*COPY\s+(.+)$/i.exec(line);
+    if (!match?.[1] || line.includes("--from=")) continue;
+    const args = match[1]
+      .split(/\s+/)
+      .filter((arg) => arg && !arg.startsWith("--"));
+    sources.push(...args.slice(0, -1));
+  }
+  return sources;
+}
+
+function existsInRepo(source: string): boolean {
+  if (!source.includes("*")) return existsSync(join(repoRoot, source));
+  const slash = source.lastIndexOf("/");
+  const dir = join(repoRoot, slash === -1 ? "." : source.slice(0, slash));
+  const name = source.slice(slash + 1);
+  const pattern = new RegExp(
+    `^${name.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`,
+  );
+  return (
+    existsSync(dir) && readdirSync(dir).some((entry) => pattern.test(entry))
+  );
+}
+
+describe("Docker build inputs", () => {
+  // CI doesn't build the image, so a removed folder still listed here only
+  // shows up when a server builds it.
+  it("copies only files and folders that exist", async () => {
+    const dockerfile = await readFile(join(repoRoot, "Dockerfile"), "utf8");
+    const sources = dockerfileCopySources(dockerfile);
+    expect(sources.length).toBeGreaterThan(10);
+    expect(sources.filter((source) => !existsInRepo(source))).toEqual([]);
+  });
+
+  it("ships a Playwright Firefox for when Camoufox is unavailable", async () => {
+    const dockerfile = await readFile(join(repoRoot, "Dockerfile"), "utf8");
+    expect(dockerfile).toContain("npx --no-install playwright install firefox");
+    expect(dockerfile).toContain(
+      "COPY --from=node-deps /ms-playwright /ms-playwright",
+    );
+    const fetchScript = await readFile(
+      join(repoRoot, "scripts", "camoufox-fetch.mjs"),
+      "utf8",
+    );
+    expect(fetchScript).toMatch(
+      /try \{\s*await new CamoufoxFetcher\(\)\.install\(\);/,
+    );
+  });
+
+  it("syncs only folders that exist in compose dev mode", async () => {
+    const compose = await readFile(
+      join(repoRoot, "docker-compose.yml"),
+      "utf8",
+    );
+    // Only the develop.watch list: env_file paths may be optional.
+    const watch = compose.slice(compose.indexOf("watch:"));
+    const paths = [...watch.matchAll(/^\s*- path: (\S+)/gm)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(paths.length).toBeGreaterThan(3);
+    expect(paths.filter((path) => !existsSync(join(repoRoot, path)))).toEqual(
+      [],
+    );
+  });
+});

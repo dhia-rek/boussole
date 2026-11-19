@@ -38,14 +38,17 @@ The first build takes several minutes. When it finishes, the script prints your 
 
 ### 2. Optional: bring your existing data
 
-From the computer where Boussole ran before, copy a consistent snapshot of the database plus the PDFs, then restart:
+From the computer where Boussole ran before, copy a consistent snapshot of the database, your CV files (including the photo), the PDFs and the sign-in secret. Stop Boussole on the server while the database is replaced:
 
 ```bash
 sqlite3 orchestrator/data/jobs.db ".backup /tmp/jobs.db"
+ssh user@my-server 'docker stop boussole'
 scp /tmp/jobs.db user@my-server:/opt/boussole/data/jobs.db
-scp -r orchestrator/data/pdfs orchestrator/data/jwt-secret user@my-server:/opt/boussole/data/
-ssh user@my-server 'docker restart boussole'
+scp -r orchestrator/data/design-resume orchestrator/data/pdfs orchestrator/data/jwt-secret user@my-server:/opt/boussole/data/
+ssh user@my-server 'rm -f /opt/boussole/data/jobs.db-wal /opt/boussole/data/jobs.db-shm && docker start boussole'
 ```
+
+Stop Boussole on the old computer afterwards, so only one copy keeps searching and syncing email.
 
 Put the API keys you use (Adzuna, Brave Search…) in `/opt/boussole/.env` on the server (`chmod 600`).
 
@@ -82,6 +85,7 @@ Defaults and constraints:
 - `BOUSSOLE_HOME` (default `/opt/boussole`), `BOUSSOLE_PORT` (default `3005`) and `BOUSSOLE_HTTPS_PORT` (default `8443`) can be changed when running `install.sh`.
 - The container is never published on the server's public IP address; only Tailscale Serve exposes it, to your tailnet.
 - A commit whose checks failed, or that couldn't start, is skipped until a newer commit arrives.
+- Server-only additions (an extra folder, a setting) go in `/opt/boussole/compose.override.yml`. `deploy.sh` adds it to every build and restart, so updates keep it.
 
 ## Common problems
 
@@ -96,6 +100,21 @@ A check failed on that commit, so the running version stays. Fix the problem on 
 ### "did not become healthy; rolling back"
 
 The new version didn't start. The previous version is running again; see `docker logs boussole` for the reason.
+
+### The build log says "Camoufox not installed"
+
+Camoufox (the stealth browser Hiring Cafe uses to get past Cloudflare) couldn't be downloaded: its original download source, `github.com/daijro/camoufox`, disappeared in November 2026. The build continues and Hiring Cafe uses plain Firefox, which anti-bot checks block more often.
+
+To keep Camoufox, put a copy of a Linux Camoufox folder in `/opt/boussole/camoufox` (for example from an older Boussole image: `docker create --name old boussole:previous && docker cp old:/root/.cache/camoufox /opt/boussole/camoufox && docker rm old`), then add it in `/opt/boussole/compose.override.yml`:
+
+```yaml
+services:
+  boussole:
+    volumes:
+      - /opt/boussole/camoufox:/root/.cache/camoufox
+```
+
+Run `/opt/boussole/repo/deploy/server/deploy.sh --force` to restart with it.
 
 ### AI features fail on the server
 

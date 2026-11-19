@@ -75,12 +75,16 @@ RUN --mount=type=cache,target=/root/.npm \
 RUN --mount=type=secret,id=github_token,required=false \
     sh -c 'GITHUB_TOKEN="$([ -f /run/secrets/github_token ] && cat /run/secrets/github_token || true)" node ./scripts/camoufox-fetch.mjs'
 
+# Firefox for Playwright (Node), the fallback when Camoufox is unavailable.
+# The Python stage installs the Firefox build of Python's Playwright, which
+# may not be the revision Node's Playwright expects.
+RUN npx --no-install playwright install firefox
+
 FROM node-deps AS build-sources
 
 COPY shared ./shared
 COPY docs-site ./docs-site
 COPY orchestrator ./orchestrator
-COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
 COPY extractors/jobspy ./extractors/jobspy
@@ -164,6 +168,7 @@ FROM runtime-node-deps AS production
 COPY --from=tectonic /usr/local/bin/tectonic /usr/local/bin/tectonic
 COPY --from=python-deps /usr/local/lib/python3.11/dist-packages /usr/local/lib/python3.11/dist-packages
 COPY --from=python-deps /ms-playwright /ms-playwright
+COPY --from=node-deps /ms-playwright /ms-playwright
 COPY --from=node-deps /root/.cache/camoufox /root/.cache/camoufox
 
 # Copy built assets and runtime source code.
@@ -171,7 +176,6 @@ COPY --from=client-build /app/orchestrator/dist ./orchestrator/dist
 COPY --from=docs-build /app/docs-site/build ./orchestrator/dist/docs
 COPY shared ./shared
 COPY orchestrator ./orchestrator
-COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
 COPY extractors/jobspy ./extractors/jobspy

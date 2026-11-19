@@ -1,3 +1,6 @@
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { CamoufoxFetcher } from "camoufox-js/dist/pkgman.js";
 
 const githubToken = process.env.GITHUB_TOKEN?.trim() || "";
@@ -49,4 +52,15 @@ if (githubToken) {
   };
 }
 
-await new CamoufoxFetcher().install();
+// Camoufox is optional: browser-utils falls back to Playwright's Firefox,
+// which the image also ships. Its GitHub repository (daijro/camoufox) has
+// disappeared, so a failed download must never stop the build.
+try {
+  await new CamoufoxFetcher().install();
+} catch (error) {
+  console.warn(
+    `Camoufox not installed (${error instanceof Error ? error.message : String(error)}). Hiring Cafe will use Playwright's Firefox instead.`,
+  );
+  // The production stage copies this folder, so it must exist.
+  mkdirSync(join(homedir(), ".cache", "camoufox"), { recursive: true });
+}
