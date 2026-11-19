@@ -35,6 +35,7 @@ import { openJobPdf } from "@/client/lib/private-pdf";
 import { queryKeys } from "@/client/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AgentTeamPanel } from "../components/agents/AgentTeamPanel";
 import { GhostwriterPanel } from "../components/ghostwriter/GhostwriterPanel";
 import { JobBriefPane, parseJobBrief } from "../components/JobBriefPane";
 import { JobDescriptionMarkdown } from "../components/JobDescriptionMarkdown";
@@ -49,6 +50,8 @@ export const COVER_LETTER_PROMPT =
   "Write a short cover letter for this job, in the language of the job posting (under 250 words): why this role and this company (use one specific fact from the company research if there is one), two or three concrete matches between my CV and what they ask for, and a short closing. No generic filler.";
 
 const FOLLOW_UP_DAYS = 7;
+
+type MessageMode = "ghostwriter" | "agents";
 
 function isGuidedStep(value: string | null): value is GuidedApplyStep {
   return (GUIDED_APPLY_STEPS as readonly string[]).includes(value ?? "");
@@ -274,52 +277,86 @@ const CvPdfBlock: React.FC<{ job: Job }> = ({ job }) => {
   );
 };
 
-const MessageStep: React.FC<{ job: Job }> = ({ job }) => {
+const MessageStep: React.FC<{ job: Job; initialMode: MessageMode }> = ({
+  job,
+  initialMode,
+}) => {
   const route = detectApplyRoutes(job).primary;
   const byEmail = route?.channel === "email";
   const [prompt, setPrompt] = useState<string | null>(null);
+  const [mode, setMode] = useState<MessageMode>(initialMode);
   return (
     <div className="space-y-4">
-      <StepIntro
-        title={
-          byEmail
-            ? "Write your application email"
-            : "Write a short cover letter"
-        }
-      >
-        {byEmail
-          ? `This job is applied to by email${route?.email ? ` (${route.email})` : ""}. Ghostwriter writes it from your CV, the job and the company research. Ask for any change in the chat below.`
-          : "Most application forms have a cover letter or message field. Ghostwriter writes one from your CV, the job and the company research. Ask for any change in the chat below."}
-      </StepIntro>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          onClick={() =>
-            setPrompt(byEmail ? EMAIL_PROMPT : COVER_LETTER_PROMPT)
-          }
-          disabled={prompt !== null}
-        >
-          <PenLine className="mr-1.5 h-3.5 w-3.5" />
-          {byEmail ? "Write my email" : "Write my cover letter"}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            setPrompt(byEmail ? COVER_LETTER_PROMPT : EMAIL_PROMPT)
-          }
-          disabled={prompt !== null}
-        >
-          {byEmail ? "A cover letter instead" : "An email instead"}
-        </Button>
-      </div>
-      <div className="h-[65vh] min-h-[420px] rounded-xl border border-border/50 bg-card/40 px-3 pt-3">
-        <GhostwriterPanel
-          job={job}
-          initialPrompt={prompt}
-          onInitialPromptConsumed={() => setPrompt(null)}
-        />
-      </div>
+      <fieldset className="inline-flex rounded-lg border border-border/60 p-0.5 text-sm">
+        <legend className="sr-only">Who writes it</legend>
+        {(
+          [
+            ["ghostwriter", "Ghostwriter (chat)"],
+            ["agents", "Agent team (full pack)"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={mode === value}
+            onClick={() => setMode(value)}
+            className={cn(
+              "rounded-md px-3 py-1.5",
+              mode === value
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </fieldset>
+      {mode === "agents" ? (
+        <AgentTeamPanel jobId={job.id} />
+      ) : (
+        <>
+          <StepIntro
+            title={
+              byEmail
+                ? "Write your application email"
+                : "Write a short cover letter"
+            }
+          >
+            {byEmail
+              ? `This job is applied to by email${route?.email ? ` (${route.email})` : ""}. Ghostwriter writes it from your CV, the job and the company research. Ask for any change in the chat below.`
+              : "Most application forms have a cover letter or message field. Ghostwriter writes one from your CV, the job and the company research. Ask for any change in the chat below."}
+          </StepIntro>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={() =>
+                setPrompt(byEmail ? EMAIL_PROMPT : COVER_LETTER_PROMPT)
+              }
+              disabled={prompt !== null}
+            >
+              <PenLine className="mr-1.5 h-3.5 w-3.5" />
+              {byEmail ? "Write my email" : "Write my cover letter"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                setPrompt(byEmail ? COVER_LETTER_PROMPT : EMAIL_PROMPT)
+              }
+              disabled={prompt !== null}
+            >
+              {byEmail ? "A cover letter instead" : "An email instead"}
+            </Button>
+          </div>
+          <div className="h-[65vh] min-h-[420px] rounded-xl border border-border/50 bg-card/40 px-3 pt-3">
+            <GhostwriterPanel
+              job={job}
+              initialPrompt={prompt}
+              onInitialPromptConsumed={() => setPrompt(null)}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -479,7 +516,14 @@ export const GuidedApplyPage: React.FC = () => {
               <CompanyResearchCard jobId={job.id} />
             </div>
           ) : null}
-          {step === "message" ? <MessageStep job={job} /> : null}
+          {step === "message" ? (
+            <MessageStep
+              job={job}
+              initialMode={
+                searchParams.get("with") === "agents" ? "agents" : "ghostwriter"
+              }
+            />
+          ) : null}
           {step === "send" ? (
             applied ? (
               <AppliedPanel job={job} />

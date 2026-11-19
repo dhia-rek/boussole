@@ -50,6 +50,7 @@ import {
   Sparkles,
   Star,
   Upload,
+  Users,
   Video,
   XCircle,
 } from "lucide-react";
@@ -642,6 +643,16 @@ export const JobDetailPanel: React.FC<JobDetailPanelProps> = ({
                   <PanelRightOpen className="mr-2 h-4 w-4" />
                   Ask Ghostwriter
                 </DropdownMenuItem>
+                {canApplyStepByStep ? (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to={`/apply/${selectedJob.id}?step=message&with=agents`}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Prepare with the agent team
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   onSelect={() =>
                     window.setTimeout(() => setIsInterviewOpen(true), 0)

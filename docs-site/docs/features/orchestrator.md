@@ -50,7 +50,7 @@ Select a job to open its panel. It has three tabs, **The job**, **Your CV** and 
 
 - **Apply step by step** (New and Ready jobs): opens the [guided application](/docs/features/guided-apply).
 - **Start Tailoring** (New jobs): opens the **Your CV** tab.
-- **⋯** (more actions): **Ask Ghostwriter**, **Mock interview**, **Skip this job**, **Edit details**, **View job description**, **Copy job info**, **Recalculate match**.
+- **⋯** (more actions): **Prepare with the agent team**, **Ask Ghostwriter**, **Mock interview**, **Skip this job**, **Edit details**, **View job description**, **Copy job info**, **Recalculate match**.
 
 For a Ready job, log the application in the **Apply** tab: open the job listing, apply, then **Mark Applied** (keyboard: `a`).
 

@@ -118,6 +118,12 @@ export const queryKeys = {
         { runId, provider, accountKey },
       ] as const,
   },
+  agents: {
+    all: ["agents"] as const,
+    run: (runId: string) => [...queryKeys.agents.all, "run", runId] as const,
+    latestForJob: (jobId: string) =>
+      [...queryKeys.agents.all, "latest", jobId] as const,
+  },
   aiActivity: {
     all: ["ai-activity"] as const,
     list: () => [...queryKeys.aiActivity.all, "list"] as const,

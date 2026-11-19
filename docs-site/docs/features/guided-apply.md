@@ -36,7 +36,7 @@ Open it from **Choose your next application**, from **Today** ("Finish your appl
 1. **The job**: the match score and the job summary. **Not for me** skips the job and goes back to Today.
 2. **Your CV**: the [CV check](/docs/features/cv-check) (which CV lines fit, which to reword, which to cut) and the CV you will send. For a job without a tailored CV yet, **Prepare my CV for this job** makes one (about a minute). Your saved CV is never changed.
 3. **The company**: [company research](/docs/features/company-research) with a source for every fact.
-4. **Your message**: [Ghostwriter](/docs/features/ghostwriter) writes the application email when the posting says to apply by email, otherwise a cover letter. **A cover letter instead** / **An email instead** switches. Ask for changes in the chat.
+4. **Your message**: [Ghostwriter](/docs/features/ghostwriter) writes the application email when the posting says to apply by email, otherwise a cover letter. **A cover letter instead** / **An email instead** switches. Ask for changes in the chat. Or switch to **Agent team (full pack)** and click **Prepare with the agent team**: four [AI agents](/docs/features/ai-agents) prepare the letter, a suggested CV headline, what to put forward in your CV, a critic's review and the risks to know, while you watch each agent work (about 2 to 3 minutes).
 5. **Send it**: how to apply (email, LinkedIn, the company website…). After applying, click **Yes, mark applied**. Boussole shows the date it will remind you to follow up (7 days later).
 
 **Next** and **Back** move between steps; click a step to jump to it. A check mark shows the steps already done for this job. Opened without `?step=`, the page starts at the first step still to do.
