@@ -38,14 +38,17 @@ The first build takes several minutes. When it finishes, the script prints your 
 
 ### 2. Optional: bring your existing data
 
-From the computer where Boussole ran before, copy a consistent snapshot of the database plus the PDFs, then restart:
+From the computer where Boussole ran before, copy a consistent snapshot of the database, your CV files (including the photo), the PDFs and the sign-in secret. Stop Boussole on the server while the database is replaced:
 
 ```bash
 sqlite3 orchestrator/data/jobs.db ".backup /tmp/jobs.db"
+ssh user@my-server 'docker stop boussole'
 scp /tmp/jobs.db user@my-server:/opt/boussole/data/jobs.db
-scp -r orchestrator/data/pdfs orchestrator/data/jwt-secret user@my-server:/opt/boussole/data/
-ssh user@my-server 'docker restart boussole'
+scp -r orchestrator/data/design-resume orchestrator/data/pdfs orchestrator/data/jwt-secret user@my-server:/opt/boussole/data/
+ssh user@my-server 'rm -f /opt/boussole/data/jobs.db-wal /opt/boussole/data/jobs.db-shm && docker start boussole'
 ```
+
+Stop Boussole on the old computer afterwards, so only one copy keeps searching and syncing email.
 
 Put the API keys you use (Adzuna, Brave Search…) in `/opt/boussole/.env` on the server (`chmod 600`).
 

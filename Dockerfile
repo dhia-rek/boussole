@@ -80,7 +80,6 @@ FROM node-deps AS build-sources
 COPY shared ./shared
 COPY docs-site ./docs-site
 COPY orchestrator ./orchestrator
-COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
 COPY extractors/jobspy ./extractors/jobspy
@@ -171,7 +170,6 @@ COPY --from=client-build /app/orchestrator/dist ./orchestrator/dist
 COPY --from=docs-build /app/docs-site/build ./orchestrator/dist/docs
 COPY shared ./shared
 COPY orchestrator ./orchestrator
-COPY visa-sponsor-providers ./visa-sponsor-providers
 COPY extractors/adzuna ./extractors/adzuna
 COPY extractors/hiringcafe ./extractors/hiringcafe
 COPY extractors/jobspy ./extractors/jobspy

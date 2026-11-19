@@ -32,14 +32,11 @@ services:
         # Rebuild container when package.json changes
         - path: ./orchestrator/package.json
           action: rebuild
-        - path: ./orchestrator/package-lock.json
+        - path: ./package-lock.json
           action: rebuild
         # Sync source code changes and rebuild inside container
         - path: ./orchestrator/src
           target: /app/orchestrator/src
-          action: sync+restart
-        - path: ./visa-sponsor-providers
-          target: /app/visa-sponsor-providers
           action: sync+restart
         # Sync extractor changes
         - path: ./extractors/hiringcafe/src
